@@ -26,9 +26,18 @@ def save_frames(path: str | Path, frames: list[Frame]) -> None:
         pickle.dump(list(frames), fh, protocol=pickle.HIGHEST_PROTOCOL)
 
 
+class _RenameUnpickler(pickle.Unpickler):
+    """Load pickles written before the TrustSwarm -> Fittest rename (``trustswarm.data.Frame``)."""
+
+    def find_class(self, module: str, name: str):
+        if module == "trustswarm" or module.startswith("trustswarm."):
+            module = "fittest" + module[len("trustswarm"):]
+        return super().find_class(module, name)
+
+
 def load_frames(path: str | Path) -> list[Frame]:
     with Path(path).open("rb") as fh:
-        frames = pickle.load(fh)
+        frames = _RenameUnpickler(fh).load()
     if not all(isinstance(f, Frame) for f in frames):
         raise TypeError(f"{path} does not contain a list[Frame]")
     return frames

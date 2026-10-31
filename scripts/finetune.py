@@ -404,7 +404,9 @@ def predict(model, frames: Sequence[Frame], device, max_atoms: int = 4096) -> tu
         while i < len(frames) and (not chunk or n + frames[i].n_atoms <= max_atoms):
             chunk.append(frames[i]); n += frames[i].n_atoms; i += 1
         b = Batch.from_data_list([to_atomic_data(f, with_labels=False) for f in chunk], device=device)
-        torch.cuda.synchronize(); t0 = time.perf_counter()
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
+        t0 = time.perf_counter()
         compute_neighbors(b, config=nc)
         with torch.enable_grad():
             out = model(b)
