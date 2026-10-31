@@ -58,7 +58,7 @@ from trustswarm.agents.stream import TRIAGE
 from trustswarm.blackboard import Blackboard
 from trustswarm.cache import Predictions, load_models, load_predictions, prediction_path
 from trustswarm.data import (EVAL, PLANTED, POOL, SEED_TRAIN, SKEPTIC_REF, Frame, arrival_rounds, by_split,
-                             reactant_index, split_val_by_formula, strip_all)
+                             assign_leakfree_splits, geometry_hash, reactant_index, strip_all)
 from trustswarm.round_driver import RoundDriver
 from trustswarm.signals import force_rmse, force_spread, max_abs_force
 
@@ -102,6 +102,7 @@ class AblationConfig:
 
 @dataclass
 class AblationData:
+    split_report: dict[str, Any]
     pool: list[Frame]
     eval: list[Frame]
     refs: list[Frame]
@@ -149,8 +150,9 @@ def select_planted(planted_split: Sequence[Frame], model: Predictions, cfg: Abla
 
 def prepare_data(frames: Sequence[Frame], planted_model: Predictions,
                  cfg: AblationConfig) -> AblationData:
-    """Splits (skeptic_ref / planted re-derived by formula), planted cases, relative energies."""
-    frames = split_val_by_formula(frames, cfg.seed)
+    """Leak-free splits (re-derived from the official split prefix: pool/eval by component of
+    shared endpoint geometry, skeptic_ref/planted by formula), planted cases, relative energies."""
+    frames, split_report = assign_leakfree_splits(frames, cfg.seed)
     splits = by_split(frames)
     pool, eval_, refs = (sorted(splits.get(s, []), key=lambda f: f.uid) for s in (POOL, EVAL, SKEPTIC_REF))
     if not pool or not eval_:
@@ -161,7 +163,7 @@ def prepare_data(frames: Sequence[Frame], planted_model: Predictions,
     for f in frames:
         r = reactants.get(f.reaction)
         rel_true[f.uid] = None if r is None or r.E is None or f.E is None else f.E - r.E
-    return AblationData(pool=pool, eval=eval_, refs=refs, planted_cases=cases,
+    return AblationData(split_report=split_report, pool=pool, eval=eval_, refs=refs, planted_cases=cases,
                         planted_context=context, by_uid={f.uid: f for f in frames},
                         rel_true=rel_true, reactant_uid={k: v.uid for k, v in reactants.items()})
 
@@ -265,6 +267,7 @@ class ArmOutcome:
     """The arm's own P(served answer wrong) on pool; None → isotonic map of its score."""
     p_wrong_eval: dict[str, float] | None = None
     oracle_calls_per_round: dict[int, int] = field(default_factory=dict)
+    extra: dict[str, Any] = field(default_factory=dict)
     finetune: dict[str, Any] | None = None
     notes: list[str] = field(default_factory=list)
 
@@ -393,7 +396,8 @@ def run_trustswarm_arm(data: AblationData, preds: Mapping[str, Predictions],
     # prediction rows addressed as (event id, row index) — what verdicts reference
     pred_rows = {(e.id, i): row for e in events if e.kind == bbk.PREDICTION
                  for i, row in iter_rows(e.payload, ("uid", "rel_energy", "forces"))}
-    verdict_keys = ("uid", "phase", "trust", "recommended_model", "prediction_events")
+    verdict_keys = ("uid", "phase", "trust", "recommended_model", "prediction_events",
+                    "sigma_served")
 
     def last_verdicts(pre_update: bool, triage: bool) -> dict[str, dict[str, Any]]:
         out: dict[str, dict[str, Any]] = {}
@@ -440,18 +444,28 @@ def run_trustswarm_arm(data: AblationData, preds: Mapping[str, Predictions],
         notes.append(f"{len(missing)} streamed systems lacked a prediction from some model")
     if oracle.rejected_bids:
         notes.append(f"oracle rejected {oracle.rejected_bids} bids on systems it cannot label")
-    cand = [f.uid for f in data.candidates if f.uid in sigma]
-    eval_uids = [f.uid for f in data.eval if f.uid in sigma]
+    served_v = {**pre_pool, **pre_eval}
+    sigma_served = {u: float(v["sigma_served"]) for u, v in served_v.items()}
+    served_by = {u: v["recommended_model"] for u, v in served_v.items()}
+    cand = [f.uid for f in data.candidates if f.uid in sigma_served]
+    eval_uids = [f.uid for f in data.eval if f.uid in sigma_served]
     calibrator: Calibrator = agents["calibrator"]
-    if calibrator.risk(0.0) is None:
-        notes.append(f"fewer than {config.RISK_MIN_LABELLED} oracle labels: D's score "
-                     "fell back to the σ rank")
+    if any(calibrator.served_risk(c, 0.0) is None for c in set(served_by.values())):
+        notes.append(f"fewer than {config.RISK_MIN_LABELLED} oracle labels for a served "
+                     "candidate: D's score fell back to the σ_served rank")
+
+    def d_score(uids: list[str]) -> dict[str, float]:
+        """D's ranking score on the feature its Calibrator selected (v4)."""
+        if calibrator.risk_feature == "sigma_served":
+            return trustswarm_score(uids, sigma_served, p_skeptic, calibrator.served_risk, served_by)
+        return trustswarm_score(uids, sigma, p_skeptic, lambda c, s: calibrator.risk(s), served_by)
     outcome = ArmOutcome(
         name="D_trustswarm", models=list(cfg.hetero_models),
-        score="max(isotonic P(wrong | σ_F), Skeptic p_S); ties by σ_F",
+        score="max(isotonic P(served wrong | selected feature), Skeptic p_S); ties by feature",
         served="Calibrator recommendation (a model or the consensus)",
-        pool_score=trustswarm_score(cand, sigma, p_skeptic, calibrator.risk),
-        eval_score=trustswarm_score(eval_uids, sigma, p_skeptic, calibrator.risk),
+        pool_score=d_score(cand), eval_score=d_score(eval_uids),
+        extra={"risk_feature": calibrator.risk_feature,
+               "risk_feature_cv_auroc": calibrator.risk_feature_cv_auroc},
         served_pool=served_pool, served_eval_pre=served_from(pre_eval),
         served_eval_post=served_from(last_verdicts(pre_update=False, triage=False)),
         checked={e.payload["uid"]: int(e.payload["bid_round"]) for e in events
@@ -467,19 +481,21 @@ def run_trustswarm_arm(data: AblationData, preds: Mapping[str, Predictions],
 
 
 def trustswarm_score(uids: Sequence[str], sigma: Mapping[str, float],
-                     p_skeptic: Mapping[str, float],
-                     risk: Callable[[float], float | None]) -> dict[str, float]:
+                     p_skeptic: Mapping[str, float], risk: Callable[[str, float], float | None],
+                     candidate: Mapping[str, str] | None = None) -> dict[str, float]:
     """Arm D's continuous ranking score, returned as a rank in (0, 1].
 
-    value(x) = max(risk(σ_x), p_S(x) if the Skeptic vetoed x else 0), where ``risk`` is the
-    Calibrator's isotonic P(served wrong | σ_F); with too few labels ``risk`` is replaced by
-    the σ percentile rank. Ties (isotonic plateaus) are broken by σ_F, so without vetoes the
-    ranking is exactly the σ_F ranking and the Skeptic can only add information.
+    value(x) = max(risk(c_x, σ_x), p_S(x) if the Skeptic vetoed x else 0), where c_x is the
+    candidate served for x, σ_x its σ_served and ``risk`` the Calibrator's isotonic
+    P(c wrong | σ_served); with too few labels ``risk`` is replaced by the σ percentile rank.
+    Ties (isotonic plateaus) are broken by σ, so without vetoes and with a single candidate
+    the ranking is exactly the σ ranking and the Skeptic can only add information.
     """
     if not uids:
         return {}
     sig = np.array([sigma[u] for u in uids])
-    base = [risk(s) for s in sig]
+    cand = candidate or {}
+    base = [risk(cand.get(u, ""), s) for u, s in zip(uids, sig)]
     if any(b is None for b in base):
         base = list(rankdata(sig) / len(sig))
     value = np.array([max(float(b), p_skeptic.get(u, 0.0)) for u, b in zip(uids, base)])
@@ -731,7 +747,8 @@ def run_ablation(frames: Sequence[Frame], preds_dir: str | Path, cfg: AblationCo
         "config": {**dataclasses.asdict(cfg), "total_budget": cfg.total_budget},
         "arms": {}, "failures": failures, "comparisons": {}}
     try:
-        common, planted_model = load([cfg.common_target, cfg.planted_model]).values()
+        loaded = load(sorted({cfg.common_target, cfg.planted_model}))
+        common, planted_model = loaded[cfg.common_target], loaded[cfg.planted_model]
     except FileNotFoundError as exc:
         results["status"] = "failed"
         failures.append(f"cannot run ablation: common-target/planted model unavailable ({exc})")
@@ -746,9 +763,13 @@ def run_ablation(frames: Sequence[Frame], preds_dir: str | Path, cfg: AblationCo
         "n_eval_reactions": len({f.reaction for f in data.eval}),
         "pool_eval_shared_formulas": len({f.formula for f in data.pool} & {f.formula for f in data.eval}),
         "planted_filter": f"{cfg.planted_model} force RMSE > {cfg.planted_force_rmse} eV/Å",
+        "split_report": data.split_report,
         "skeptic_ref_formulas": sorted({f.formula for f in data.refs}),
         "planted_formulas": sorted({f.formula for f in data.injected}),
     }
+    for pair, n in data.split_report["shared_endpoint_geometries"].items():
+        if n:
+            failures.append(f"split leak: {n} endpoint geometries shared across {pair}")
     if not data.planted_cases:
         failures.append(f"no planted cases: {cfg.planted_model} is never badly wrong on the planted split")
     scorer = ArmScorer(data, cfg, common)
@@ -756,7 +777,8 @@ def run_ablation(frames: Sequence[Frame], preds_dir: str | Path, cfg: AblationCo
     finetune_fn = finetune_fn or default_finetune(preds_dir, cfg)
     bind = getattr(finetune_fn, "bind_held_out", None)
     if bind is not None:  # replayed fine-tunes must never have trained on held-out frames
-        bind({f.uid for f in frames if f.split not in (POOL, SEED_TRAIN)})
+        held_out = [f for f in [*data.eval, *data.refs, *data.injected]]
+        bind({f.uid for f in held_out}, {geometry_hash(f.Z, f.R) for f in held_out})
 
     for name, models, score in arm_specs(cfg):
         entry: dict[str, Any] = {"models": list(models), "score": score}
@@ -800,7 +822,7 @@ def _run_arm(name: str, score: str, preds: Mapping[str, Predictions], data: Abla
     else:
         outcome = run_baseline_arm(name, preds, score, data, arrival, cfg)
     entry.update(status="ok", served=outcome.served, score=outcome.score,
-                 oracle_calls=len(outcome.checked),
+                 oracle_calls=len(outcome.checked), **outcome.extra,
                  oracle_labels_by_source={
                      "audit": sorted(outcome.audited),
                      "bid": sorted(set(outcome.checked) - outcome.audited)},

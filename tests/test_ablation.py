@@ -18,11 +18,13 @@ from trustswarm.ablation import (AblationConfig, arm_specs, auroc_mann_whitney, 
 from trustswarm.agents import (Calibrator, FinetuneReport, ModelAgent, NullFinetune,
                                ReplayFinetune)
 from trustswarm.agents.base import iter_rows
+from trustswarm.agents.calibrator import grouped_cv_auroc
 from trustswarm.blackboard import ORACLE_RESULT, Blackboard, Event, load_jsonl
 from trustswarm.cache import load_models, load_predictions
 from trustswarm.candidates import candidate_members
-from trustswarm.data import Frame, arrival_rounds
+from trustswarm.data import Frame, arrival_rounds, assign_leakfree_splits
 from trustswarm.round_driver import RoundDriver
+from trustswarm.signals import served_spread
 from trustswarm.synthetic import write_curated
 
 ARMS = [name for name, _, _ in arm_specs(SMALL_CFG)]
@@ -64,6 +66,7 @@ def test_artifacts_written(ablation_run: dict[str, Any], tmp_path: Path) -> None
     assert [e.id for e in log] == list(range(len(log)))
     snap = json.loads((out / "trust_snapshot.json").read_text())
     assert set(snap) == {"models", "candidates", "candidate_members", "p_global", "tiebreak_order",
+                         "risk_iso", "risk_definition", "risk_feature", "risk_feature_cv_auroc",
                          "tau", "sigma_edges", "fbar_edges", "p_correct", "counts", "reputation",
                          "wrong_thresholds", "budget", "created"}
     assert snap["tiebreak_order"][0] == "consensus" and set(snap["p_global"]) == set(snap["candidates"])
@@ -154,15 +157,68 @@ def test_trustswarm_score_is_sigma_order_unless_skeptic_speaks() -> None:
     uids = ["a", "b", "c", "d"]
     sigma = {"a": 0.1, "b": 0.2, "c": 0.3, "d": 0.4}
 
-    def plateau(s: float) -> float:  # an isotonic fit with a flat step
+    def plateau(candidate: str, s: float) -> float:  # an isotonic fit with a flat step
         return 0.2 if s < 0.35 else 0.8
 
     plain = trustswarm_score(uids, sigma, {}, plateau)
     assert sorted(uids, key=plain.get) == ["a", "b", "c", "d"]  # ties broken by σ
     vetoed = trustswarm_score(uids, sigma, {"a": 0.9}, plateau)
     assert max(uids, key=vetoed.get) == "a"  # the Skeptic's p_S lifts a vetoed system
-    fallback = trustswarm_score(uids, sigma, {}, lambda s: None)
+    fallback = trustswarm_score(uids, sigma, {}, lambda c, s: None)
     assert sorted(uids, key=fallback.get) == ["a", "b", "c", "d"]
+    # per-candidate maps: a riskier candidate outranks a calmer one at equal σ
+    by_cand = trustswarm_score(["x", "y"], {"x": 0.3, "y": 0.3}, {},
+                               lambda c, s: 0.9 if c == "orb" else 0.1, {"x": "orb", "y": "consensus"})
+    assert by_cand["x"] > by_cand["y"]
+
+
+def test_leakfree_split_keeps_shared_reactants_together(frames: list[Frame]) -> None:
+    rng = np.random.default_rng(1)
+    shared_R = rng.normal(size=(4, 3)) * 1.5
+    made = []
+    for i in range(12):  # 12 test reactions, 3 families sharing one reactant geometry each
+        R0 = shared_R * (1.0 + i // 4)  # a different shared geometry per family
+        for role, R in (("reactant", R0), ("product", rng.normal(size=(4, 3)) * 1.5)):
+            made.append(Frame(uid=f"test:CH3/rxn{i}:{role}", reaction=f"CH3/rxn{i}", formula="CH3",
+                              split="test", role=role, Z=np.array([6, 1, 1, 1]), R=R,
+                              E=0.0, F=np.zeros((4, 3))))
+    out, report = assign_leakfree_splits(made, seed=0)
+    side = {f.reaction: f.split for f in out}
+    for fam in range(3):
+        assert len({side[f"CH3/rxn{i}"] for i in range(4 * fam, 4 * fam + 4)}) == 1
+    assert report["test_components"] == 3
+    assert report["shared_endpoint_geometries"]["pool|eval"] == 0
+    # the real pipeline on synthetic data: zero shared endpoints across both held-out splits
+    _, rep = assign_leakfree_splits(frames, seed=0)
+    assert rep["shared_endpoint_geometries"] == {"pool|eval": 0, "skeptic_ref|planted": 0}
+    assert rep["near_duplicate_endpoints_max_dR_1e-3"] == {"pool|eval": 0, "skeptic_ref|planted": 0}
+
+
+def test_risk_feature_is_selected_from_own_labels(ablation_run: dict[str, Any]) -> None:
+    d = ablation_run["results"]["arms"]["D_trustswarm"]
+    cv = d["risk_feature_cv_auroc"]
+    assert d["risk_feature"] in ("sigma_F", "sigma_served")
+    if cv["sigma_served"] is not None and cv["sigma_F"] is not None:
+        assert (d["risk_feature"] == "sigma_served") == (cv["sigma_served"] > cv["sigma_F"])
+
+
+def test_grouped_cv_auroc() -> None:
+    rng = np.random.default_rng(0)
+    x = rng.random(200)
+    wrong = rng.random(200) < x  # informative feature
+    groups = np.repeat(np.arange(40), 5)
+    assert grouped_cv_auroc(x, wrong, groups) > 0.7
+    assert grouped_cv_auroc(x, np.zeros(200, bool), groups) is None
+
+
+def test_served_spread_definition() -> None:
+    forces = {"a": np.array([[1.0, 0, 0]]), "b": np.array([[-1.0, 0, 0]]),
+              "c": np.array([[0.0, 3.0, 0]])}
+    # pair: their own spread
+    assert served_spread(forces, ["a", "b"]) == pytest.approx(1.0)
+    # singleton: RMS distance from the full-committee mean F̄ = (0, 1, 0)
+    assert served_spread(forces, ["c"]) == pytest.approx(2.0)
+    assert served_spread(forces, ["a"]) == pytest.approx(np.sqrt(2.0))
 
 
 def test_finetune_without_offline_replay_is_reported(ablation_run: dict[str, Any]) -> None:

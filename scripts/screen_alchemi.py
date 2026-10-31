@@ -21,6 +21,7 @@ import argparse
 import json
 import os
 import pickle
+import shutil
 import sys
 import time
 import traceback
@@ -31,11 +32,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-SERVERS = {  # name -> (port, python)
-    "mace_mpa0": (6100, "/usr/bin/python3"),
-    "aimnet2": (6101, "/usr/bin/python3"),
-    "orb": (6102, "/content/envs/orb/bin/python"),
-}
+from trustswarm import paths  # noqa: E402
 
 
 def load_frames(a):
@@ -100,13 +97,13 @@ class FrameDataset:
         return atomic_data(f.Z, f.R, charge=0.0, device=self.device, with_dynamics_fields=True), {}
 
 
-def start_servers(names, log_dir, report):
+def start_servers(names, log_dir, report, base_port):
     from trustswarm.model_server import spawn
 
     procs = {}
-    for n in names:
-        port, py = SERVERS[n]
-        if not Path(py).exists():
+    for k, n in enumerate(names):
+        port, py = base_port + k, paths.model_python(n)
+        if not (Path(py).exists() or shutil.which(py)):
             report[n] = f"python {py} not found"
             continue
         try:
@@ -150,7 +147,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--frames", default=str(ROOT / "data" / "frames.pkl"))
     ap.add_argument("--split", default="pool")
-    ap.add_argument("--h5", default="/content/data/Transition1x.h5")
+    ap.add_argument("--h5", default=paths.t1x_path(), help="Transition1x HDF5 [$TRUSTSWARM_T1X]")
     ap.add_argument("--n-reactions", type=int, default=30)
     ap.add_argument("--n-path", type=int, default=3)
     ap.add_argument("--max-frames", type=int, default=200)
@@ -168,7 +165,9 @@ def main() -> int:
     ap.add_argument("--max-engine-steps", type=int, default=20000)
     ap.add_argument("--score-labels", action="store_true")
     ap.add_argument("--device", default="cuda")
-    ap.add_argument("--log-dir", default="/content/logs")
+    ap.add_argument("--log-dir", default=paths.log_dir(), help="server logs [$TRUSTSWARM_LOG_DIR]")
+    ap.add_argument("--base-port", type=int, default=6100,
+                    help="committee member k of --models listens on base-port + k")
     ap.add_argument("--out", default=str(ROOT / "results" / "screen_alchemi.json"))
     ap.add_argument("--queue-out", default=str(ROOT / "data" / "oracle_queue_alchemi.pkl"))
     a = ap.parse_args()
@@ -185,7 +184,7 @@ def main() -> int:
                             "n_frames": len(frames)}, "servers": {}, "errors": []}
     print(f"[screen] {len(frames)} frames from {src}; tau={tau:.4f} ({tau_src})", flush=True)
 
-    clients = start_servers([m for m in a.models.split(",") if m], a.log_dir, out["servers"])
+    clients = start_servers([m for m in a.models.split(",") if m], a.log_dir, out["servers"], a.base_port)
     print("[screen] servers:", out["servers"], flush=True)
     if len(clients) < 2:
         out["errors"].append("fewer than two model servers available; nothing to compare")

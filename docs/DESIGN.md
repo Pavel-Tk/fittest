@@ -136,6 +136,16 @@ slice of oracle labels (NOT `eval`). Ship ⇔ report verdict passes; then re-pre
   - skeptic_ref / planted are split by formula; planted = AIMNet2 force RMSE > 0.4 eV/Å
     (arm-independent); replayed fine-tunes ship only if `train_uids` ⊆ this run's labels and
     disjoint from held-out frames.
+* v3 (v2 kept in `results/v2_all_member_sigma/`):
+  - Leak-free split: T1x reuses reactant geometries across reactions, so test → pool/eval is
+    by connected component of shared endpoint geometry (`data.geometry_hash`: sorted Z +
+    sorted pair distances at 0.01 Å; `data.assign_leakfree_splits`), val → skeptic_ref/planted
+    by formula with components kept whole. Re-derived from uid prefixes at load time;
+    `results/split_report.json`. Replays are also refused on geometry duplicates.
+  - D's reported risk = per-candidate isotonic P(served wrong | σ_served), σ_served = spread
+    among the served candidate's members (singleton: RMS distance from the committee mean);
+    snapshot `risk_iso`. Reporting only: allocation/labels unchanged (md5-checked).
+  - Common-target AUROC uses AIMNet2-wrong (in every arm).
 
 ## 5. Ablation (same oracle budget K = rounds × k)
 
@@ -201,5 +211,6 @@ mace_seed0..3, mace_lora_curated}. GPU timings go in `meta` (atoms/s) for the co
 * Orb checkpoint = `orb-v3-conservative-inf-omat` (OMol25-trained Orb models saw T1x geometries → excluded from headline; leakage).
 * AIMNet2 checkpoint = `aimnet2` (ωB97M-D3), MACE = `medium-mpa-0`.
 * Arm A single = `aimnet2` (model file `aimnet2`); Arm B = `aimnet2_m0..m3` (the four shipped ensemble members); Arms C/D = `mace_mpa0, aimnet2, orb`. Optional extra arm B' = `mace_seed0..3` if produced.
+* `aimnet2` is the aimnet registry alias of ensemble member 0 (`aimnet2-wb97m-d3_0`): the `aimnet2` and `aimnet2_m0` servers return identical predictions (force RMSE vs DFT 0.316169 eV/Å for both on all 5632 frames), so arm A and arm B member 0 are the same network.
 * T1x official split is by chemical formula (test 8 formulas, val 8). Our `pool`/`eval` split is by reaction within T1x test; report that pool and eval share formulas.
 * "Wrong" thresholds are config values; primary reported with threshold-free Spearman(sigma, error) and AUROC at several thresholds.

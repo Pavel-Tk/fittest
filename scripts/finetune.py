@@ -14,8 +14,14 @@ DESIGN.md §4 (Curator) / §9 (prediction cache). ALCHEMI Toolkit 0.3.0-rc APIs 
 
 Pipeline
 --------
-1. Training pool = frames whose uid is in ``--labelled-uids`` (oracle labels; E, F read from
-   frames.pkl). Frames of split ``eval`` (or ``skeptic_ref``) are refused outright.
+1. Splits are re-derived exactly as the ablation does (``assign_leakfree_splits(frames,
+   --data-seed)``: pool/eval by connected component of shared endpoint geometry), so the
+   ``eval`` refused here is the ``eval`` that is scored. Training pool = frames whose uid is in
+   ``--labelled-uids`` (oracle labels; E, F read from frames.pkl). Frames of split ``eval`` (or
+   ``skeptic_ref``) are refused outright. Geometry leak check: a labelled frame is dropped if
+   its own geometry, or an endpoint (reactant/product) geometry of its reaction, has the same
+   ``data.geometry_hash`` (sorted Z + sorted pair distances at 0.01 Å) as an eval frame; the
+   result is recorded as ``geometry_leak_check``.
 2. 15 % of the labelled *reactions* are held out for the acceptance report (by reaction, never
    by frame; seeded by ``--split-seed`` so every ``--seeds`` member sees identical data).
 3. Per-element reference energies are re-fitted on the training frames
@@ -24,10 +30,14 @@ Pipeline
    "Before" = base MACE-MPA-0 **with the same refitted E0s**, so the comparison isolates
    what LoRA adds and energies are on one scale. The fit uses training frames only.
 4. LoRA fine-tune (e3nn layout, recipe of ALCHEMI example intermediate/08) on energy + forces.
-5. Acceptance: ``evaluate_accuracy`` for base(+E0) and fine-tuned on the held-out labelled
-   slice, ``build_acceptance_report`` with ``max_from_scratch_ratio = --max-ratio`` (1.0) and
-   the base model as baseline: fine-tuned must not regress energy/atom MAE *or* force MAE.
-   ``report.accepted`` -> ``shipped``.
+5. Acceptance on the held-out labelled slice; three gates, all must pass to ship:
+   (a) ALCHEMI: ``evaluate_accuracy`` base(+E0) vs fine-tuned, ``build_acceptance_report``
+       with ``max_from_scratch_ratio = --max-ratio`` (1.0) -> ``report.accepted``. It reads
+       energy-per-atom MAE (absolute energies, i.e. E0 transfer) and force MAE;
+   (b) hold-out force RMSE (fine-tuned) <= base;
+   (c) hold-out reaction-centred relative-energy MAE (what TrustSwarm scores) <= base
+       (fails if no hold-out reaction has >= 2 frames: not measurable is not a pass).
+   Every check is recorded with pass/fail; ``verdict`` = "pass" iff all pass -> ``shipped``.
 6. Predict E/F for ``--predict-uids`` (default all frames) with the *reloaded* checkpoint and
    write ``trustswarm.cache.save_predictions(--out, model=...)``.
 
@@ -53,7 +63,8 @@ See :mod:`trustswarm.mace_lora` (single source of truth)::
     trustswarm.mace_lora.load_mace_lora("<ckpt>", enable_cueq=True)  # ALCHEMI MACEWrapper
 
 Predictions meta (read by ``trustswarm.agents.curator.ReplayFinetune``): ``base_model``,
-``train_uids``, ``holdout_uids``, ``acceptance_report`` (``verdict`` "pass"/"fail"),
+``train_uids``, ``holdout_uids``, ``acceptance_report`` (``verdict`` "pass"/"fail", each check
+with ``source`` and ``passed``), ``geometry_leak_check``,
 ``shipped``, ``epochs``, ``n_train``, ``wall_seconds``, ``atoms_per_second``, ``weights``.
 """
 
@@ -79,7 +90,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from trustswarm import mace_lora  # noqa: E402
 from trustswarm.cache import load_frames, save_predictions  # noqa: E402
 from trustswarm.config import CURATED_BASE_MODEL, CURATED_MODEL, WRONG_F  # noqa: E402
-from trustswarm.data import EVAL, PLANTED, POOL, SKEPTIC_REF, Frame, split_reactions  # noqa: E402
+from trustswarm.data import (ENDPOINT_ROLES, EVAL, PLANTED, POOL, SKEPTIC_REF, Frame,  # noqa: E402
+                             assign_leakfree_splits, geometry_hash, split_reactions)
 
 BASE_CHECKPOINTS = {"mace_mpa0": "medium-mpa-0"}
 ALLOWED_TRAIN_SPLITS = (POOL, PLANTED)  # oracle labels come from the pool stream (planted inside it)
@@ -151,6 +163,46 @@ def select_labelled(frames: Sequence[Frame], uids: Sequence[str],
     if unlabelled:
         raise ValueError(f"{len(unlabelled)} labelled uids have no E/F in the frames file")
     return chosen
+
+
+def exclude_eval_geometry(labelled: Sequence[Frame], frames: Sequence[Frame]
+                          ) -> tuple[list[Frame], dict[str, Any]]:
+    """Drop labelled frames that share a geometry with the eval split (T1x reuses reactant
+    geometries across reactions): a frame goes if its own ``geometry_hash`` matches any eval
+    frame, or if an endpoint of its reaction matches an eval endpoint."""
+    eval_all = {geometry_hash(f.Z, f.R) for f in frames if f.split == EVAL}
+    eval_endpoints = {geometry_hash(f.Z, f.R) for f in frames
+                      if f.split == EVAL and f.role in ENDPOINT_ROLES}
+    endpoints_of: dict[str, set[str]] = defaultdict(set)
+    for f in frames:
+        if f.role in ENDPOINT_ROLES:
+            endpoints_of[f.reaction].add(geometry_hash(f.Z, f.R))
+    own = [f.uid for f in labelled if geometry_hash(f.Z, f.R) in eval_all]
+    via_endpoint = [f.uid for f in labelled if endpoints_of[f.reaction] & eval_endpoints]
+    drop = set(own) | set(via_endpoint)
+    return [f for f in labelled if f.uid not in drop], {
+        "hash": "sorted Z + sorted pair distances rounded to 0.01 A (trustswarm.data.geometry_hash)",
+        "n_labelled": len(labelled), "n_eval_frames_hashed": len(eval_all),
+        "n_eval_endpoint_hashes": len(eval_endpoints), "n_own_geometry_matches": len(own),
+        "n_reaction_endpoint_matches": len(via_endpoint), "n_excluded": len(drop),
+        "excluded_uids": sorted(drop),
+        "passed": True,  # matching frames are removed, never trained on or used for acceptance
+        "detail": ("no labelled frame matched an eval geometry" if not drop else
+                   f"{len(drop)} labelled frame(s) matched an eval geometry and were excluded")}
+
+
+def trustswarm_checks(before: dict, after: dict) -> list[dict]:
+    """Gates (b), (c): hold-out force RMSE and reaction-centred rel-E MAE must not regress."""
+    checks = []
+    for name, key, unit in (("holdout_force_rmse_not_worse", "force_rmse", "eV/A"),
+                            ("holdout_rel_energy_mae_not_worse", "rel_energy_mae", "eV")):
+        b, a = before[key], after[key]
+        ok = math.isfinite(a) and math.isfinite(b)
+        checks.append({"name": name, "source": "trustswarm", "value": a if ok else None,
+                       "limit": b if ok else None, "comparison": "<=", "passed": bool(ok and a <= b),
+                       "detail": (f"fine-tuned {a:.4f} vs base {b:.4f} {unit}, held-out labelled slice"
+                                  if ok else "not measurable (needs a hold-out reaction with >= 2 frames)")})
+    return checks
 
 
 def holdout_by_reaction(frames: Sequence[Frame], fraction: float,
@@ -434,11 +486,13 @@ def finetune(checkpoint: str, e0: dict[int, float], train: Sequence[Frame], args
 
 
 def acceptance(base_acc, tuned_acc, name: str, max_ratio: float) -> tuple[bool, dict]:
-    """ALCHEMI acceptance report. The bar is the toolkit's ``max_from_scratch_ratio`` with the
+    """Gate (a), the ALCHEMI acceptance report. The bar is the toolkit's ``max_from_scratch_ratio`` with the
     *base model* (same refitted E0s, same hold-out batches) as the baseline: the worst of
     MAE_tuned / MAE_base over energy-per-atom and forces must be <= ``max_ratio``, i.e. the
     repair must not trade energies for forces or vice versa. No absolute bar: the Curator
-    replaces the worst model, so "better than what it replaces" is the shipping criterion."""
+    replaces the worst model, so "better than what it replaces" is the shipping criterion.
+    Energy-per-atom MAE measures absolute energies (E0 transfer), not the relative energies
+    TrustSwarm scores, hence the extra gates of :func:`trustswarm_checks`."""
     from nvalchemi.training.distillation.evaluation import (AcceptanceThresholds, StudentEvaluation,
                                                             build_acceptance_report)
 
@@ -447,11 +501,16 @@ def acceptance(base_acc, tuned_acc, name: str, max_ratio: float) -> tuple[bool, 
         [StudentEvaluation(name=name, accuracy=tuned_acc, baseline_accuracy=base_acc, weights="raw")],
         thresholds)
     accepted = bool(report.accepted)
-    checks = [{"name": c.name, "value": c.value, "limit": c.limit, "comparison": c.comparison,
-               "passed": bool(c.passed), "detail": c.detail} for c in report.verdicts[0].checks]
-    return accepted, {"verdict": "pass" if accepted else "fail", "accepted": accepted,
-                      "checks": checks,
-                      "thresholds": {"max_from_scratch_ratio": max_ratio},
+    checks = [{"name": c.name, "source": "alchemi", "value": c.value, "limit": c.limit,
+               "comparison": c.comparison, "passed": bool(c.passed), "detail": c.detail}
+              for c in report.verdicts[0].checks]
+    checks.append({"name": "alchemi_report_accepted", "source": "alchemi", "value": accepted,
+                   "limit": True, "comparison": "==", "passed": accepted,
+                   "detail": "build_acceptance_report(...).accepted"})
+    return accepted, {"toolkit_accepted": accepted, "checks": checks,
+                      "thresholds": {"max_from_scratch_ratio": max_ratio,
+                                     "holdout_force_rmse": "<= base",
+                                     "holdout_rel_energy_mae": "<= base"},
                       "baseline": "base MACE-MPA-0 with the same refitted E0s",
                       "alchemi_report": report.to_dict()}
 
@@ -473,7 +532,8 @@ def _fmt(before: dict, after: dict) -> str:
 
 
 def run_one(*, name: str, seed: int, frames: list[Frame], train: list[Frame], hold: list[Frame],
-            e0: dict[int, float], e0_info: dict, base_eval: dict, args, out: Path, ckpt: Path) -> dict:
+            e0: dict[int, float], e0_info: dict, base_eval: dict, args, out: Path, ckpt: Path,
+            leak_check: dict, split_report: dict) -> dict:
     import torch
 
     device = torch.device(args.device)
@@ -496,11 +556,15 @@ def run_one(*, name: str, seed: int, frames: list[Frame], train: list[Frame], ho
     # Everything downstream uses the checkpoint as shipped (reload == what BatchedMACE serves).
     shipped_model = mace_lora.load_mace_lora(ckpt, device=device, enable_cueq=use_cueq(args.cueq, device))
     tuned_acc = alchemi_accuracy(shipped_model, holdout_batches(hold, shipped_model.model_config.neighbor_config, device))
-    accepted, report = acceptance(base_eval["alchemi"], tuned_acc, name, args.max_ratio)
+    toolkit_accepted, report = acceptance(base_eval["alchemi"], tuned_acc, name, args.max_ratio)
     E_h, F_h, _ = predict(shipped_model, hold, device)
     E_t, F_t, _ = predict(shipped_model, train, device)
     after = {"holdout": error_metrics(hold, E_h, F_h), "train": error_metrics(train, E_t, F_t),
              "alchemi": tuned_acc.to_dict()}
+    report["checks"] += trustswarm_checks(base_eval["holdout"], after["holdout"])
+    accepted = toolkit_accepted and all(c["passed"] for c in report["checks"])
+    report.update({"verdict": "pass" if accepted else "fail", "accepted": accepted,
+                   "geometry_leak_check": leak_check, "split_report": split_report})
     report.update({"holdout_metrics": {"before": base_eval["holdout"], "after": after["holdout"]},
                    "train_metrics": {"before": base_eval["train"], "after": after["train"]},
                    "alchemi_accuracy": {"before": base_eval["alchemi"].to_dict(), "after": after["alchemi"]},
@@ -514,11 +578,13 @@ def run_one(*, name: str, seed: int, frames: list[Frame], train: list[Frame], ho
     E, F, model_seconds = predict(shipped_model, targets, device, max_atoms=args.predict_max_atoms)
     predict_wall = time.perf_counter() - t0
     n_atoms = int(sum(f.n_atoms for f in targets))
-    slim_report = {k: report[k] for k in ("verdict", "accepted", "checks", "thresholds", "baseline",
-                                          "holdout_metrics", "n_train", "n_holdout")}
+    slim_report = {k: report[k] for k in ("verdict", "accepted", "toolkit_accepted", "checks",
+                                          "thresholds", "baseline", "holdout_metrics", "n_train",
+                                          "n_holdout")}
     meta = {"base_model": args.model, "base_checkpoint": BASE_CHECKPOINTS[args.model],
             "weights": str(ckpt), "checkpoint": str(ckpt), "checkpoint_format": mace_lora.FORMAT,
             "shipped": accepted, "acceptance_report": slim_report,
+            "geometry_leak_check": leak_check, "data_seed": args.data_seed,
             "epochs": args.epochs, "seed": seed, "n_train": len(train), "n_holdout": len(hold),
             "train_uids": [f.uid for f in train], "holdout_uids": [f.uid for f in hold],
             "finetune_wall_seconds": finetune_seconds, "train_seconds": info["train_seconds"],
@@ -588,6 +654,8 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     ap.add_argument("--lora-alpha", type=float, default=LORA_ALPHA)
     ap.add_argument("--seed", type=int, default=0, help="training seed (LoRA init, shuffling)")
     ap.add_argument("--split-seed", type=int, default=0, help="seed of the by-reaction hold-out split")
+    ap.add_argument("--data-seed", type=int, default=0,
+                    help="seed of the leak-free pool/eval re-split; must equal run_ablation --seed")
     ap.add_argument("--holdout-fraction", type=float, default=0.15)
     ap.add_argument("--max-ratio", type=float, default=1.0,
                     help="acceptance: worst MAE ratio fine-tuned/base over energy/atom and forces")
@@ -606,8 +674,10 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
 def main(argv: Sequence[str] | None = None) -> None:
     args = parse_args(argv)
     t0 = time.perf_counter()
-    frames = load_frames(args.frames)
+    frames, split_report = assign_leakfree_splits(load_frames(args.frames), args.data_seed)
     labelled = select_labelled(frames, read_uid_list(args.labelled_uids))
+    labelled, leak_check = exclude_eval_geometry(labelled, frames)
+    print(f"geometry leak check: {leak_check['detail']}", flush=True)
     train, hold = holdout_by_reaction(labelled, args.holdout_fraction, args.split_seed)
     if len(train) < 8 or not hold:
         raise ValueError(f"too few labelled frames to fine-tune: {len(train)} train / {len(hold)} hold-out")
@@ -632,7 +702,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     else:
         runs = [(args.name, args.seed, out, ckpt)]
     results = [run_one(name=n, seed=s, frames=frames, train=train, hold=hold, e0=e0, e0_info=e0_info,
-                       base_eval=base_eval, args=args, out=o, ckpt=c) for n, s, o, c in runs]
+                       base_eval=base_eval, args=args, out=o, ckpt=c, leak_check=leak_check,
+                       split_report=split_report) for n, s, o, c in runs]
     print(f"\nDONE {len(results)} run(s) in {time.perf_counter() - t0:.1f} s: "
           + ", ".join(f"{r['name']}={r['verdict']}" for r in results), flush=True)
 

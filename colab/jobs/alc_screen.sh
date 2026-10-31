@@ -1,1 +1,1 @@
-cd /content/trustswarm && mkdir -p results data /content/logs/alc_screen && python3 scripts/screen_alchemi.py --split pool --max-frames 600 --every 10 --n-steps 50 --score-labels --log-dir /content/logs/alc_screen 2>&1
+. /content/trustswarm/colab/env.sh && $TRUSTSWARM_CORE_PYTHON scripts/screen_alchemi.py --split pool --max-frames 600 --every 10 --n-steps 50 --score-labels --base-port 6100 --log-dir $TRUSTSWARM_LOG_DIR/alc_screen 2>&1

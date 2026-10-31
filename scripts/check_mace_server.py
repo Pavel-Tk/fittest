@@ -1,6 +1,6 @@
 """Smoke-check the MACE model server (Toolkit MACEWrapper backend) on Transition1x test frames.
 
-    python3 scripts/check_mace_server.py --port 6100 --n-reactions 5 --n-path 2
+    python scripts/check_mace_server.py --base-port 6100 --n-reactions 5 --n-path 2
 
 Prints force RMSE vs DFT (wB97x/6-31G(d)), relative-energy MAE within reactions and throughput;
 writes ``results/check_mace_server.json``.
@@ -20,19 +20,21 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from trustswarm import t1x  # noqa: E402
+from trustswarm import paths, t1x  # noqa: E402
 from trustswarm.model_server import spawn  # noqa: E402
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--h5", default="/content/data/Transition1x.h5")
-    ap.add_argument("--port", type=int, default=6100)
+    ap.add_argument("--h5", default=paths.t1x_path(), help="Transition1x HDF5 [$TRUSTSWARM_T1X]")
+    ap.add_argument("--base-port", "--port", dest="port", type=int, default=6100)
     ap.add_argument("--model", default="mace_mpa0")
     ap.add_argument("--model-path", default=None)
     ap.add_argument("--n-reactions", type=int, default=5)
     ap.add_argument("--n-path", type=int, default=2)
-    ap.add_argument("--log-dir", default="/content/logs")
+    ap.add_argument("--log-dir", default=paths.log_dir(), help="server logs [$TRUSTSWARM_LOG_DIR]")
+    ap.add_argument("--python", default=paths.core_python(),
+                    help="server interpreter [$TRUSTSWARM_CORE_PYTHON]")
     ap.add_argument("--out", default=str(ROOT / "results" / "check_mace_server.json"))
     a = ap.parse_args()
 
@@ -43,7 +45,7 @@ def main() -> int:
     Fd = np.concatenate([f.F for f in frames])
 
     t0 = time.perf_counter()
-    c = spawn(a.model, a.port, python="/usr/bin/python3", log_dir=a.log_dir, model_path=a.model_path)
+    c = spawn(a.model, a.port, python=a.python, log_dir=a.log_dir, model_path=a.model_path)
     try:
         c.connect(timeout=900)
         t_up = time.perf_counter() - t0

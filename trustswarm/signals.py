@@ -4,7 +4,7 @@ for the disagreement functions; the error functions are only ever called where l
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
 import numpy as np
@@ -33,6 +33,22 @@ def model_deviations(forces: np.ndarray) -> np.ndarray:
     f = np.asarray(forces, dtype=float)
     dev = f - f.mean(axis=0, keepdims=True)
     return np.mean(np.linalg.norm(dev, axis=-1), axis=1)
+
+
+def served_spread(forces: Mapping[str, np.ndarray], members: Sequence[str]) -> float:
+    """σ_served: uncertainty of the answer actually served (a mean over ``members``).
+
+    * ``|members| ≥ 2``: the members' own force spread, ``force_spread(F_members)[0]``.
+    * one member c: its distance from the full committee mean F̄ over all models in
+      ``forces``, ``sqrt(mean_i ||F_c,i − F̄_i||²)`` [eV/Å] — how far the served model sits
+      from the collective.
+    """
+    if len(members) >= 2:
+        return force_spread(np.stack([np.asarray(forces[m], dtype=float) for m in members]))[0]
+    (c,) = members
+    fbar = np.mean([np.asarray(f, dtype=float) for f in forces.values()], axis=0)
+    dev = np.asarray(forces[c], dtype=float) - fbar
+    return float(np.sqrt(np.mean(np.sum(dev * dev, axis=-1))))
 
 
 def energy_spread(rel_energies: Sequence[float]) -> float:

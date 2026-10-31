@@ -11,8 +11,12 @@
 * Verdict: ``recommended = argmax_c P(c correct | bucket)`` over candidates (ties: global
   posterior, then consensus first, then model order — with no evidence the ensemble mean is
   served); ``trust = P(served answer correct | bucket)``; ``risk`` = isotonic
-  P(served wrong | σ_F) fitted on the oracle-labelled points (continuous; ``None`` until
-  ``RISK_MIN_LABELLED`` labels exist).
+  P(c wrong | σ_served) for the recommended candidate c, where σ_served
+  (:func:`trustswarm.signals.served_spread`) is the spread among c's own members (or a
+  singleton's distance from the committee mean). One isotonic map per candidate, fitted on
+  every oracle label (the oracle reports each candidate's error); ``None`` until
+  ``RISK_MIN_LABELLED`` labels exist. The risk is reported only: verdict re-posting uses the
+  v2 trigger (trust, recommendation, and P(served wrong | σ_F)), so allocation is unchanged.
 * Threshold: smallest τ with ledger-estimated P(served wrong | σ ≥ τ) ≥ 0.5 (isotonic fit on
   labelled points), floored at the 70th percentile of round-0 σ. If no τ reaches 0.5 the
   floor is kept (the hook never flags *less* than the floor).
@@ -37,7 +41,7 @@ from trustswarm.agents.stream import TRIAGE
 from trustswarm.blackboard import (ORACLE_RESULT, PREDICTION, REPUTATION, THRESHOLD, VERDICT,
                                    Blackboard, Event)
 from trustswarm.candidates import CONSENSUS, candidate_members
-from trustswarm.signals import force_spread, mean_abs_force
+from trustswarm.signals import force_spread, mean_abs_force, served_spread
 
 
 @dataclass
@@ -56,7 +60,9 @@ class Verdict:
     trust: float
     prediction_events: dict[str, tuple[int, int]]
     bucket: tuple[int, int]
-    risk: float | None
+    risk_sigma_F: float | None  # v2 trigger for re-posting (allocation unchanged by v3)
+    risk: float | None          # v3: P(served wrong | σ_served) for the served candidate
+    sigma_served: float
 
 
 def bucket_of(sigma_F: float, mean_abs_fbar: float, sigma_edges: Sequence[float],
@@ -82,6 +88,31 @@ def isotonic_threshold(sigma: np.ndarray, wrong: np.ndarray, target: float) -> f
     tail_mean = np.cumsum(p[::-1])[::-1] / np.arange(len(p), 0, -1)
     ok = np.flatnonzero(tail_mean >= target)
     return float(s[ok[0]]) if ok.size else None
+
+
+def grouped_cv_auroc(x: np.ndarray, wrong: np.ndarray, groups: np.ndarray,
+                     n_splits: int = 5) -> float | None:
+    """Out-of-fold AUROC of an isotonic P(wrong | x), folds grouped by reaction (GroupKFold).
+
+    None when it cannot be estimated (one class, or fewer than two groups)."""
+    from sklearn.metrics import roc_auc_score
+    from sklearn.model_selection import GroupKFold
+
+    x, wrong, groups = np.asarray(x, float), np.asarray(wrong, bool), np.asarray(groups)
+    k = min(n_splits, len(np.unique(groups)))
+    if k < 2 or wrong.all() or not wrong.any():
+        return None
+    oof = np.empty(len(x))
+    for train, test in GroupKFold(n_splits=k).split(x, wrong, groups):
+        if wrong[train].all() or not wrong[train].any():
+            oof[test] = float(wrong[train].mean())
+        else:
+            fit = isotonic_probability(x[train], wrong[train])
+            oof[test] = np.interp(x[test], fit.X_thresholds_, fit.y_thresholds_)
+    return float(roc_auc_score(wrong, oof))
+
+
+RISK_FEATURES = ("sigma_F", "sigma_served")
 
 
 def isotonic_probability(x: np.ndarray, wrong: np.ndarray) -> IsotonicRegression:
@@ -125,6 +156,12 @@ class Calibrator(Agent):
         self.labelled: dict[str, int] = {}  # uid -> id of the oracle_result that revealed it
         self._labelled_points: list[tuple[float, bool]] = []
         self._risk_fit: IsotonicRegression | None = None
+        self._served_points: dict[str, list[tuple[float, bool]]] = defaultdict(list)
+        # (reaction, σ_F, σ_served of the served candidate, served wrong) per triage label
+        self._selection_points: list[tuple[str, float, float, bool]] = []
+        self.risk_feature: str = RISK_FEATURES[0]
+        self.risk_feature_cv_auroc: dict[str, float | None] = {f: None for f in RISK_FEATURES}
+        self._served_fit: dict[str, tuple[np.ndarray, np.ndarray]] = {}
         self._reputation: dict[str, BetaCounter] = {}
         self._verdicts: dict[str, Verdict] = {}
 
@@ -152,6 +189,32 @@ class Calibrator(Agent):
         # == IsotonicRegression.predict with out_of_bounds="clip", without per-call validation
         return float(np.interp(sigma_F, self._risk_fit.X_thresholds_, self._risk_fit.y_thresholds_))
 
+    def sigma_served(self, uid: str, candidate: str) -> float:
+        forces = {m: np.asarray(self._preds[uid][m][1]["forces"]) for m in self._models}
+        return served_spread(forces, self.members[candidate])
+
+    def reported_risk(self, candidate: str, sigma_F: float, sigma_served: float) -> float | None:
+        """P(served wrong) on the feature the Calibrator selected from its own labels (v4)."""
+        if self.risk_feature == "sigma_served":
+            return self.served_risk(candidate, sigma_served)
+        return self.risk(sigma_F)
+
+    def served_risk(self, candidate: str, sigma_served: float) -> float | None:
+        """Isotonic P(candidate wrong | σ_served); None below RISK_MIN_LABELLED labels."""
+        fit = self._served_fit.get(candidate)
+        return None if fit is None else float(np.interp(sigma_served, *fit))
+
+    def _risk_iso_export(self) -> dict[str, dict[str, list[float]]]:
+        if self.risk_feature == "sigma_served":
+            fits = dict(self._served_fit)
+        elif self._risk_fit is not None:
+            fit = (self._risk_fit.X_thresholds_, self._risk_fit.y_thresholds_)
+            fits = {c: fit for c in self.candidates}
+        else:
+            fits = {}
+        return {c: {"x": [float(v) for v in f[0]], "y": [float(v) for v in f[1]]}
+                for c, f in sorted(fits.items())}
+
     def export_snapshot(self, wrong_thresholds: tuple[float, float] = (config.WRONG_F, config.WRONG_E),
                         budget: tuple[int, int] | None = None) -> dict[str, Any]:
         """JSON-serialisable final state for the trust service (``results/trust_snapshot.json``)."""
@@ -169,6 +232,16 @@ class Calibrator(Agent):
             # recommend() ranks by (p_correct[c][bucket], p_global[c], -index in tiebreak_order)
             "p_global": {c: float(self._global[c].mean) for c in self.candidates},
             "tiebreak_order": sorted(self.candidates, key=self._tiebreak.__getitem__),
+            # P(served wrong) = np.interp(<risk_feature>, x, y) for the served candidate
+            "risk_feature": self.risk_feature,
+            "risk_feature_cv_auroc": dict(self.risk_feature_cv_auroc),
+            "risk_iso": self._risk_iso_export(),
+            "risk_definition": "risk_feature 'sigma_F': full-committee force spread (same map for "
+                               "every candidate); 'sigma_served': force_spread over the served "
+                               "candidate's members (mean over atoms of per-atom RMS deviation), "
+                               "for a single model sqrt(mean_i ||F_c,i - Fbar_i||^2) vs the "
+                               "full-committee mean. Chosen by 5-fold reaction-grouped CV AUROC "
+                               "on the Calibrator's own oracle labels; tie -> sigma_F.",
             "tau": float(self._tau),
             "sigma_edges": [float(x) for x in self._sigma_edges],
             "fbar_edges": [float(x) for x in self._fbar_edges],
@@ -264,8 +337,11 @@ class Calibrator(Agent):
                 self._counts[(c, b)] += 1
                 self._global[c].alpha += correct
                 self._global[c].beta += not correct
+                self._served_points[c].append((self.sigma_served(uid, c), bool(err["wrong"])))
             if self._phase.get(uid) == TRIAGE:
                 self._labelled_points.append((self._sigma[uid][0], served_wrong))
+                self._selection_points.append((p.get("reaction", uid), self._sigma[uid][0],
+                                               self.sigma_served(uid, served), served_wrong))
         if p.get("audit"):
             return False  # exploration: no reputation at stake
         total = sum(p["bidders"].values())
@@ -279,12 +355,33 @@ class Calibrator(Agent):
         return bool(p["bidders"])
 
     def _refit_risk(self) -> None:
+        for c, pts in self._served_points.items():
+            if len(pts) >= config.RISK_MIN_LABELLED:
+                fit = isotonic_probability(np.array([s for s, _ in pts]),
+                                           np.array([w for _, w in pts]))
+                self._served_fit[c] = (fit.X_thresholds_, fit.y_thresholds_)
+        self._select_risk_feature()
         if len(self._labelled_points) < config.RISK_MIN_LABELLED:
             self._risk_fit = None
             return
         sig = np.array([s for s, _ in self._labelled_points])
         wrong = np.array([w for _, w in self._labelled_points])
         self._risk_fit = isotonic_probability(sig, wrong)
+
+    def _select_risk_feature(self) -> None:
+        """v4: pick the risk feature with the higher reaction-grouped CV AUROC on this
+        Calibrator's own oracle labels (never eval); tie or undefined -> σ_F."""
+        pts = self._selection_points
+        if len(pts) < config.RISK_MIN_LABELLED:
+            return
+        groups = np.array([g for g, *_ in pts])
+        wrong = np.array([w for *_, w in pts])
+        cv = {"sigma_F": grouped_cv_auroc(np.array([p[1] for p in pts]), wrong, groups),
+              "sigma_served": grouped_cv_auroc(np.array([p[2] for p in pts]), wrong, groups)}
+        self.risk_feature_cv_auroc = cv
+        better = cv["sigma_served"] is not None and (cv["sigma_F"] is None
+                                                     or cv["sigma_served"] > cv["sigma_F"])
+        self.risk_feature = "sigma_served" if better else "sigma_F"
 
     # --- threshold ------------------------------------------------------------------------------
     def _update_threshold(self, bb: Blackboard) -> None:
@@ -311,7 +408,9 @@ class Calibrator(Agent):
         rec = max(self.candidates, key=lambda c: (self.p_correct(c, b), self._global[c].mean,
                                                   -self._tiebreak[c]))
         served = {m: self._preds[uid][m][0] for m in self.members[rec]}
-        return Verdict(rec, self.p_correct(rec, b), served, b, self.risk(self._sigma[uid][0]))
+        s_served = self.sigma_served(uid, rec)
+        return Verdict(rec, self.p_correct(rec, b), served, b, self.risk(self._sigma[uid][0]),
+                       self.reported_risk(rec, self._sigma[uid][0], s_served), s_served)
 
     def _verdict_row(self, uid: str) -> dict[str, Any] | None:
         """The verdict for ``uid`` if it changed materially since the last one, else None."""
@@ -320,12 +419,13 @@ class Calibrator(Agent):
         if old is not None and old.recommended == v.recommended \
                 and old.prediction_events == v.prediction_events \
                 and abs(old.trust - v.trust) < config.VERDICT_REPOST_DELTA \
-                and (old.risk is None) == (v.risk is None) \
-                and abs((old.risk or 0.0) - (v.risk or 0.0)) < config.VERDICT_REPOST_DELTA:
+                and (old.risk_sigma_F is None) == (v.risk_sigma_F is None) \
+                and abs((old.risk_sigma_F or 0.0) - (v.risk_sigma_F or 0.0)) < config.VERDICT_REPOST_DELTA:
             return None
         self._verdicts[uid] = v
         sigma, fbar = self._sigma[uid]
         return {"uid": uid, "phase": self._phase[uid], "trust": v.trust, "risk": v.risk,
+                "sigma_served": v.sigma_served,
                 "recommended_model": v.recommended,
                 "prediction_events": {m: list(ref) for m, ref in v.prediction_events.items()},
                 "bucket": list(v.bucket), "sigma_F": sigma, "mean_abs_fbar": fbar}

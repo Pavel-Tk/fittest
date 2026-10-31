@@ -46,10 +46,10 @@ class RecordingFinetune:
             self.recorded = True
         return self.inner(model_name, labelled_frames)
 
-    def bind_held_out(self, uids) -> None:
+    def bind_held_out(self, uids, geometries=()) -> None:
         bind = getattr(self.inner, "bind_held_out", None)
         if bind is not None:
-            bind(uids)
+            bind(uids, geometries)
 
 SUMMARY_KEYS = ("auroc_pool", "auroc_eval", "recall_at_k", "planted_caught", "audit_hit_rate",
                 "eval_force_rmse_post", "ece_eval", "silent_failures_eval")
@@ -96,6 +96,9 @@ def main(argv: list[str] | None = None) -> None:
                            snapshot_path=out / "trust_snapshot.json")
     results["runtime_s"] = round(time.perf_counter() - t0, 1)
     (out / "ablation.json").write_text(json.dumps(results, indent=2), encoding="utf-8")
+    if "split_report" in results.get("data", {}):
+        (out / "split_report.json").write_text(
+            json.dumps(results["data"]["split_report"], indent=2), encoding="utf-8")
     if results.get("arms"):
         plot_ablation(results, out / "ablation.png")
 

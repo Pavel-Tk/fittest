@@ -71,3 +71,29 @@ def test_error_metrics_relative_energy_cancels_offsets() -> None:
     assert m["rel_energy_mae"] == pytest.approx(0.0, abs=1e-9)
     assert m["force_rmse"] == pytest.approx(0.2) and m["force_mae"] == pytest.approx(0.2)
     assert m["frac_force_wrong"] == 0.0
+
+
+def test_geometry_leak_check_drops_frames_sharing_eval_geometry() -> None:
+    frames = _frames(4, 3)
+    shared = frames[0]  # an eval frame with the same geometry (shifted + permuted) as frames[0]
+    perm = np.array([1, 0, 2, 4, 3])
+    twin = dataclasses.replace(shared, uid="test:rE:p0", reaction="rE", split="eval",
+                               Z=shared.Z[perm], R=shared.R[perm] + 3.0)
+    endpoint = dataclasses.replace(frames[3], uid="test:r1:reactant", role="reactant")
+    eval_endpoint = dataclasses.replace(endpoint, uid="test:rF:reactant", reaction="rF", split="eval")
+    pool = frames[1:3] + [frames[0], endpoint] + frames[4:]
+    kept, check = ft.exclude_eval_geometry(pool, pool + [twin, eval_endpoint])
+    assert check["n_own_geometry_matches"] == 2  # frames[0] and the shared reactant itself
+    assert {f.reaction for f in pool} - {f.reaction for f in kept} >= {"r1"}  # whole r1 via endpoint
+    assert shared.uid not in {f.uid for f in kept}
+    assert check["n_excluded"] == len(pool) - len(kept) and check["passed"]
+
+
+def test_trustswarm_gates_require_both_metrics_not_worse() -> None:
+    before = {"force_rmse": 0.6, "rel_energy_mae": 0.18}
+    ok = ft.trustswarm_checks(before, {"force_rmse": 0.3, "rel_energy_mae": 0.15})
+    assert all(c["passed"] for c in ok)
+    bad = ft.trustswarm_checks(before, {"force_rmse": 0.3, "rel_energy_mae": 0.31})
+    assert [c["passed"] for c in bad] == [True, False]
+    nan = ft.trustswarm_checks(before, {"force_rmse": 0.3, "rel_energy_mae": float("nan")})
+    assert nan[1]["passed"] is False and nan[1]["value"] is None

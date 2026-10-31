@@ -83,6 +83,14 @@ def test_missing_model_agent_rejected(snapshot):
         score([WATER], {"a": fake(1.0), "b": fake(1.0)}, snapshot)
 
 
+def test_trust_from_risk_iso(snapshot):
+    # P(wrong) rises from 0.1 at sigma 0 to 0.9 at sigma 1 for candidate "c"
+    snapshot.risk_iso = {"c": {"x": [0.0, 1.0], "y": [0.1, 0.9]}}
+    snapshot.risk_feature = "sigma_F"
+    res = score([WATER], {m: fake(1.0) for m in "abc"}, snapshot)[0]
+    assert res["recommended_model"] == "c" and res["trust"] == pytest.approx(0.9)
+
+
 def test_bad_input_rejected(snapshot):
     with pytest.raises(ValueError):
         score([{"Z": [1, 1], "R": [[0, 0, 0]]}], {m: fake(1.0) for m in "abc"}, snapshot)

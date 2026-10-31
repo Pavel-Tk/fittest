@@ -35,9 +35,8 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-SERVERS = {"mace_mpa0": (6103, "/usr/bin/python3"), "aimnet2": (6104, "/usr/bin/python3"),
-           "orb": (6105, "/content/envs/orb/bin/python")}
-NEB_DIR = Path("/content/nvalchemi-toolkit/examples/advanced/batched_neb_endpoints")
+from trustswarm import paths  # noqa: E402
+
 
 
 def spearman(x, y) -> float | None:
@@ -78,8 +77,9 @@ def match_dft_forces(h5_path, reaction_id, Z, images, tol=2e-3):
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--neb-dir", default=str(NEB_DIR))
-    ap.add_argument("--h5", default="/content/data/Transition1x.h5")
+    ap.add_argument("--neb-dir", default=paths.neb_dir(),
+                    help="toolkit examples/advanced/batched_neb_endpoints [$TRUSTSWARM_NEB_DIR]")
+    ap.add_argument("--h5", default=paths.t1x_path(), help="Transition1x HDF5 [$TRUSTSWARM_T1X]")
     ap.add_argument("--driver", default="aimnet2", choices=["aimnet2", "mace"])
     ap.add_argument("--models", default="mace_mpa0,aimnet2,orb")
     ap.add_argument("--images", type=int, default=10)
@@ -88,7 +88,9 @@ def main() -> int:
     ap.add_argument("--fmax", type=float, default=0.05)
     ap.add_argument("--tau", type=float, default=0.30, help="flag threshold (recorded only)")
     ap.add_argument("--device", default="cuda")
-    ap.add_argument("--log-dir", default="/content/logs")
+    ap.add_argument("--log-dir", default=paths.log_dir(), help="server logs [$TRUSTSWARM_LOG_DIR]")
+    ap.add_argument("--base-port", type=int, default=6103,
+                    help="committee member k of --models listens on base-port + k")
     ap.add_argument("--out", default=str(ROOT / "results" / "neb.json"))
     ap.add_argument("--fig", default=str(ROOT / "results" / "neb_sigma.png"))
     a = ap.parse_args()
@@ -109,8 +111,8 @@ def main() -> int:
 
     # ---------------------------------------------------------------- committee
     procs = {}
-    for n in [m for m in a.models.split(",") if m]:
-        port, py = SERVERS[n]
+    for k, n in enumerate(m for m in a.models.split(",") if m):
+        port, py = a.base_port + k, paths.model_python(n)
         try:
             procs[n] = spawn(n, port, python=py, log_dir=a.log_dir)
         except Exception as exc:

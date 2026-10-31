@@ -32,8 +32,8 @@ HETERO_MODELS: tuple[str, ...] = ("mace_mpa0", "aimnet2", "orb")
 CURATED_MODEL: str = "mace_lora_curated"
 CURATED_BASE_MODEL: str = "mace_mpa0"
 """The offline GPU fine-tune script writes ``{CURATED_MODEL}.npz`` for this base model."""
-COMMON_TARGET_MODEL: str = "mace_mpa0"
-"""Model whose wrongness is the arm-independent AUROC target and the planted filter."""
+COMMON_TARGET_MODEL: str = "aimnet2"
+"""Model whose wrongness is the arm-independent AUROC target (present in every arm)."""
 
 # --- Section 4: Calibrator ----------------------------------------------------------------
 CORRECTNESS_PRIOR: tuple[float, float] = (2.0, 1.0)

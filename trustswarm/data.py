@@ -262,6 +262,9 @@ def assign_leakfree_splits(frames: Sequence[Frame], seed: int = 0
     report["shared_endpoint_geometries"] = {
         "pool|eval": len(shared_endpoint_hashes(out, POOL, EVAL)),
         "skeptic_ref|planted": len(shared_endpoint_hashes(out, SKEPTIC_REF, PLANTED))}
+    report["near_duplicate_endpoints_max_dR_1e-3"] = {
+        "pool|eval": near_duplicate_endpoints(out, POOL, EVAL),
+        "skeptic_ref|planted": near_duplicate_endpoints(out, SKEPTIC_REF, PLANTED)}
     return out, report
 
 
@@ -271,6 +274,22 @@ def shared_endpoint_hashes(frames: Sequence[Frame], a: str, b: str) -> set[str]:
         return {geometry_hash(f.Z, f.R) for f in frames
                 if f.split == split and f.role in ENDPOINT_ROLES}
     return hashes(a) & hashes(b)
+
+
+def near_duplicate_endpoints(frames: Sequence[Frame], a: str, b: str, tol: float = 1e-3) -> int:
+    """Independent of hashing: pairs of endpoint frames (same atom order) across splits ``a``
+    and ``b`` whose coordinates agree to max|ΔR| < ``tol`` Å."""
+    groups: dict[tuple[str, bytes], list[np.ndarray]] = defaultdict(list)
+    for f in frames:
+        if f.split == a and f.role in ENDPOINT_ROLES:
+            groups[(a, np.asarray(f.Z).tobytes())].append(np.asarray(f.R, dtype=float))
+    count = 0
+    for f in frames:
+        if f.split == b and f.role in ENDPOINT_ROLES:
+            R = np.asarray(f.R, dtype=float)
+            count += sum(1 for other in groups.get((a, np.asarray(f.Z).tobytes()), [])
+                         if np.max(np.abs(other - R)) < tol)
+    return count
 
 
 def split_val_by_formula(frames: Sequence[Frame], seed: int = 0) -> list[Frame]:

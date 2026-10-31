@@ -1,0 +1,983 @@
+{
+  "schema": "trustswarm.ablation_budget/v1",
+  "budgets": [
+    20,
+    40,
+    80
+  ],
+  "rounds": 5,
+  "seed": 0,
+  "n_bootstrap": 200,
+  "arms": {
+    "A_single": {
+      "auroc_pool": [
+        {
+          "value": 0.7916285892138164,
+          "ci": [
+            0.7487822300763315,
+            0.8230848346104903
+          ],
+          "n": 1672
+        },
+        {
+          "value": 0.7916285892138164,
+          "ci": [
+            0.7487822300763315,
+            0.8230848346104903
+          ],
+          "n": 1672
+        },
+        {
+          "value": 0.7916285892138164,
+          "ci": [
+            0.7487822300763315,
+            0.8230848346104903
+          ],
+          "n": 1672
+        }
+      ],
+      "recall_at_k": [
+        {
+          "value": 0.06643356643356643,
+          "ci": [
+            0.050258785353442234,
+            0.08275986219311586
+          ],
+          "n": 1144
+        },
+        {
+          "value": 0.13111888111888112,
+          "ci": [
+            0.1061785531244707,
+            0.15346869328493648
+          ],
+          "n": 1144
+        },
+        {
+          "value": 0.2631118881118881,
+          "ci": [
+            0.23124050973777116,
+            0.29491986425433575
+          ],
+          "n": 1144
+        }
+      ],
+      "planted_caught": [
+        {
+          "value": 0.6,
+          "ci": [
+            0.4465500641848525,
+            0.7380952380952381
+          ],
+          "n": 40
+        },
+        {
+          "value": 0.6,
+          "ci": [
+            0.4465500641848525,
+            0.7380952380952381
+          ],
+          "n": 40
+        },
+        {
+          "value": 0.6,
+          "ci": [
+            0.4465500641848525,
+            0.7380952380952381
+          ],
+          "n": 40
+        }
+      ],
+      "eval_force_rmse_post": [
+        {
+          "value": 0.31688599863700195,
+          "ci": [
+            0.3028174351994717,
+            0.3285640586707993
+          ],
+          "n": 1485
+        },
+        {
+          "value": 0.31688599863700195,
+          "ci": [
+            0.3028174351994717,
+            0.3285640586707993
+          ],
+          "n": 1485
+        },
+        {
+          "value": 0.31688599863700195,
+          "ci": [
+            0.3028174351994717,
+            0.3285640586707993
+          ],
+          "n": 1485
+        }
+      ],
+      "silent_failures_eval": [
+        {
+          "value": 0.0,
+          "ci": [
+            0.0,
+            0.0
+          ],
+          "n": 309
+        },
+        {
+          "value": 0.0,
+          "ci": [
+            0.0,
+            0.0
+          ],
+          "n": 309
+        },
+        {
+          "value": 0.0,
+          "ci": [
+            0.0,
+            0.0
+          ],
+          "n": 309
+        }
+      ]
+    },
+    "A_random": {
+      "auroc_pool": [
+        {
+          "value": 0.5180255350709896,
+          "ci": [
+            0.4876935185372053,
+            0.5477669183801989
+          ],
+          "n": 1672
+        },
+        {
+          "value": 0.5180255350709896,
+          "ci": [
+            0.4876935185372053,
+            0.5477669183801989
+          ],
+          "n": 1672
+        },
+        {
+          "value": 0.5180255350709896,
+          "ci": [
+            0.4876935185372053,
+            0.5477669183801989
+          ],
+          "n": 1672
+        }
+      ],
+      "recall_at_k": [
+        {
+          "value": 0.05856643356643357,
+          "ci": [
+            0.0447352731388876,
+            0.07374200678485117
+          ],
+          "n": 1144
+        },
+        {
+          "value": 0.12062937062937062,
+          "ci": [
+            0.09981063416226482,
+            0.13976762461988645
+          ],
+          "n": 1144
+        },
+        {
+          "value": 0.2403846153846154,
+          "ci": [
+            0.2155079678319188,
+            0.26626698993318554
+          ],
+          "n": 1144
+        }
+      ],
+      "planted_caught": [
+        {
+          "value": 0.325,
+          "ci": [
+            0.18600061199510404,
+            0.4729166666666668
+          ],
+          "n": 40
+        },
+        {
+          "value": 0.325,
+          "ci": [
+            0.18600061199510404,
+            0.4729166666666668
+          ],
+          "n": 40
+        },
+        {
+          "value": 0.325,
+          "ci": [
+            0.18600061199510404,
+            0.4729166666666668
+          ],
+          "n": 40
+        }
+      ],
+      "eval_force_rmse_post": [
+        {
+          "value": 0.31688599863700195,
+          "ci": [
+            0.3028174351994717,
+            0.3285640586707993
+          ],
+          "n": 1485
+        },
+        {
+          "value": 0.31688599863700195,
+          "ci": [
+            0.3028174351994717,
+            0.3285640586707993
+          ],
+          "n": 1485
+        },
+        {
+          "value": 0.31688599863700195,
+          "ci": [
+            0.3028174351994717,
+            0.3285640586707993
+          ],
+          "n": 1485
+        }
+      ],
+      "silent_failures_eval": [
+        {
+          "value": 0.0,
+          "ci": [
+            0.0,
+            0.0
+          ],
+          "n": 309
+        },
+        {
+          "value": 0.7184466019417476,
+          "ci": [
+            0.6711966030811249,
+            0.7687892005300354
+          ],
+          "n": 309
+        },
+        {
+          "value": 0.7184466019417476,
+          "ci": [
+            0.6711966030811249,
+            0.7687892005300354
+          ],
+          "n": 309
+        }
+      ]
+    },
+    "B_seed": {
+      "auroc_pool": [
+        {
+          "value": 0.7646327950275613,
+          "ci": [
+            0.7320922411449429,
+            0.8026729386305297
+          ],
+          "n": 1672
+        },
+        {
+          "value": 0.7646327950275613,
+          "ci": [
+            0.7320922411449429,
+            0.8026729386305297
+          ],
+          "n": 1672
+        },
+        {
+          "value": 0.7646327950275613,
+          "ci": [
+            0.7320922411449429,
+            0.8026729386305297
+          ],
+          "n": 1672
+        }
+      ],
+      "recall_at_k": [
+        {
+          "value": 0.08433734939759036,
+          "ci": [
+            0.06295138888888889,
+            0.10675744780173145
+          ],
+          "n": 1079
+        },
+        {
+          "value": 0.16589434661723818,
+          "ci": [
+            0.1363506891881125,
+            0.19172442734743836
+          ],
+          "n": 1079
+        },
+        {
+          "value": 0.3345690454124189,
+          "ci": [
+            0.2898020025839793,
+            0.37532197171889714
+          ],
+          "n": 1079
+        }
+      ],
+      "planted_caught": [
+        {
+          "value": 0.7,
+          "ci": [
+            0.5499404761904763,
+            0.85
+          ],
+          "n": 40
+        },
+        {
+          "value": 0.7,
+          "ci": [
+            0.5499404761904763,
+            0.85
+          ],
+          "n": 40
+        },
+        {
+          "value": 0.7,
+          "ci": [
+            0.5499404761904763,
+            0.85
+          ],
+          "n": 40
+        }
+      ],
+      "eval_force_rmse_post": [
+        {
+          "value": 0.2862480910533747,
+          "ci": [
+            0.2748059550985847,
+            0.29641623886141344
+          ],
+          "n": 1485
+        },
+        {
+          "value": 0.2862480910533747,
+          "ci": [
+            0.2748059550985847,
+            0.29641623886141344
+          ],
+          "n": 1485
+        },
+        {
+          "value": 0.2862480910533747,
+          "ci": [
+            0.2748059550985847,
+            0.29641623886141344
+          ],
+          "n": 1485
+        }
+      ],
+      "silent_failures_eval": [
+        {
+          "value": 0.0,
+          "ci": [
+            0.0,
+            0.0
+          ],
+          "n": 199
+        },
+        {
+          "value": 0.0,
+          "ci": [
+            0.0,
+            0.0
+          ],
+          "n": 199
+        },
+        {
+          "value": 0.0,
+          "ci": [
+            0.0,
+            0.0
+          ],
+          "n": 199
+        }
+      ]
+    },
+    "B_mace_seeds": {
+      "auroc_pool": [
+        {
+          "value": null,
+          "ci": null,
+          "status": "skipped"
+        },
+        {
+          "value": null,
+          "ci": null,
+          "status": "skipped"
+        },
+        {
+          "value": null,
+          "ci": null,
+          "status": "skipped"
+        }
+      ],
+      "recall_at_k": [
+        {
+          "value": null,
+          "ci": null,
+          "status": "skipped"
+        },
+        {
+          "value": null,
+          "ci": null,
+          "status": "skipped"
+        },
+        {
+          "value": null,
+          "ci": null,
+          "status": "skipped"
+        }
+      ],
+      "planted_caught": [
+        {
+          "value": null,
+          "ci": null,
+          "status": "skipped"
+        },
+        {
+          "value": null,
+          "ci": null,
+          "status": "skipped"
+        },
+        {
+          "value": null,
+          "ci": null,
+          "status": "skipped"
+        }
+      ],
+      "eval_force_rmse_post": [
+        {
+          "value": null,
+          "ci": null,
+          "status": "skipped"
+        },
+        {
+          "value": null,
+          "ci": null,
+          "status": "skipped"
+        },
+        {
+          "value": null,
+          "ci": null,
+          "status": "skipped"
+        }
+      ],
+      "silent_failures_eval": [
+        {
+          "value": null,
+          "ci": null,
+          "status": "skipped"
+        },
+        {
+          "value": null,
+          "ci": null,
+          "status": "skipped"
+        },
+        {
+          "value": null,
+          "ci": null,
+          "status": "skipped"
+        }
+      ]
+    },
+    "C_collective": {
+      "auroc_pool": [
+        {
+          "value": 0.7262836772356379,
+          "ci": [
+            0.683869199019842,
+            0.7702406851348159
+          ],
+          "n": 1672
+        },
+        {
+          "value": 0.7262836772356379,
+          "ci": [
+            0.683869199019842,
+            0.7702406851348159
+          ],
+          "n": 1672
+        },
+        {
+          "value": 0.7262836772356379,
+          "ci": [
+            0.683869199019842,
+            0.7702406851348159
+          ],
+          "n": 1672
+        }
+      ],
+      "recall_at_k": [
+        {
+          "value": 0.07502206531332745,
+          "ci": [
+            0.035675321497083044,
+            0.11344202539402186
+          ],
+          "n": 1133
+        },
+        {
+          "value": 0.1588702559576346,
+          "ci": [
+            0.11221513813542165,
+            0.21203072364949876
+          ],
+          "n": 1133
+        },
+        {
+          "value": 0.32038834951456313,
+          "ci": [
+            0.2649625189732036,
+            0.3798600118681429
+          ],
+          "n": 1133
+        }
+      ],
+      "planted_caught": [
+        {
+          "value": 0.35,
+          "ci": [
+            0.1941885964912281,
+            0.4883720930232558
+          ],
+          "n": 40
+        },
+        {
+          "value": 0.35,
+          "ci": [
+            0.1941885964912281,
+            0.4883720930232558
+          ],
+          "n": 40
+        },
+        {
+          "value": 0.4,
+          "ci": [
+            0.23062500000000002,
+            0.5610537836147593
+          ],
+          "n": 40
+        }
+      ],
+      "eval_force_rmse_post": [
+        {
+          "value": 0.2929864790273976,
+          "ci": [
+            0.2803936370439704,
+            0.3064612404587
+          ],
+          "n": 1485
+        },
+        {
+          "value": 0.2929864790273976,
+          "ci": [
+            0.2803936370439704,
+            0.3064612404587
+          ],
+          "n": 1485
+        },
+        {
+          "value": 0.2929864790273976,
+          "ci": [
+            0.2803936370439704,
+            0.3064612404587
+          ],
+          "n": 1485
+        }
+      ],
+      "silent_failures_eval": [
+        {
+          "value": 0.0,
+          "ci": [
+            0.0,
+            0.0
+          ],
+          "n": 239
+        },
+        {
+          "value": 0.0,
+          "ci": [
+            0.0,
+            0.0
+          ],
+          "n": 239
+        },
+        {
+          "value": 0.0,
+          "ci": [
+            0.0,
+            0.0
+          ],
+          "n": 239
+        }
+      ]
+    },
+    "C_audit": {
+      "auroc_pool": [
+        {
+          "value": 0.7262836772356379,
+          "ci": [
+            0.683869199019842,
+            0.7702406851348159
+          ],
+          "n": 1672
+        },
+        {
+          "value": 0.7262836772356379,
+          "ci": [
+            0.683869199019842,
+            0.7702406851348159
+          ],
+          "n": 1672
+        },
+        {
+          "value": 0.7262836772356379,
+          "ci": [
+            0.683869199019842,
+            0.7702406851348159
+          ],
+          "n": 1672
+        }
+      ],
+      "recall_at_k": [
+        {
+          "value": 0.0706090026478376,
+          "ci": [
+            0.0354287998620441,
+            0.10986366264131553
+          ],
+          "n": 1133
+        },
+        {
+          "value": 0.13768755516328332,
+          "ci": [
+            0.10025967030509993,
+            0.18019085565597198
+          ],
+          "n": 1133
+        },
+        {
+          "value": 0.2903795233892321,
+          "ci": [
+            0.2443605514324482,
+            0.34266263072804287
+          ],
+          "n": 1133
+        }
+      ],
+      "planted_caught": [
+        {
+          "value": 0.35,
+          "ci": [
+            0.1941885964912281,
+            0.4883720930232558
+          ],
+          "n": 40
+        },
+        {
+          "value": 0.375,
+          "ci": [
+            0.21405677655677657,
+            0.5241289198606273
+          ],
+          "n": 40
+        },
+        {
+          "value": 0.4,
+          "ci": [
+            0.249671052631579,
+            0.5368612078977933
+          ],
+          "n": 40
+        }
+      ],
+      "eval_force_rmse_post": [
+        {
+          "value": 0.2929864790273976,
+          "ci": [
+            0.2803936370439704,
+            0.3064612404587
+          ],
+          "n": 1485
+        },
+        {
+          "value": 0.2929864790273976,
+          "ci": [
+            0.2803936370439704,
+            0.3064612404587
+          ],
+          "n": 1485
+        },
+        {
+          "value": 0.2929864790273976,
+          "ci": [
+            0.2803936370439704,
+            0.3064612404587
+          ],
+          "n": 1485
+        }
+      ],
+      "silent_failures_eval": [
+        {
+          "value": 0.02510460251046025,
+          "ci": [
+            0.0,
+            0.07323719801179056
+          ],
+          "n": 239
+        },
+        {
+          "value": 0.029288702928870293,
+          "ci": [
+            0.0,
+            0.07782670589351807
+          ],
+          "n": 239
+        },
+        {
+          "value": 0.02510460251046025,
+          "ci": [
+            0.0,
+            0.07323719801179056
+          ],
+          "n": 239
+        }
+      ]
+    },
+    "D_trustswarm": {
+      "auroc_pool": [
+        {
+          "value": 0.5110973770371188,
+          "ci": [
+            0.46233135584414176,
+            0.5668386142172521
+          ],
+          "n": 1672
+        },
+        {
+          "value": 0.5965018857045357,
+          "ci": [
+            0.5470727987385732,
+            0.6362293601946227
+          ],
+          "n": 1672
+        },
+        {
+          "value": 0.5992950416074572,
+          "ci": [
+            0.5533758707440525,
+            0.6347607280302296
+          ],
+          "n": 1672
+        }
+      ],
+      "recall_at_k": [
+        {
+          "value": 0.08751793400286945,
+          "ci": [
+            0.04658445228245292,
+            0.1335426667726936
+          ],
+          "n": 697
+        },
+        {
+          "value": 0.18624641833810887,
+          "ci": [
+            0.13301129289223892,
+            0.24668633931381811
+          ],
+          "n": 698
+        },
+        {
+          "value": 0.37815126050420167,
+          "ci": [
+            0.3228935107517063,
+            0.4421904266983417
+          ],
+          "n": 714
+        }
+      ],
+      "planted_caught": [
+        {
+          "value": 0.55,
+          "ci": [
+            0.37812944523470843,
+            0.6977325581395349
+          ],
+          "n": 40
+        },
+        {
+          "value": 0.45,
+          "ci": [
+            0.2777777777777778,
+            0.6343183239524703
+          ],
+          "n": 40
+        },
+        {
+          "value": 0.65,
+          "ci": [
+            0.49967948717948724,
+            0.7906976744186046
+          ],
+          "n": 40
+        }
+      ],
+      "eval_force_rmse_post": [
+        {
+          "value": 0.201647680188958,
+          "ci": [
+            0.19314331668336085,
+            0.21277427164969792
+          ],
+          "n": 1485
+        },
+        {
+          "value": 0.20632911232014323,
+          "ci": [
+            0.19793198080236826,
+            0.2170391640269644
+          ],
+          "n": 1485
+        },
+        {
+          "value": 0.2039591737778507,
+          "ci": [
+            0.19494995496714687,
+            0.2149939890399001
+          ],
+          "n": 1485
+        }
+      ],
+      "silent_failures_eval": [
+        {
+          "value": 0.0,
+          "ci": [
+            0.0,
+            0.0
+          ],
+          "n": 90
+        },
+        {
+          "value": 0.0,
+          "ci": [
+            0.0,
+            0.0
+          ],
+          "n": 96
+        },
+        {
+          "value": 0.0,
+          "ci": [
+            0.0,
+            0.0
+          ],
+          "n": 90
+        }
+      ]
+    }
+  },
+  "failures": {
+    "20": [
+      "B_mace_seeds skipped: missing prediction file(s): data\\preds\\mace_seed0.npz, data\\preds\\mace_seed1.npz, data\\preds\\mace_seed2.npz, data\\preds\\mace_seed3.npz",
+      "D_trustswarm: fine-tune not shipped (78 train uids are held-out frames (e.g. test:C2H3N3O2/rxn10005:path1888))",
+      "D vs A_single: auroc_pool significantly WORSE (diff -0.281, paired 95% CI [-0.337, -0.210])",
+      "D vs A_single: auroc_eval significantly WORSE (diff -0.187, paired 95% CI [-0.234, -0.143])",
+      "D vs A_single: recall_at_k not significantly better (diff +0.021, paired 95% CI [-0.021, +0.071])",
+      "D vs A_single: planted_caught not significantly better (diff -0.050, paired 95% CI [-0.238, +0.163])",
+      "D vs A_single: silent_failures_pool not significantly better (diff +0.000, paired 95% CI [+0.000, +0.000])",
+      "D vs A_single: silent_failures_eval not significantly better (diff +0.000, paired 95% CI [+0.000, +0.000])",
+      "D vs A_random: auroc_pool not significantly better (diff -0.007, paired 95% CI [-0.073, +0.054])",
+      "D vs A_random: recall_at_k not significantly better (diff +0.029, paired 95% CI [-0.013, +0.081])",
+      "D vs A_random: planted_caught not significantly better (diff +0.225, paired 95% CI [-0.028, +0.450])",
+      "D vs A_random: ece_eval not significantly better (diff -0.008, paired 95% CI [-0.062, +0.051])",
+      "D vs A_random: silent_failures_pool not significantly better (diff +0.000, paired 95% CI [+0.000, +0.000])",
+      "D vs A_random: silent_failures_eval not significantly better (diff +0.000, paired 95% CI [+0.000, +0.000])",
+      "D vs B_seed: auroc_pool significantly WORSE (diff -0.254, paired 95% CI [-0.309, -0.189])",
+      "D vs B_seed: auroc_eval significantly WORSE (diff -0.151, paired 95% CI [-0.204, -0.099])",
+      "D vs B_seed: recall_at_k not significantly better (diff +0.003, paired 95% CI [-0.041, +0.055])",
+      "D vs B_seed: planted_caught not significantly better (diff -0.150, paired 95% CI [-0.334, +0.025])",
+      "D vs B_seed: silent_failures_pool not significantly better (diff +0.000, paired 95% CI [+0.000, +0.000])",
+      "D vs B_seed: silent_failures_eval not significantly better (diff +0.000, paired 95% CI [+0.000, +0.000])",
+      "D vs C_collective: auroc_pool significantly WORSE (diff -0.215, paired 95% CI [-0.280, -0.142])",
+      "D vs C_collective: auroc_eval significantly WORSE (diff -0.152, paired 95% CI [-0.201, -0.100])",
+      "D vs C_collective: recall_at_k not significantly better (diff +0.012, paired 95% CI [-0.039, +0.062])",
+      "D vs C_collective: silent_failures_pool not significantly better (diff +0.000, paired 95% CI [+0.000, +0.000])",
+      "D vs C_collective: silent_failures_eval not significantly better (diff +0.000, paired 95% CI [+0.000, +0.000])",
+      "D vs C_audit: auroc_pool significantly WORSE (diff -0.215, paired 95% CI [-0.280, -0.142])",
+      "D vs C_audit: auroc_eval significantly WORSE (diff -0.152, paired 95% CI [-0.201, -0.100])",
+      "D vs C_audit: recall_at_k not significantly better (diff +0.017, paired 95% CI [-0.033, +0.062])",
+      "D vs C_audit: brier_eval not significantly better (diff -0.016, paired 95% CI [-0.045, +0.018])",
+      "D vs C_audit: silent_failures_pool not significantly better (diff +0.000, paired 95% CI [+0.000, +0.000])",
+      "D vs C_audit: silent_failures_eval not significantly better (diff -0.025, paired 95% CI [-0.073, +0.000])"
+    ],
+    "40": [
+      "B_mace_seeds skipped: missing prediction file(s): data\\preds\\mace_seed0.npz, data\\preds\\mace_seed1.npz, data\\preds\\mace_seed2.npz, data\\preds\\mace_seed3.npz",
+      "D_trustswarm: fine-tune not shipped (78 train uids are held-out frames (e.g. test:C2H3N3O2/rxn10005:path1888))",
+      "D vs A_single: auroc_pool significantly WORSE (diff -0.195, paired 95% CI [-0.240, -0.141])",
+      "D vs A_single: auroc_eval significantly WORSE (diff -0.156, paired 95% CI [-0.199, -0.119])",
+      "D vs A_single: recall_at_k not significantly better (diff +0.055, paired 95% CI [-0.004, +0.116])",
+      "D vs A_single: planted_caught not significantly better (diff -0.150, paired 95% CI [-0.400, +0.129])",
+      "D vs A_single: silent_failures_pool not significantly better (diff +0.009, paired 95% CI [+0.000, +0.033])",
+      "D vs A_single: silent_failures_eval not significantly better (diff +0.000, paired 95% CI [+0.000, +0.000])",
+      "D vs A_random: planted_caught not significantly better (diff +0.125, paired 95% CI [-0.151, +0.381])",
+      "D vs B_seed: auroc_pool significantly WORSE (diff -0.168, paired 95% CI [-0.210, -0.112])",
+      "D vs B_seed: auroc_eval significantly WORSE (diff -0.120, paired 95% CI [-0.166, -0.079])",
+      "D vs B_seed: recall_at_k not significantly better (diff +0.020, paired 95% CI [-0.034, +0.091])",
+      "D vs B_seed: planted_caught not significantly better (diff -0.250, paired 95% CI [-0.477, +0.049])",
+      "D vs B_seed: silent_failures_pool not significantly better (diff +0.009, paired 95% CI [+0.000, +0.033])",
+      "D vs B_seed: silent_failures_eval not significantly better (diff +0.000, paired 95% CI [+0.000, +0.000])",
+      "D vs C_collective: auroc_pool significantly WORSE (diff -0.130, paired 95% CI [-0.182, -0.077])",
+      "D vs C_collective: auroc_eval significantly WORSE (diff -0.120, paired 95% CI [-0.161, -0.080])",
+      "D vs C_collective: recall_at_k not significantly better (diff +0.027, paired 95% CI [-0.036, +0.096])",
+      "D vs C_collective: silent_failures_pool not significantly better (diff +0.009, paired 95% CI [+0.000, +0.033])",
+      "D vs C_collective: silent_failures_eval not significantly better (diff +0.000, paired 95% CI [+0.000, +0.000])",
+      "D vs C_audit: auroc_pool significantly WORSE (diff -0.130, paired 95% CI [-0.182, -0.077])",
+      "D vs C_audit: auroc_eval significantly WORSE (diff -0.120, paired 95% CI [-0.161, -0.080])",
+      "D vs C_audit: recall_at_k not significantly better (diff +0.049, paired 95% CI [-0.018, +0.117])",
+      "D vs C_audit: planted_caught not significantly better (diff +0.075, paired 95% CI [-0.026, +0.214])",
+      "D vs C_audit: ece_eval not significantly better (diff +0.001, paired 95% CI [-0.034, +0.051])",
+      "D vs C_audit: brier_eval not significantly better (diff -0.003, paired 95% CI [-0.024, +0.017])",
+      "D vs C_audit: silent_failures_pool not significantly better (diff +0.005, paired 95% CI [-0.009, +0.029])",
+      "D vs C_audit: silent_failures_eval not significantly better (diff -0.029, paired 95% CI [-0.078, +0.000])"
+    ],
+    "80": [
+      "B_mace_seeds skipped: missing prediction file(s): data\\preds\\mace_seed0.npz, data\\preds\\mace_seed1.npz, data\\preds\\mace_seed2.npz, data\\preds\\mace_seed3.npz",
+      "D_trustswarm: fine-tune not shipped (78 train uids are held-out frames (e.g. test:C2H3N3O2/rxn10005:path1888))",
+      "D vs A_single: auroc_pool significantly WORSE (diff -0.192, paired 95% CI [-0.242, -0.143])",
+      "D vs A_single: auroc_eval significantly WORSE (diff -0.206, paired 95% CI [-0.249, -0.158])",
+      "D vs A_single: planted_caught not significantly better (diff +0.050, paired 95% CI [-0.150, +0.282])",
+      "D vs A_single: silent_failures_pool not significantly better (diff +0.000, paired 95% CI [+0.000, +0.000])",
+      "D vs A_single: silent_failures_eval not significantly better (diff +0.000, paired 95% CI [+0.000, +0.000])",
+      "D vs B_seed: auroc_pool significantly WORSE (diff -0.165, paired 95% CI [-0.215, -0.122])",
+      "D vs B_seed: auroc_eval significantly WORSE (diff -0.170, paired 95% CI [-0.223, -0.128])",
+      "D vs B_seed: recall_at_k not significantly better (diff +0.044, paired 95% CI [-0.017, +0.112])",
+      "D vs B_seed: planted_caught not significantly better (diff -0.050, paired 95% CI [-0.244, +0.164])",
+      "D vs B_seed: silent_failures_pool not significantly better (diff +0.000, paired 95% CI [+0.000, +0.000])",
+      "D vs B_seed: silent_failures_eval not significantly better (diff +0.000, paired 95% CI [+0.000, +0.000])",
+      "D vs C_collective: auroc_pool significantly WORSE (diff -0.127, paired 95% CI [-0.172, -0.081])",
+      "D vs C_collective: auroc_eval significantly WORSE (diff -0.170, paired 95% CI [-0.214, -0.128])",
+      "D vs C_collective: silent_failures_pool not significantly better (diff +0.000, paired 95% CI [+0.000, +0.000])",
+      "D vs C_collective: silent_failures_eval not significantly better (diff +0.000, paired 95% CI [+0.000, +0.000])",
+      "D vs C_audit: auroc_pool significantly WORSE (diff -0.127, paired 95% CI [-0.172, -0.081])",
+      "D vs C_audit: auroc_eval significantly WORSE (diff -0.170, paired 95% CI [-0.214, -0.128])",
+      "D vs C_audit: ece_eval significantly WORSE (diff +0.043, paired 95% CI [+0.002, +0.070])",
+      "D vs C_audit: brier_eval not significantly better (diff +0.006, paired 95% CI [-0.015, +0.028])",
+      "D vs C_audit: silent_failures_pool not significantly better (diff +0.000, paired 95% CI [+0.000, +0.000])",
+      "D vs C_audit: silent_failures_eval not significantly better (diff -0.025, paired 95% CI [-0.073, +0.000])"
+    ]
+  },
+  "runtime_s": 13.5
+}

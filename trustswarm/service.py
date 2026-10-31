@@ -30,7 +30,7 @@ from pathlib import Path
 
 import numpy as np
 
-from trustswarm.signals import force_spread
+from trustswarm.signals import force_spread, served_spread
 
 CONSENSUS = "consensus"  # the ensemble-mean candidate the Calibrator can recommend
 
@@ -52,6 +52,8 @@ class TrustSnapshot:
     candidate_members: dict[str, list[str]] = field(default_factory=dict)
     p_global: dict[str, float] = field(default_factory=dict)  # tie-break 1: global posterior
     tiebreak_order: list[str] = field(default_factory=list)  # tie-break 2: Calibrator's order
+    risk_iso: dict[str, dict[str, list[float]]] = field(default_factory=dict)  # P(wrong | feature)
+    risk_feature: str = "sigma_served"  # which label-free feature the Calibrator chose
     meta: dict = field(default_factory=dict)
 
     def rank_key(self, candidate: str, p_bucket: float) -> tuple[float, float, int]:
@@ -72,7 +74,7 @@ class TrustSnapshot:
     def load(cls, path: str | Path) -> "TrustSnapshot":
         d = json.loads(Path(path).read_text())
         known = {"models", "tau", "sigma_edges", "fbar_edges", "p_correct", "counts", "candidates",
-                 "candidate_members", "p_global", "tiebreak_order"}
+                 "candidate_members", "p_global", "tiebreak_order", "risk_iso", "risk_feature"}
         return cls(models=list(d["models"]), tau=float(d["tau"]),
                    sigma_edges=[float(x) for x in d["sigma_edges"]],
                    fbar_edges=[float(x) for x in d["fbar_edges"]],
@@ -81,6 +83,8 @@ class TrustSnapshot:
                    candidate_members={k: list(v) for k, v in d.get("candidate_members", {}).items()},
                    p_global={k: float(v) for k, v in d.get("p_global", {}).items()},
                    tiebreak_order=list(d.get("tiebreak_order", [])),
+                   risk_iso=d.get("risk_iso", {}),
+                   risk_feature=str(d.get("risk_feature", "sigma_served")),
                    meta={k: v for k, v in d.items() if k not in known})
 
     def bucket(self, sigma_F: float, mean_abs_fbar: float) -> tuple[int, int]:
@@ -126,9 +130,17 @@ def score(systems: Sequence[dict], predictors: dict[str, Predictor],
         rec = max(p_ok, key=lambda c: snapshot.rank_key(c, p_ok[c])) if p_ok else CONSENSUS
         energies = {m: float(np.asarray(outs[m]["energy"])[k]) for m in models}
         flagged = bool(s_mean >= snapshot.tau)
+        members = snapshot.members(rec, models)
+        iso = snapshot.risk_iso.get(rec)
+        if iso:  # the Calibrator's isotonic P(served answer wrong | its chosen label-free feature)
+            feature = (float(s_mean) if snapshot.risk_feature == "sigma_F"
+                       else served_spread({m: F[i] for i, m in enumerate(models)}, members))
+            trust = 1.0 - float(np.interp(feature, iso["x"], iso["y"]))
+        else:  # older snapshots: bucket posterior
+            trust = p_ok.get(rec, float("nan"))
         results.append({
             "sigma_F": float(s_mean), "sigma_F_max": float(s_max), "mean_abs_fbar": fbar,
-            "flagged": flagged, "trust": round(p_ok.get(rec, float("nan")), 4),
+            "flagged": flagged, "trust": round(trust, 4),
             "recommended_model": rec, "bucket": list(bkt),
             "action": "send to oracle / DFT" if flagged else f"use {rec}",
             # the served answer: the recommended model's prediction, or the ensemble mean

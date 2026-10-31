@@ -26,7 +26,7 @@ from trustswarm.agents.stream import TRIAGE
 from trustswarm.blackboard import (FINETUNE_REPORT, MODEL_UPDATE, ORACLE_RESULT, SYSTEM,
                                    Blackboard, Event)
 from trustswarm.cache import load_predictions
-from trustswarm.data import POOL, Frame
+from trustswarm.data import POOL, Frame, geometry_hash
 
 
 @dataclass(frozen=True)
@@ -59,19 +59,22 @@ class ReplayFinetune:
     * a non-empty ``train_uids`` list that is a subset of the labels the Curator handed over
       (otherwise it was trained on another run's labels: "fine-tune not re-run"),
     * no train uid among the held-out uids (eval / skeptic_ref / planted; see
-      :meth:`bind_held_out`), and
+      :meth:`bind_held_out`) and no train geometry identical to a held-out one, and
     * ``acceptance_report.verdict == "pass"``.
     Every refusal is reported with its reason.
     """
 
-    def __init__(self, replay: Mapping[str, str | Path],
-                 held_out_uids: Iterable[str] = ()) -> None:
+    def __init__(self, replay: Mapping[str, str | Path], held_out_uids: Iterable[str] = (),
+                 held_out_geometries: Iterable[str] = ()) -> None:
         self._replay = {m: Path(p) for m, p in replay.items()}
         self._held_out = frozenset(held_out_uids)
+        self._held_out_geometries = frozenset(held_out_geometries)
 
-    def bind_held_out(self, uids: Iterable[str]) -> None:
-        """Called by the ablation with every uid that must never be trained on."""
+    def bind_held_out(self, uids: Iterable[str], geometries: Iterable[str] = ()) -> None:
+        """Called by the ablation with every uid — and every geometry hash
+        (:func:`trustswarm.data.geometry_hash`) — that must never be trained on."""
         self._held_out = frozenset(uids)
+        self._held_out_geometries = frozenset(geometries)
 
     def __call__(self, model_name: str, labelled_frames: Sequence[Frame]) -> FinetuneReport:
         uids = [f.uid for f in labelled_frames]
@@ -100,6 +103,12 @@ class ReplayFinetune:
         leaked = sorted(trained & self._held_out)
         if leaked:
             return refuse(f"{len(leaked)} train uids are held-out frames (e.g. {leaked[0]})")
+        by_uid = {f.uid: f for f in labelled_frames}
+        twins = sorted(u for u in trained if u in by_uid
+                       and geometry_hash(by_uid[u].Z, by_uid[u].R) in self._held_out_geometries)
+        if twins:
+            return refuse(f"{len(twins)} train frames duplicate a held-out geometry "
+                          f"(e.g. {twins[0]})")
         foreign = trained - set(uids)
         if foreign:
             return refuse(f"replay was trained on a different label set ({len(foreign)} of "
