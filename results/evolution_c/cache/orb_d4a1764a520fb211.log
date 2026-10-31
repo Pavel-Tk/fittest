@@ -1,0 +1,23 @@
+/content/envs/orb/lib/python3.12/site-packages/torch/jit/_script.py:1491: FutureWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
+  warnings.warn(
+/content/envs/orb/lib/python3.12/site-packages/orb_models/utils.py:30: UserWarning: Setting global torch default dtype to torch.float32.
+  warnings.warn(f"Setting global torch default dtype to {torch_dtype}.")
+/content/envs/orb/lib/python3.12/site-packages/orb_models/utils.py:32: UserWarning: Consider passing 'precision=float32-high' for significantly higher (>2x) model throughput if high precision is not required.
+  warnings.warn(
+/content/envs/orb/lib/python3.12/site-packages/triton/knobs.py:504: UserWarning: TRITON_DEFAULT_FP_FUSION is unset: defaulting to FP fusion ENABLED for backward compatibility in Triton 3.9. The default will change to DISABLED in Triton 3.10; set TRITON_DEFAULT_FP_FUSION=1 to keep fusion enabled or =0 to adopt the new default early and silence this warning.
+  warn_once(FP_FUSION_DEFAULT_WARNING)
+/content/fittest/scripts/evolve_c_offspring.py:220: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /__w/pytorch/pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:820.)
+  "rel_e_mse": float(el / len(lab_pos))})
+{"step": 0, "loss": 0.1583111435174942, "force_mse": 0.09449710696935654, "rel_e_mse": 0.03190701827406883}
+{"step": 20, "loss": 0.23923352360725403, "force_mse": 0.1379879266023636, "rel_e_mse": 0.05062279477715492}
+{"step": 40, "loss": 0.17799848318099976, "force_mse": 0.13016998767852783, "rel_e_mse": 0.023914245888590813}
+{"step": 60, "loss": 0.14363662898540497, "force_mse": 0.09635456651449203, "rel_e_mse": 0.023641029372811317}
+{"step": 80, "loss": 0.15855364501476288, "force_mse": 0.1359403282403946, "rel_e_mse": 0.011306658387184143}
+{"step": 100, "loss": 0.17800931632518768, "force_mse": 0.10026799887418747, "rel_e_mse": 0.03887065872550011}
+{"step": 120, "loss": 0.1705969274044037, "force_mse": 0.12234976887702942, "rel_e_mse": 0.024123581126332283}
+{"step": 140, "loss": 0.21455426514148712, "force_mse": 0.1173771470785141, "rel_e_mse": 0.04858855903148651}
+{"step": 160, "loss": 0.15182717144489288, "force_mse": 0.09598997980356216, "rel_e_mse": 0.02791859582066536}
+{"step": 180, "loss": 0.163870707154274, "force_mse": 0.11369886994361877, "rel_e_mse": 0.025085920467972755}
+{"step": 199, "loss": 0.12198538333177567, "force_mse": 0.1182069480419159, "rel_e_mse": 0.0018892167136073112}
+DONE {"id": "g3_orb_flagged", "ckpt": "results/evolution_c/cache/orb_d4a1764a520fb211.pt", "n_train": 67, "n_train_reactions": 30, "n_head_params": 144809, "train_seconds": 32.99914622306824, "predict_seconds": 17.015479803085327, "wall_seconds": 50.0146267414093, "toolkit": {}}

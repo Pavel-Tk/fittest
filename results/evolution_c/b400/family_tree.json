@@ -1,0 +1,1931 @@
+{
+ "evolved_s0": [
+  {
+   "id": "mace_mpa0",
+   "parent": null,
+   "family": "mace",
+   "kind": "base",
+   "generation": 0,
+   "hyperparams": {},
+   "n_train_labels": 0,
+   "gate": null,
+   "status": "dead",
+   "born": 0,
+   "died": 1,
+   "death_reason": "no significant contribution, fitness \u2248 0 or negative",
+   "fitness_per_generation": {
+    "0": {
+     "answerer": -0.019241629133926425,
+     "answerer_se": 0.0217406562091057,
+     "answerer_ci": [
+      -0.06657725857571647,
+      0.015168460739581724
+     ],
+     "critic": -0.0031036313667445192,
+     "critic_se": 0.035221927670489886,
+     "critic_ci": [
+      -0.07749295068031394,
+      0.06325802801779162
+     ],
+     "z_answerer": -0.8850528221805651,
+     "z_critic": -0.0881164539255143,
+     "fitness": -0.9731692761060794,
+     "role": "critic",
+     "n_labels": 100,
+     "n_reactions": 49,
+     "swarm_err_oof": 2.267452504684685,
+     "swarm_auroc_oof": 0.8664400194269063
+    },
+    "1": {
+     "answerer": -0.018119429137706627,
+     "answerer_se": 0.022202253129161714,
+     "answerer_ci": [
+      -0.0673429692604197,
+      0.020218943249340284
+     ],
+     "critic": 0.02178649237472763,
+     "critic_se": 0.041966926406912984,
+     "critic_ci": [
+      -0.08532928752928749,
+      0.07604124239346509
+     ],
+     "z_answerer": -0.816107673049972,
+     "z_critic": 0.5191348101951745,
+     "fitness": -0.2969728628547975,
+     "role": "critic",
+     "n_labels": 87,
+     "n_reactions": 27,
+     "swarm_err_oof": 1.8558508181938458,
+     "swarm_auroc_oof": 0.8061002178649237
+    }
+   },
+   "role": "critic",
+   "ckpt": null
+  },
+  {
+   "id": "aimnet2",
+   "parent": null,
+   "family": "aimnet2",
+   "kind": "base",
+   "generation": 0,
+   "hyperparams": {},
+   "n_train_labels": 0,
+   "gate": null,
+   "status": "alive",
+   "born": 0,
+   "died": null,
+   "death_reason": null,
+   "fitness_per_generation": {
+    "0": {
+     "answerer": 2.5028080829348123,
+     "answerer_se": 0.19382027109013727,
+     "answerer_ci": [
+      2.1057360186225993,
+      2.8542452172985713
+     ],
+     "critic": 0.0,
+     "critic_se": null,
+     "critic_ci": null,
+     "z_answerer": 12.913035715293507,
+     "z_critic": 0.0,
+     "fitness": 12.913035715293507,
+     "role": "answerer",
+     "n_labels": 100,
+     "n_reactions": 49,
+     "swarm_err_oof": 2.267452504684685,
+     "swarm_auroc_oof": 0.8664400194269063
+    },
+    "1": {
+     "answerer": 0.4962693773886737,
+     "answerer_se": 0.14637764149862298,
+     "answerer_ci": [
+      0.20242918598061255,
+      0.7525706229301307
+     ],
+     "critic": -0.1281103084508658,
+     "critic_se": 0.04978963417427097,
+     "critic_ci": [
+      -0.21956622023809516,
+      -0.03499489159594523
+     ],
+     "z_answerer": 3.390335930459313,
+     "z_critic": -2.5730317278986434,
+     "fitness": 0.8173042025606696,
+     "role": "answerer",
+     "n_labels": 87,
+     "n_reactions": 27,
+     "swarm_err_oof": 1.8558508181938458,
+     "swarm_auroc_oof": 0.8061002178649237
+    },
+    "2": {
+     "answerer": 0.5308295043355927,
+     "answerer_se": 0.09916202538195829,
+     "answerer_ci": [
+      0.3183504564870174,
+      0.7151714761534543
+     ],
+     "critic": -0.03854537226754495,
+     "critic_se": 0.03179416565143151,
+     "critic_ci": [
+      -0.09833309761591856,
+      0.02535506239466995
+     ],
+     "z_answerer": 5.353153107663055,
+     "z_critic": -1.2123410530764933,
+     "fitness": 4.140812054586561,
+     "role": "answerer",
+     "n_labels": 136,
+     "n_reactions": 42,
+     "swarm_err_oof": 1.908475363288863,
+     "swarm_auroc_oof": 0.8432156340217632
+    },
+    "3": {
+     "answerer": 0.5512448125650408,
+     "answerer_se": 0.08829158443941934,
+     "answerer_ci": [
+      0.37570196219340557,
+      0.7078517415143097
+     ],
+     "critic": -0.14623317095842447,
+     "critic_se": 0.04048354864300203,
+     "critic_ci": [
+      -0.22067101552160592,
+      -0.060241226991898135
+     ],
+     "z_answerer": 6.243458151362926,
+     "z_critic": -3.61216286269663,
+     "fitness": 2.6312952886662964,
+     "role": "answerer",
+     "n_labels": 160,
+     "n_reactions": 42,
+     "swarm_err_oof": 1.8737634841594897,
+     "swarm_auroc_oof": 0.7304860088365243
+    }
+   },
+   "role": "answerer",
+   "ckpt": null
+  },
+  {
+   "id": "orb",
+   "parent": null,
+   "family": "orb",
+   "kind": "base",
+   "generation": 0,
+   "hyperparams": {},
+   "n_train_labels": 0,
+   "gate": null,
+   "status": "dead",
+   "born": 0,
+   "died": 1,
+   "death_reason": "no significant contribution, fitness \u2248 0 or negative",
+   "fitness_per_generation": {
+    "0": {
+     "answerer": 0.8193633798691483,
+     "answerer_se": 0.1573322072496425,
+     "answerer_ci": [
+      0.5018263635146591,
+      1.1347873536998747
+     ],
+     "critic": -0.06733974247785557,
+     "critic_se": 0.06022278365199135,
+     "critic_ci": [
+      -0.1687242105720366,
+      0.06273297215703955
+     ],
+     "z_answerer": 5.207855366632251,
+     "z_critic": -1.118177181363633,
+     "fitness": 4.089678185268618,
+     "role": "answerer",
+     "n_labels": 100,
+     "n_reactions": 49,
+     "swarm_err_oof": 2.267452504684685,
+     "swarm_auroc_oof": 0.8664400194269063
+    },
+    "1": {
+     "answerer": 0.28453896338278495,
+     "answerer_se": 0.12068588603891353,
+     "answerer_ci": [
+      0.05223932056455855,
+      0.5264033511117836
+     ],
+     "critic": -0.04684095860566451,
+     "critic_se": 0.027027717113930295,
+     "critic_ci": [
+      -0.10092804214423132,
+      0.002811141064817591
+     ],
+     "z_answerer": 2.357682184071128,
+     "z_critic": -1.7330712175288498,
+     "fitness": 0.6246109665422783,
+     "role": "answerer",
+     "n_labels": 87,
+     "n_reactions": 27,
+     "swarm_err_oof": 1.8558508181938458,
+     "swarm_auroc_oof": 0.8061002178649237
+    }
+   },
+   "role": "answerer",
+   "ckpt": null
+  },
+  {
+   "id": "g1_aimnet2_flagged",
+   "parent": "aimnet2",
+   "family": "aimnet2",
+   "kind": "offspring",
+   "generation": 1,
+   "hyperparams": {
+    "lr": 0.0001,
+    "energy_weight": 1.0,
+    "force_weight": 1.0,
+    "steps": 200,
+    "reactions_per_batch": 4,
+    "niche": "flagged"
+   },
+   "n_train_labels": 45,
+   "gate": {
+    "passed": false,
+    "checks": [
+     {
+      "name": "holdout_force_rmse_not_worse",
+      "value": 0.41994193286751913,
+      "limit": 0.5679568967415007,
+      "passed": true
+     },
+     {
+      "name": "holdout_rel_energy_mae_not_worse",
+      "value": 0.20131486447638355,
+      "limit": 0.14226194695432545,
+      "passed": false
+     }
+    ],
+    "scope": "select labels in niche flagged",
+    "n_holdout": 30,
+    "n_holdout_reactions": 5,
+    "holdout_components_disjoint": true,
+    "clone_check": {
+     "is_clone": false,
+     "closest": "aimnet2",
+     "per_member": {
+      "mace_mpa0": {
+       "corr": -0.7524707292924675,
+       "median_force_diff": 0.5957032615778852
+      },
+      "aimnet2": {
+       "corr": 0.827305864820265,
+       "median_force_diff": 0.2118665460944723
+      },
+      "orb": {
+       "corr": -0.3136113747717958,
+       "median_force_diff": 0.44942931975568734
+      }
+     },
+     "rule": "corr of deviations from population-mean force > 0.95 or median per-frame force RMS diff < 0.02 eV/\u00c5"
+    }
+   },
+   "status": "stillborn",
+   "born": 1,
+   "died": null,
+   "death_reason": null,
+   "fitness_per_generation": {},
+   "role": null,
+   "ckpt": "results/evolution_c/cache/aimnet2_6ab097e3e0ddcb55.pt"
+  },
+  {
+   "id": "g1_orb_flagged",
+   "parent": "orb",
+   "family": "orb",
+   "kind": "offspring",
+   "generation": 1,
+   "hyperparams": {
+    "lr": 0.0001,
+    "energy_weight": 1.0,
+    "force_weight": 1.0,
+    "steps": 200,
+    "reactions_per_batch": 4,
+    "niche": "flagged"
+   },
+   "n_train_labels": 45,
+   "gate": {
+    "passed": true,
+    "checks": [
+     {
+      "name": "holdout_force_rmse_not_worse",
+      "value": 0.5901337409692285,
+      "limit": 0.9565942311789499,
+      "passed": true
+     },
+     {
+      "name": "holdout_rel_energy_mae_not_worse",
+      "value": 0.22769556414035227,
+      "limit": 0.33656269360083874,
+      "passed": true
+     }
+    ],
+    "scope": "select labels in niche flagged",
+    "n_holdout": 30,
+    "n_holdout_reactions": 5,
+    "holdout_components_disjoint": true,
+    "clone_check": {
+     "is_clone": false,
+     "closest": "aimnet2",
+     "per_member": {
+      "mace_mpa0": {
+       "corr": -0.6804029565877361,
+       "median_force_diff": 0.6069652026150028
+      },
+      "aimnet2": {
+       "corr": 0.49891083116594775,
+       "median_force_diff": 0.33300982367258203
+      },
+      "orb": {
+       "corr": 0.14087491242687467,
+       "median_force_diff": 0.3607669547360218
+      }
+     },
+     "rule": "corr of deviations from population-mean force > 0.95 or median per-frame force RMS diff < 0.02 eV/\u00c5"
+    }
+   },
+   "status": "dead",
+   "born": 1,
+   "died": 3,
+   "death_reason": "no significant contribution, fitness \u2248 0 or negative",
+   "fitness_per_generation": {
+    "1": {
+     "answerer": 0.0163870504865424,
+     "answerer_se": 0.053755687008023564,
+     "answerer_ci": [
+      -0.09117135912906102,
+      0.11800676589709545
+     ],
+     "critic": 0.04738562091503262,
+     "critic_se": 0.045812420128685964,
+     "critic_ci": [
+      -0.022852464926123618,
+      0.15736892460773044
+     ],
+     "z_answerer": 0.3048431040253745,
+     "z_critic": 1.03434004974912,
+     "fitness": 1.3391831537744945,
+     "role": "critic",
+     "n_labels": 87,
+     "n_reactions": 27,
+     "swarm_err_oof": 1.8558508181938458,
+     "swarm_auroc_oof": 0.8061002178649237
+    },
+    "2": {
+     "answerer": 0.4351648895067252,
+     "answerer_se": 0.08404010205119423,
+     "answerer_ci": [
+      0.23330581271821402,
+      0.5763795647184153
+     ],
+     "critic": 0.006376691714070959,
+     "critic_se": 0.03997507473171108,
+     "critic_ci": [
+      -0.07922904933309068,
+      0.07861927431327645
+     ],
+     "z_answerer": 5.1780623641037264,
+     "z_critic": 0.1595166927608646,
+     "fitness": 5.337579056864591,
+     "role": "answerer",
+     "n_labels": 136,
+     "n_reactions": 42,
+     "swarm_err_oof": 1.908475363288863,
+     "swarm_auroc_oof": 0.8432156340217632
+    },
+    "3": {
+     "answerer": -0.07464165708535132,
+     "answerer_se": 0.02574600057514296,
+     "answerer_ci": [
+      -0.12288901786880226,
+      -0.02426310422777651
+     ],
+     "critic": 0.0181639666175748,
+     "critic_se": 0.01863059437569087,
+     "critic_ci": [
+      -0.01643094743207398,
+      0.05565977047712247
+     ],
+     "z_answerer": -2.899155419013536,
+     "z_critic": 0.9749536837791432,
+     "fitness": -1.9242017352343925,
+     "role": "critic",
+     "n_labels": 160,
+     "n_reactions": 42,
+     "swarm_err_oof": 1.8737634841594897,
+     "swarm_auroc_oof": 0.7304860088365243
+    }
+   },
+   "role": "critic",
+   "ckpt": "results/evolution_c/cache/orb_128c920ca8787ff1.pt"
+  },
+  {
+   "id": "g1_mace_flagged",
+   "parent": "mace_mpa0",
+   "family": "mace",
+   "kind": "offspring",
+   "generation": 1,
+   "hyperparams": {
+    "lr": 0.001,
+    "energy_weight": 1.0,
+    "force_weight": 1.0,
+    "steps": 200,
+    "reactions_per_batch": 4,
+    "niche": "flagged"
+   },
+   "n_train_labels": 45,
+   "gate": {
+    "passed": true,
+    "checks": [
+     {
+      "name": "holdout_force_rmse_not_worse",
+      "value": 1.1431243222995724,
+      "limit": 1.4784769739871748,
+      "passed": true
+     },
+     {
+      "name": "holdout_rel_energy_mae_not_worse",
+      "value": 0.3584541582757083,
+      "limit": 0.3865493626085178,
+      "passed": true
+     }
+    ],
+    "scope": "select labels in niche flagged",
+    "n_holdout": 30,
+    "n_holdout_reactions": 5,
+    "holdout_components_disjoint": true,
+    "clone_check": {
+     "is_clone": false,
+     "closest": "mace_mpa0",
+     "per_member": {
+      "mace_mpa0": {
+       "corr": 0.7260180478080702,
+       "median_force_diff": 0.29355578372639635
+      },
+      "aimnet2": {
+       "corr": -0.3351944508255865,
+       "median_force_diff": 0.6199790863184713
+      },
+      "orb": {
+       "corr": -0.19633984095799137,
+       "median_force_diff": 0.5012503648574111
+      },
+      "g1_orb_flagged": {
+       "corr": -0.5285454849299884,
+       "median_force_diff": 0.5619111710968094
+      }
+     },
+     "rule": "corr of deviations from population-mean force > 0.95 or median per-frame force RMS diff < 0.02 eV/\u00c5"
+    }
+   },
+   "status": "alive",
+   "born": 1,
+   "died": null,
+   "death_reason": null,
+   "fitness_per_generation": {
+    "1": {
+     "answerer": 0.03898388890436176,
+     "answerer_se": 0.026528944709621693,
+     "answerer_ci": [
+      0.00046967942405924684,
+      0.1014575561742228
+     ],
+     "critic": 0.01753196037324778,
+     "critic_se": 0.01538222311622519,
+     "critic_ci": [
+      -0.009260149607317818,
+      0.044413756912791466
+     ],
+     "z_answerer": 1.4694850975441487,
+     "z_critic": 1.139754653198018,
+     "fitness": 2.6092397507421667,
+     "role": "answerer",
+     "n_labels": 87,
+     "n_reactions": 27,
+     "swarm_err_oof": 1.8558508181938458,
+     "swarm_auroc_oof": 0.8061002178649237
+    },
+    "2": {
+     "answerer": -0.14796323873034745,
+     "answerer_se": 0.06588007496870507,
+     "answerer_ci": [
+      -0.2883475986495593,
+      -0.03921747952048691
+     ],
+     "critic": 0.022679919736048992,
+     "critic_se": 0.03169812362773659,
+     "critic_ci": [
+      -0.04127296455566575,
+      0.08492153930865279
+     ],
+     "z_answerer": -2.245948244604066,
+     "z_critic": 0.7154972326564952,
+     "fitness": -1.530451011947571,
+     "role": "critic",
+     "n_labels": 136,
+     "n_reactions": 42,
+     "swarm_err_oof": 1.908475363288863,
+     "swarm_auroc_oof": 0.8432156340217632
+    },
+    "3": {
+     "answerer": 0.013386391147089585,
+     "answerer_se": 0.014458158635108602,
+     "answerer_ci": [
+      -0.015667229859869902,
+      0.03917311371385534
+     ],
+     "critic": -0.009198065953933465,
+     "critic_se": 0.03454858205678109,
+     "critic_ci": [
+      -0.07497181081217531,
+      0.05698089334249375
+     ],
+     "z_answerer": 0.925871093611018,
+     "z_critic": -0.26623570075368974,
+     "fitness": 0.6596353928573283,
+     "role": "answerer",
+     "n_labels": 160,
+     "n_reactions": 42,
+     "swarm_err_oof": 1.8737634841594897,
+     "swarm_auroc_oof": 0.7304860088365243
+    }
+   },
+   "role": "answerer",
+   "ckpt": "results/evolution_c/cache/mace_929d38eebaed3e2a.pt"
+  },
+  {
+   "id": "g2_aimnet2_flagged",
+   "parent": "aimnet2",
+   "family": "aimnet2",
+   "kind": "offspring",
+   "generation": 2,
+   "hyperparams": {
+    "lr": 0.0001,
+    "energy_weight": 1.0,
+    "force_weight": 1.0,
+    "steps": 200,
+    "reactions_per_batch": 4,
+    "niche": "flagged"
+   },
+   "n_train_labels": 91,
+   "gate": {
+    "passed": false,
+    "checks": [
+     {
+      "name": "holdout_force_rmse_not_worse",
+      "value": 0.387240861563137,
+      "limit": 0.5431797959400431,
+      "passed": true
+     },
+     {
+      "name": "holdout_rel_energy_mae_not_worse",
+      "value": 0.1753343281289138,
+      "limit": 0.11857310217589354,
+      "passed": false
+     }
+    ],
+    "scope": "select labels in niche flagged",
+    "n_holdout": 60,
+    "n_holdout_reactions": 9,
+    "holdout_components_disjoint": true,
+    "clone_check": {
+     "is_clone": false,
+     "closest": "aimnet2",
+     "per_member": {
+      "aimnet2": {
+       "corr": 0.6101402534449297,
+       "median_force_diff": 0.2158038608775994
+      },
+      "g1_orb_flagged": {
+       "corr": 0.17401015069814585,
+       "median_force_diff": 0.28102028292125714
+      },
+      "g1_mace_flagged": {
+       "corr": -0.5836448032428401,
+       "median_force_diff": 0.5380736181932171
+      }
+     },
+     "rule": "corr of deviations from population-mean force > 0.95 or median per-frame force RMS diff < 0.02 eV/\u00c5"
+    }
+   },
+   "status": "stillborn",
+   "born": 2,
+   "died": null,
+   "death_reason": null,
+   "fitness_per_generation": {},
+   "role": null,
+   "ckpt": "results/evolution_c/cache/aimnet2_e69297fdecb8972f.pt"
+  },
+  {
+   "id": "g2_orb_flagged",
+   "parent": "g1_orb_flagged",
+   "family": "orb",
+   "kind": "offspring",
+   "generation": 2,
+   "hyperparams": {
+    "lr": 0.0002,
+    "energy_weight": 0.5,
+    "force_weight": 1.0,
+    "steps": 200,
+    "reactions_per_batch": 4,
+    "niche": "flagged"
+   },
+   "n_train_labels": 91,
+   "gate": {
+    "passed": false,
+    "checks": [
+     {
+      "name": "holdout_force_rmse_not_worse",
+      "value": 0.4932667906702859,
+      "limit": 0.4980997468828635,
+      "passed": true
+     },
+     {
+      "name": "holdout_rel_energy_mae_not_worse",
+      "value": 0.30189878034695233,
+      "limit": 0.21777426756422452,
+      "passed": false
+     }
+    ],
+    "scope": "select labels in niche flagged",
+    "n_holdout": 60,
+    "n_holdout_reactions": 9,
+    "holdout_components_disjoint": true,
+    "clone_check": {
+     "is_clone": false,
+     "closest": "g1_orb_flagged",
+     "per_member": {
+      "aimnet2": {
+       "corr": 0.11320601061101894,
+       "median_force_diff": 0.32183266258856014
+      },
+      "g1_orb_flagged": {
+       "corr": 0.7852167671339162,
+       "median_force_diff": 0.1590276641134135
+      },
+      "g1_mace_flagged": {
+       "corr": -0.5728989442327141,
+       "median_force_diff": 0.5613726776286888
+      }
+     },
+     "rule": "corr of deviations from population-mean force > 0.95 or median per-frame force RMS diff < 0.02 eV/\u00c5"
+    }
+   },
+   "status": "stillborn",
+   "born": 2,
+   "died": null,
+   "death_reason": null,
+   "fitness_per_generation": {},
+   "role": null,
+   "ckpt": "results/evolution_c/cache/orb_94f6789fca799308.pt"
+  },
+  {
+   "id": "g2_mace_flagged",
+   "parent": "g1_mace_flagged",
+   "family": "mace",
+   "kind": "offspring",
+   "generation": 2,
+   "hyperparams": {
+    "lr": 0.002,
+    "energy_weight": 2.0,
+    "force_weight": 1.0,
+    "steps": 200,
+    "reactions_per_batch": 4,
+    "niche": "flagged"
+   },
+   "n_train_labels": 91,
+   "gate": {
+    "passed": false,
+    "checks": [
+     {
+      "name": "holdout_force_rmse_not_worse",
+      "value": 0.9455643627972387,
+      "limit": 1.007015469921334,
+      "passed": true
+     },
+     {
+      "name": "holdout_rel_energy_mae_not_worse",
+      "value": 0.41909272045692586,
+      "limit": 0.4152107407895528,
+      "passed": false
+     }
+    ],
+    "scope": "select labels in niche flagged",
+    "n_holdout": 60,
+    "n_holdout_reactions": 9,
+    "holdout_components_disjoint": true,
+    "clone_check": {
+     "is_clone": false,
+     "closest": "g1_mace_flagged",
+     "per_member": {
+      "aimnet2": {
+       "corr": -0.6961036697217562,
+       "median_force_diff": 0.596434757018854
+      },
+      "g1_orb_flagged": {
+       "corr": -0.585764179657576,
+       "median_force_diff": 0.5604783777394151
+      },
+      "g1_mace_flagged": {
+       "corr": 0.9048268434111952,
+       "median_force_diff": 0.13897774542265895
+      }
+     },
+     "rule": "corr of deviations from population-mean force > 0.95 or median per-frame force RMS diff < 0.02 eV/\u00c5"
+    }
+   },
+   "status": "stillborn",
+   "born": 2,
+   "died": null,
+   "death_reason": null,
+   "fitness_per_generation": {},
+   "role": null,
+   "ckpt": "results/evolution_c/cache/mace_c3db1895be9e3a77.pt"
+  },
+  {
+   "id": "g3_aimnet2_flagged",
+   "parent": "aimnet2",
+   "family": "aimnet2",
+   "kind": "offspring",
+   "generation": 3,
+   "hyperparams": {
+    "lr": 0.0001,
+    "energy_weight": 1.0,
+    "force_weight": 1.0,
+    "steps": 200,
+    "reactions_per_batch": 4,
+    "niche": "flagged"
+   },
+   "n_train_labels": 136,
+   "gate": {
+    "passed": false,
+    "checks": [
+     {
+      "name": "holdout_force_rmse_not_worse",
+      "value": 0.4238569262884649,
+      "limit": 0.5677082146429353,
+      "passed": true
+     },
+     {
+      "name": "holdout_rel_energy_mae_not_worse",
+      "value": 0.19527810352276523,
+      "limit": 0.14812032431174804,
+      "passed": false
+     }
+    ],
+    "scope": "select labels in niche flagged",
+    "n_holdout": 89,
+    "n_holdout_reactions": 22,
+    "holdout_components_disjoint": true,
+    "clone_check": {
+     "is_clone": false,
+     "closest": "aimnet2",
+     "per_member": {
+      "aimnet2": {
+       "corr": 0.582390919365583,
+       "median_force_diff": 0.21513682421076702
+      },
+      "g1_orb_flagged": {
+       "corr": 0.18675620441735324,
+       "median_force_diff": 0.27791185590303014
+      },
+      "g1_mace_flagged": {
+       "corr": -0.5698491479183843,
+       "median_force_diff": 0.5350939801649133
+      }
+     },
+     "rule": "corr of deviations from population-mean force > 0.95 or median per-frame force RMS diff < 0.02 eV/\u00c5"
+    }
+   },
+   "status": "stillborn",
+   "born": 3,
+   "died": null,
+   "death_reason": null,
+   "fitness_per_generation": {},
+   "role": null,
+   "ckpt": "results/evolution_c/cache/aimnet2_502e53f394eccd46.pt"
+  },
+  {
+   "id": "g3_orb_flagged",
+   "parent": "g1_orb_flagged",
+   "family": "orb",
+   "kind": "offspring",
+   "generation": 3,
+   "hyperparams": {
+    "lr": 0.0002,
+    "energy_weight": 2.0,
+    "force_weight": 1.0,
+    "steps": 200,
+    "reactions_per_batch": 4,
+    "niche": "flagged"
+   },
+   "n_train_labels": 136,
+   "gate": {
+    "passed": true,
+    "checks": [
+     {
+      "name": "holdout_force_rmse_not_worse",
+      "value": 0.4683356143748111,
+      "limit": 0.47205698882959723,
+      "passed": true
+     },
+     {
+      "name": "holdout_rel_energy_mae_not_worse",
+      "value": 0.2721563945144655,
+      "limit": 0.2816268324424343,
+      "passed": true
+     }
+    ],
+    "scope": "select labels in niche flagged",
+    "n_holdout": 89,
+    "n_holdout_reactions": 22,
+    "holdout_components_disjoint": true,
+    "clone_check": {
+     "is_clone": false,
+     "closest": "g1_orb_flagged",
+     "per_member": {
+      "aimnet2": {
+       "corr": 0.02630382827222005,
+       "median_force_diff": 0.3389303623532359
+      },
+      "g1_orb_flagged": {
+       "corr": 0.8260924526589064,
+       "median_force_diff": 0.13788739162533697
+      },
+      "g1_mace_flagged": {
+       "corr": -0.5302870950387817,
+       "median_force_diff": 0.5540542460184337
+      }
+     },
+     "rule": "corr of deviations from population-mean force > 0.95 or median per-frame force RMS diff < 0.02 eV/\u00c5"
+    }
+   },
+   "status": "alive",
+   "born": 3,
+   "died": null,
+   "death_reason": null,
+   "fitness_per_generation": {
+    "3": {
+     "answerer": 0.18722318136422894,
+     "answerer_se": 0.05590388081734247,
+     "answerer_ci": [
+      0.07892114479527015,
+      0.28520625772953856
+     ],
+     "critic": -0.006310527960012524,
+     "critic_se": 0.026073412609634115,
+     "critic_ci": [
+      -0.05329057738363123,
+      0.054030418064728344
+     ],
+     "z_answerer": 3.3490193994930793,
+     "z_critic": -0.24202922933382287,
+     "fitness": 3.106990170159256,
+     "role": "answerer",
+     "n_labels": 160,
+     "n_reactions": 42,
+     "swarm_err_oof": 1.8737634841594897,
+     "swarm_auroc_oof": 0.7304860088365243
+    }
+   },
+   "role": "answerer",
+   "ckpt": "results/evolution_c/cache/orb_354c2789be31523b.pt"
+  },
+  {
+   "id": "g3_mace_flagged",
+   "parent": "g1_mace_flagged",
+   "family": "mace",
+   "kind": "offspring",
+   "generation": 3,
+   "hyperparams": {
+    "lr": 0.002,
+    "energy_weight": 0.5,
+    "force_weight": 1.0,
+    "steps": 200,
+    "reactions_per_batch": 4,
+    "niche": "flagged"
+   },
+   "n_train_labels": 136,
+   "gate": {
+    "passed": false,
+    "checks": [
+     {
+      "name": "holdout_force_rmse_not_worse",
+      "value": 0.8188724859135672,
+      "limit": 0.9351332126986387,
+      "passed": true
+     },
+     {
+      "name": "holdout_rel_energy_mae_not_worse",
+      "value": 0.5127847565499803,
+      "limit": 0.48312770881382044,
+      "passed": false
+     }
+    ],
+    "scope": "select labels in niche flagged",
+    "n_holdout": 89,
+    "n_holdout_reactions": 22,
+    "holdout_components_disjoint": true,
+    "clone_check": {
+     "is_clone": false,
+     "closest": "g1_mace_flagged",
+     "per_member": {
+      "aimnet2": {
+       "corr": -0.45682714561578347,
+       "median_force_diff": 0.5400344394392411
+      },
+      "g1_orb_flagged": {
+       "corr": -0.593808505768294,
+       "median_force_diff": 0.5047123643332594
+      },
+      "g1_mace_flagged": {
+       "corr": 0.8468748545678617,
+       "median_force_diff": 0.2048663354213528
+      },
+      "g3_orb_flagged": {
+       "corr": -0.5565360622522315,
+       "median_force_diff": 0.48834297022563544
+      }
+     },
+     "rule": "corr of deviations from population-mean force > 0.95 or median per-frame force RMS diff < 0.02 eV/\u00c5"
+    }
+   },
+   "status": "stillborn",
+   "born": 3,
+   "died": null,
+   "death_reason": null,
+   "fitness_per_generation": {},
+   "role": null,
+   "ckpt": "results/evolution_c/cache/mace_a7e10bbfa7116830.pt"
+  }
+ ],
+ "evolved_s1": [
+  {
+   "id": "mace_mpa0",
+   "parent": null,
+   "family": "mace",
+   "kind": "base",
+   "generation": 0,
+   "hyperparams": {},
+   "n_train_labels": 0,
+   "gate": null,
+   "status": "dead",
+   "born": 0,
+   "died": 1,
+   "death_reason": "no significant contribution, fitness \u2248 0 or negative",
+   "fitness_per_generation": {
+    "0": {
+     "answerer": -0.08599279278734068,
+     "answerer_se": 0.04150100558361905,
+     "answerer_ci": [
+      -0.1758649807533146,
+      -0.01612833515836843
+     ],
+     "critic": 0.042529219261337015,
+     "critic_se": 0.03977982631436255,
+     "critic_ci": [
+      -0.03325771614006913,
+      0.12351855501957669
+     ],
+     "z_answerer": -2.0720652807816076,
+     "z_critic": 1.069115257699901,
+     "fitness": -1.0029500230817066,
+     "role": "critic",
+     "n_labels": 100,
+     "n_reactions": 47,
+     "swarm_err_oof": 2.330325483555219,
+     "swarm_auroc_oof": 0.812529219261337
+    },
+    "1": {
+     "answerer": -0.018763434901571636,
+     "answerer_se": 0.0168423991441794,
+     "answerer_ci": [
+      -0.06157595931164473,
+      0.0
+     ],
+     "critic": -0.005495953322040226,
+     "critic_se": 0.04411267873049994,
+     "critic_ci": [
+      -0.07228496009501002,
+      0.10106880572038751
+     ],
+     "z_answerer": -1.1140595078496363,
+     "z_critic": -0.12458897260846391,
+     "fitness": -1.2386484804581002,
+     "role": "critic",
+     "n_labels": 86,
+     "n_reactions": 32,
+     "swarm_err_oof": 1.429495105470776,
+     "swarm_auroc_oof": 0.6390692640692641
+    }
+   },
+   "role": "critic",
+   "ckpt": null
+  },
+  {
+   "id": "aimnet2",
+   "parent": null,
+   "family": "aimnet2",
+   "kind": "base",
+   "generation": 0,
+   "hyperparams": {},
+   "n_train_labels": 0,
+   "gate": null,
+   "status": "alive",
+   "born": 0,
+   "died": null,
+   "death_reason": null,
+   "fitness_per_generation": {
+    "0": {
+     "answerer": 2.3397387134270415,
+     "answerer_se": 0.21390185566148873,
+     "answerer_ci": [
+      1.868925158255139,
+      2.713154819167753
+     ],
+     "critic": -0.18747078073866297,
+     "critic_se": 0.0707543673663149,
+     "critic_ci": [
+      -0.32959638400814867,
+      -0.06224425637918524
+     ],
+     "z_answerer": 10.938375014052262,
+     "z_critic": -2.6496001267041933,
+     "fitness": 8.288774887348069,
+     "role": "answerer",
+     "n_labels": 100,
+     "n_reactions": 47,
+     "swarm_err_oof": 2.330325483555219,
+     "swarm_auroc_oof": 0.812529219261337
+    },
+    "1": {
+     "answerer": 0.08913098999424057,
+     "answerer_se": 0.07900664113729562,
+     "answerer_ci": [
+      -0.061604376152731885,
+      0.23244710785844344
+     ],
+     "critic": -0.08982683982683981,
+     "critic_se": 0.06587290164605845,
+     "critic_ci": [
+      -0.2294542490729692,
+      0.025949051969476968
+     ],
+     "z_answerer": 1.1281455420861537,
+     "z_critic": -1.363638728251083,
+     "fitness": -0.2354931861649292,
+     "role": "answerer",
+     "n_labels": 86,
+     "n_reactions": 32,
+     "swarm_err_oof": 1.429495105470776,
+     "swarm_auroc_oof": 0.6390692640692641
+    },
+    "2": {
+     "answerer": -0.00839514317394837,
+     "answerer_se": 0.023774418340967447,
+     "answerer_ci": [
+      -0.051500528192917984,
+      0.04227451039667324
+     ],
+     "critic": 0.008030886858114816,
+     "critic_se": 0.017416994201675876,
+     "critic_ci": [
+      -0.026992227190837537,
+      0.04388513668821244
+     ],
+     "z_answerer": -0.3531166589881226,
+     "z_critic": 0.461094880386541,
+     "fitness": 0.1079782213984184,
+     "role": "critic",
+     "n_labels": 122,
+     "n_reactions": 42,
+     "swarm_err_oof": 1.6697421322830017,
+     "swarm_auroc_oof": 0.6249663707290826
+    },
+    "3": {
+     "answerer": 0.016449390055610365,
+     "answerer_se": 0.011300573379209025,
+     "answerer_ci": [
+      -0.0013999631413972534,
+      0.04385166153366359
+     ],
+     "critic": -0.020656262322928942,
+     "critic_se": 0.033577396933944646,
+     "critic_ci": [
+      -0.07642303848510575,
+      0.05838419480997575
+     ],
+     "z_answerer": 1.455624374412206,
+     "z_critic": -0.6151835523035067,
+     "fitness": 0.8404408221086992,
+     "role": "answerer",
+     "n_labels": 162,
+     "n_reactions": 50,
+     "swarm_err_oof": 1.6055523475433389,
+     "swarm_auroc_oof": 0.6714506172839506
+    }
+   },
+   "role": "answerer",
+   "ckpt": null
+  },
+  {
+   "id": "orb",
+   "parent": null,
+   "family": "orb",
+   "kind": "base",
+   "generation": 0,
+   "hyperparams": {},
+   "n_train_labels": 0,
+   "gate": null,
+   "status": "dead",
+   "born": 0,
+   "died": 2,
+   "death_reason": "no significant contribution, fitness \u2248 0 or negative",
+   "fitness_per_generation": {
+    "0": {
+     "answerer": 0.7261096653871636,
+     "answerer_se": 0.1915564556972496,
+     "answerer_ci": [
+      0.3280557869249125,
+      1.0642685885873986
+     ],
+     "critic": -0.11688254544454535,
+     "critic_se": 0.0772563987257147,
+     "critic_ci": [
+      -0.26699831728855544,
+      0.024767710254059612
+     ],
+     "z_answerer": 3.790577888613488,
+     "z_critic": -1.5129173424134916,
+     "fitness": 2.2776605461999964,
+     "role": "answerer",
+     "n_labels": 100,
+     "n_reactions": 47,
+     "swarm_err_oof": 2.330325483555219,
+     "swarm_auroc_oof": 0.812529219261337
+    },
+    "1": {
+     "answerer": 0.20449472895885007,
+     "answerer_se": 0.10480421420631858,
+     "answerer_ci": [
+      0.022856961450046488,
+      0.42851312744860837
+     ],
+     "critic": -0.05573593073593064,
+     "critic_se": 0.056051005266881136,
+     "critic_ci": [
+      -0.1680400165931475,
+      0.048227196161141205
+     ],
+     "z_answerer": 1.9512071199377516,
+     "z_critic": -0.9943787889360717,
+     "fitness": 0.95682833100168,
+     "role": "answerer",
+     "n_labels": 86,
+     "n_reactions": 32,
+     "swarm_err_oof": 1.429495105470776,
+     "swarm_auroc_oof": 0.6390692640692641
+    },
+    "2": {
+     "answerer": -0.0036403303259898803,
+     "answerer_se": 0.01891602114759612,
+     "answerer_ci": [
+      -0.04187546372864331,
+      0.03236356307379616
+     ],
+     "critic": -0.19777069823643467,
+     "critic_se": 0.05418555755896806,
+     "critic_ci": [
+      -0.2970857896800281,
+      -0.07572823401329506
+     ],
+     "z_answerer": -0.1924469367836639,
+     "z_critic": -3.649878438940273,
+     "fitness": -3.842325375723937,
+     "role": "answerer",
+     "n_labels": 122,
+     "n_reactions": 42,
+     "swarm_err_oof": 1.6697421322830017,
+     "swarm_auroc_oof": 0.6249663707290826
+    }
+   },
+   "role": "answerer",
+   "ckpt": null
+  },
+  {
+   "id": "g1_aimnet2_flagged",
+   "parent": "aimnet2",
+   "family": "aimnet2",
+   "kind": "offspring",
+   "generation": 1,
+   "hyperparams": {
+    "lr": 0.0001,
+    "energy_weight": 1.0,
+    "force_weight": 1.0,
+    "steps": 200,
+    "reactions_per_batch": 4,
+    "niche": "flagged"
+   },
+   "n_train_labels": 45,
+   "gate": {
+    "passed": true,
+    "checks": [
+     {
+      "name": "holdout_force_rmse_not_worse",
+      "value": 0.3670209461834588,
+      "limit": 0.60063813418558,
+      "passed": true
+     },
+     {
+      "name": "holdout_rel_energy_mae_not_worse",
+      "value": 0.11082018053869737,
+      "limit": 0.12528650878187667,
+      "passed": true
+     }
+    ],
+    "scope": "select labels in niche flagged",
+    "n_holdout": 30,
+    "n_holdout_reactions": 4,
+    "holdout_components_disjoint": true,
+    "clone_check": {
+     "is_clone": false,
+     "closest": "aimnet2",
+     "per_member": {
+      "mace_mpa0": {
+       "corr": -0.7495218788414277,
+       "median_force_diff": 0.6039168508178563
+      },
+      "aimnet2": {
+       "corr": 0.8223119014570192,
+       "median_force_diff": 0.20975782854522948
+      },
+      "orb": {
+       "corr": -0.30939805895904826,
+       "median_force_diff": 0.45921449700708405
+      }
+     },
+     "rule": "corr of deviations from population-mean force > 0.95 or median per-frame force RMS diff < 0.02 eV/\u00c5"
+    }
+   },
+   "status": "alive",
+   "born": 1,
+   "died": null,
+   "death_reason": null,
+   "fitness_per_generation": {
+    "1": {
+     "answerer": 0.2636480292369217,
+     "answerer_se": 0.04015064185550935,
+     "answerer_ci": [
+      0.1741847987366278,
+      0.3320446222040156
+     ],
+     "critic": -0.06707108680792884,
+     "critic_se": 0.04880109421757723,
+     "critic_ci": [
+      -0.17395282680337032,
+      0.013705312253685029
+     ],
+     "z_answerer": 6.566471096171149,
+     "z_critic": -1.3743766996062785,
+     "fitness": 5.192094396564871,
+     "role": "answerer",
+     "n_labels": 86,
+     "n_reactions": 32,
+     "swarm_err_oof": 1.429495105470776,
+     "swarm_auroc_oof": 0.6390692640692641
+    },
+    "2": {
+     "answerer": 0.24171707627584033,
+     "answerer_se": 0.05358623274417553,
+     "answerer_ci": [
+      0.11465533754749438,
+      0.3355328742468594
+     ],
+     "critic": -0.005625259862548027,
+     "critic_se": 0.043779671163728044,
+     "critic_ci": [
+      -0.08097470524625561,
+      0.09014468808229131
+     ],
+     "z_answerer": 4.510805553915588,
+     "z_critic": -0.12849022646859481,
+     "fitness": 4.382315327446992,
+     "role": "answerer",
+     "n_labels": 122,
+     "n_reactions": 42,
+     "swarm_err_oof": 1.6697421322830017,
+     "swarm_auroc_oof": 0.6249663707290826
+    },
+    "3": {
+     "answerer": 0.31224858319051824,
+     "answerer_se": 0.06105308563342036,
+     "answerer_ci": [
+      0.1937835065709942,
+      0.43353021099485706
+     ],
+     "critic": -0.07893171066847082,
+     "critic_se": 0.051360247879965966,
+     "critic_ci": [
+      -0.18242942794957218,
+      0.018891646565969776
+     ],
+     "z_answerer": 5.114378412670987,
+     "z_critic": -1.5368249556143523,
+     "fitness": 3.5775534570566343,
+     "role": "answerer",
+     "n_labels": 162,
+     "n_reactions": 50,
+     "swarm_err_oof": 1.6055523475433389,
+     "swarm_auroc_oof": 0.6714506172839506
+    }
+   },
+   "role": "answerer",
+   "ckpt": "results/evolution_c/cache/aimnet2_fe4f01c8e14b9e2e.pt"
+  },
+  {
+   "id": "g1_orb_flagged",
+   "parent": "orb",
+   "family": "orb",
+   "kind": "offspring",
+   "generation": 1,
+   "hyperparams": {
+    "lr": 0.0001,
+    "energy_weight": 1.0,
+    "force_weight": 1.0,
+    "steps": 200,
+    "reactions_per_batch": 4,
+    "niche": "flagged"
+   },
+   "n_train_labels": 45,
+   "gate": {
+    "passed": false,
+    "checks": [
+     {
+      "name": "holdout_force_rmse_not_worse",
+      "value": 0.45908755071531254,
+      "limit": 0.9658009748466785,
+      "passed": true
+     },
+     {
+      "name": "holdout_rel_energy_mae_not_worse",
+      "value": 0.25951681821819267,
+      "limit": 0.17563960395000322,
+      "passed": false
+     }
+    ],
+    "scope": "select labels in niche flagged",
+    "n_holdout": 30,
+    "n_holdout_reactions": 4,
+    "holdout_components_disjoint": true,
+    "clone_check": {
+     "is_clone": false,
+     "closest": "aimnet2",
+     "per_member": {
+      "mace_mpa0": {
+       "corr": -0.5703712001638823,
+       "median_force_diff": 0.6508211494547828
+      },
+      "aimnet2": {
+       "corr": 0.40959910814257844,
+       "median_force_diff": 0.3242194119987347
+      },
+      "orb": {
+       "corr": 0.033040626449700274,
+       "median_force_diff": 0.41876376953523026
+      },
+      "g1_aimnet2_flagged": {
+       "corr": 0.3533217824890157,
+       "median_force_diff": 0.3017226728351518
+      }
+     },
+     "rule": "corr of deviations from population-mean force > 0.95 or median per-frame force RMS diff < 0.02 eV/\u00c5"
+    }
+   },
+   "status": "stillborn",
+   "born": 1,
+   "died": null,
+   "death_reason": null,
+   "fitness_per_generation": {},
+   "role": null,
+   "ckpt": "results/evolution_c/cache/orb_dc07b50f844f3002.pt"
+  },
+  {
+   "id": "g1_mace_flagged",
+   "parent": "mace_mpa0",
+   "family": "mace",
+   "kind": "offspring",
+   "generation": 1,
+   "hyperparams": {
+    "lr": 0.001,
+    "energy_weight": 1.0,
+    "force_weight": 1.0,
+    "steps": 200,
+    "reactions_per_batch": 4,
+    "niche": "flagged"
+   },
+   "n_train_labels": 45,
+   "gate": {
+    "passed": false,
+    "checks": [
+     {
+      "name": "holdout_force_rmse_not_worse",
+      "value": 0.9062894970455673,
+      "limit": 1.1508323660560433,
+      "passed": true
+     },
+     {
+      "name": "holdout_rel_energy_mae_not_worse",
+      "value": 0.3872418953572075,
+      "limit": 0.28116031097494365,
+      "passed": false
+     }
+    ],
+    "scope": "select labels in niche flagged",
+    "n_holdout": 30,
+    "n_holdout_reactions": 4,
+    "holdout_components_disjoint": true,
+    "clone_check": {
+     "is_clone": false,
+     "closest": "mace_mpa0",
+     "per_member": {
+      "mace_mpa0": {
+       "corr": 0.6495473471200753,
+       "median_force_diff": 0.31821990858815186
+      },
+      "aimnet2": {
+       "corr": -0.39859480662684976,
+       "median_force_diff": 0.6086834591826706
+      },
+      "orb": {
+       "corr": -0.09945201764579467,
+       "median_force_diff": 0.5102609880191873
+      },
+      "g1_aimnet2_flagged": {
+       "corr": -0.4296488438706394,
+       "median_force_diff": 0.5205360224810138
+      }
+     },
+     "rule": "corr of deviations from population-mean force > 0.95 or median per-frame force RMS diff < 0.02 eV/\u00c5"
+    }
+   },
+   "status": "stillborn",
+   "born": 1,
+   "died": null,
+   "death_reason": null,
+   "fitness_per_generation": {},
+   "role": null,
+   "ckpt": "results/evolution_c/cache/mace_0ed9fec13046a888.pt"
+  },
+  {
+   "id": "g2_aimnet2_flagged",
+   "parent": "g1_aimnet2_flagged",
+   "family": "aimnet2",
+   "kind": "offspring",
+   "generation": 2,
+   "hyperparams": {
+    "lr": 5e-05,
+    "energy_weight": 2.0,
+    "force_weight": 1.0,
+    "steps": 200,
+    "reactions_per_batch": 4,
+    "niche": "flagged"
+   },
+   "n_train_labels": 91,
+   "gate": {
+    "passed": false,
+    "checks": [
+     {
+      "name": "holdout_force_rmse_not_worse",
+      "value": 0.33555320980275133,
+      "limit": 0.3571338443866089,
+      "passed": true
+     },
+     {
+      "name": "holdout_rel_energy_mae_not_worse",
+      "value": 0.1364048685822733,
+      "limit": 0.1134466796035061,
+      "passed": false
+     }
+    ],
+    "scope": "select labels in niche flagged",
+    "n_holdout": 60,
+    "n_holdout_reactions": 13,
+    "holdout_components_disjoint": true,
+    "clone_check": {
+     "is_clone": false,
+     "closest": "g1_aimnet2_flagged",
+     "per_member": {
+      "aimnet2": {
+       "corr": 0.3124327066504456,
+       "median_force_diff": 0.2224423940691969
+      },
+      "orb": {
+       "corr": -0.5945080123382829,
+       "median_force_diff": 0.4436046204074364
+      },
+      "g1_aimnet2_flagged": {
+       "corr": 0.8298129414442326,
+       "median_force_diff": 0.0596276971195727
+      }
+     },
+     "rule": "corr of deviations from population-mean force > 0.95 or median per-frame force RMS diff < 0.02 eV/\u00c5"
+    }
+   },
+   "status": "stillborn",
+   "born": 2,
+   "died": null,
+   "death_reason": null,
+   "fitness_per_generation": {},
+   "role": null,
+   "ckpt": "results/evolution_c/cache/aimnet2_ef3a06283c63b8d0.pt"
+  },
+  {
+   "id": "g2_orb_flagged",
+   "parent": "orb",
+   "family": "orb",
+   "kind": "offspring",
+   "generation": 2,
+   "hyperparams": {
+    "lr": 0.0001,
+    "energy_weight": 1.0,
+    "force_weight": 1.0,
+    "steps": 200,
+    "reactions_per_batch": 4,
+    "niche": "flagged"
+   },
+   "n_train_labels": 91,
+   "gate": {
+    "passed": true,
+    "checks": [
+     {
+      "name": "holdout_force_rmse_not_worse",
+      "value": 0.37276911390486733,
+      "limit": 0.8016624983137537,
+      "passed": true
+     },
+     {
+      "name": "holdout_rel_energy_mae_not_worse",
+      "value": 0.22311856469044264,
+      "limit": 0.2619966912005414,
+      "passed": true
+     }
+    ],
+    "scope": "select labels in niche flagged",
+    "n_holdout": 60,
+    "n_holdout_reactions": 13,
+    "holdout_components_disjoint": true,
+    "clone_check": {
+     "is_clone": false,
+     "closest": "orb",
+     "per_member": {
+      "aimnet2": {
+       "corr": -0.049987914999596025,
+       "median_force_diff": 0.33490725323808457
+      },
+      "orb": {
+       "corr": 0.10557591098183501,
+       "median_force_diff": 0.4123096326920857
+      },
+      "g1_aimnet2_flagged": {
+       "corr": -0.15670368297853493,
+       "median_force_diff": 0.29190244837623847
+      }
+     },
+     "rule": "corr of deviations from population-mean force > 0.95 or median per-frame force RMS diff < 0.02 eV/\u00c5"
+    }
+   },
+   "status": "alive",
+   "born": 2,
+   "died": null,
+   "death_reason": null,
+   "fitness_per_generation": {
+    "2": {
+     "answerer": 0.09920176449667394,
+     "answerer_se": 0.06005772992474031,
+     "answerer_ci": [
+      0.005826827858045264,
+      0.22143268924448262
+     ],
+     "critic": 0.06396419207984505,
+     "critic_se": 0.041730858895987544,
+     "critic_ci": [
+      -0.026854067519354288,
+      0.14562725553381725
+     ],
+     "z_answerer": 1.6517734623167726,
+     "z_critic": 1.5327791895985936,
+     "fitness": 3.184552651915366,
+     "role": "answerer",
+     "n_labels": 122,
+     "n_reactions": 42,
+     "swarm_err_oof": 1.6697421322830017,
+     "swarm_auroc_oof": 0.6249663707290826
+    },
+    "3": {
+     "answerer": 0.29083118867271146,
+     "answerer_se": 0.07978284582958547,
+     "answerer_ci": [
+      0.13604371180932542,
+      0.4432486135421512
+     ],
+     "critic": 0.011055209120685361,
+     "critic_se": 0.059079547159135756,
+     "critic_ci": [
+      -0.11365454917530027,
+      0.11048313605145113
+     ],
+     "z_answerer": 3.6452847181450623,
+     "z_critic": 0.1871241343625607,
+     "fitness": 3.8324088525076228,
+     "role": "answerer",
+     "n_labels": 162,
+     "n_reactions": 50,
+     "swarm_err_oof": 1.6055523475433389,
+     "swarm_auroc_oof": 0.6714506172839506
+    }
+   },
+   "role": "answerer",
+   "ckpt": "results/evolution_c/cache/orb_333c4b161cd34923.pt"
+  },
+  {
+   "id": "g2_mace_flagged",
+   "parent": "mace_mpa0",
+   "family": "mace",
+   "kind": "offspring",
+   "generation": 2,
+   "hyperparams": {
+    "lr": 0.001,
+    "energy_weight": 1.0,
+    "force_weight": 1.0,
+    "steps": 200,
+    "reactions_per_batch": 4,
+    "niche": "flagged"
+   },
+   "n_train_labels": 91,
+   "gate": {
+    "passed": false,
+    "checks": [
+     {
+      "name": "holdout_force_rmse_not_worse",
+      "value": 0.8228374081700465,
+      "limit": 1.035070399832578,
+      "passed": true
+     },
+     {
+      "name": "holdout_rel_energy_mae_not_worse",
+      "value": 0.5204238441029095,
+      "limit": 0.4770717813044939,
+      "passed": false
+     }
+    ],
+    "scope": "select labels in niche flagged",
+    "n_holdout": 60,
+    "n_holdout_reactions": 13,
+    "holdout_components_disjoint": true,
+    "clone_check": {
+     "is_clone": false,
+     "closest": "orb",
+     "per_member": {
+      "aimnet2": {
+       "corr": -0.24477496537225474,
+       "median_force_diff": 0.6038827971498997
+      },
+      "orb": {
+       "corr": 0.3415480575490457,
+       "median_force_diff": 0.5005293298474895
+      },
+      "g1_aimnet2_flagged": {
+       "corr": -0.06826019382256909,
+       "median_force_diff": 0.5179466034828494
+      },
+      "g2_orb_flagged": {
+       "corr": -0.2058171902333118,
+       "median_force_diff": 0.5818968235079277
+      }
+     },
+     "rule": "corr of deviations from population-mean force > 0.95 or median per-frame force RMS diff < 0.02 eV/\u00c5"
+    }
+   },
+   "status": "stillborn",
+   "born": 2,
+   "died": null,
+   "death_reason": null,
+   "fitness_per_generation": {},
+   "role": null,
+   "ckpt": "results/evolution_c/cache/mace_9b110baef6cf92ef.pt"
+  },
+  {
+   "id": "g3_aimnet2_flagged",
+   "parent": "g1_aimnet2_flagged",
+   "family": "aimnet2",
+   "kind": "offspring",
+   "generation": 3,
+   "hyperparams": {
+    "lr": 0.0002,
+    "energy_weight": 0.5,
+    "force_weight": 1.0,
+    "steps": 200,
+    "reactions_per_batch": 4,
+    "niche": "flagged"
+   },
+   "n_train_labels": 138,
+   "gate": {
+    "passed": false,
+    "checks": [
+     {
+      "name": "holdout_force_rmse_not_worse",
+      "value": 0.35109276686605684,
+      "limit": 0.41922622565887746,
+      "passed": true
+     },
+     {
+      "name": "holdout_rel_energy_mae_not_worse",
+      "value": 0.24015661471993105,
+      "limit": 0.18610991827670492,
+      "passed": false
+     }
+    ],
+    "scope": "select labels in niche flagged",
+    "n_holdout": 87,
+    "n_holdout_reactions": 23,
+    "holdout_components_disjoint": true,
+    "clone_check": {
+     "is_clone": false,
+     "closest": "g1_aimnet2_flagged",
+     "per_member": {
+      "aimnet2": {
+       "corr": -0.26478524692268657,
+       "median_force_diff": 0.255130838787614
+      },
+      "g1_aimnet2_flagged": {
+       "corr": 0.6490929286455179,
+       "median_force_diff": 0.09937561424869129
+      },
+      "g2_orb_flagged": {
+       "corr": -0.20291246704657576,
+       "median_force_diff": 0.28140755826755387
+      }
+     },
+     "rule": "corr of deviations from population-mean force > 0.95 or median per-frame force RMS diff < 0.02 eV/\u00c5"
+    }
+   },
+   "status": "stillborn",
+   "born": 3,
+   "died": null,
+   "death_reason": null,
+   "fitness_per_generation": {},
+   "role": null,
+   "ckpt": "results/evolution_c/cache/aimnet2_c5fbd6c504781aa2.pt"
+  },
+  {
+   "id": "g3_orb_flagged",
+   "parent": "g2_orb_flagged",
+   "family": "orb",
+   "kind": "offspring",
+   "generation": 3,
+   "hyperparams": {
+    "lr": 0.0002,
+    "energy_weight": 0.5,
+    "force_weight": 1.0,
+    "steps": 200,
+    "reactions_per_batch": 4,
+    "niche": "flagged"
+   },
+   "n_train_labels": 138,
+   "gate": {
+    "passed": false,
+    "checks": [
+     {
+      "name": "holdout_force_rmse_not_worse",
+      "value": 0.4190107896782856,
+      "limit": 0.41097681628892213,
+      "passed": false
+     },
+     {
+      "name": "holdout_rel_energy_mae_not_worse",
+      "value": 0.3202981151437483,
+      "limit": 0.2590994818996708,
+      "passed": false
+     }
+    ],
+    "scope": "select labels in niche flagged",
+    "n_holdout": 87,
+    "n_holdout_reactions": 23,
+    "holdout_components_disjoint": true,
+    "clone_check": {
+     "is_clone": false,
+     "closest": "g2_orb_flagged",
+     "per_member": {
+      "aimnet2": {
+       "corr": -0.6744417838621428,
+       "median_force_diff": 0.3359693552634331
+      },
+      "g1_aimnet2_flagged": {
+       "corr": -0.34549998327975173,
+       "median_force_diff": 0.2690027827736278
+      },
+      "g2_orb_flagged": {
+       "corr": 0.781549078933546,
+       "median_force_diff": 0.14376796697874805
+      }
+     },
+     "rule": "corr of deviations from population-mean force > 0.95 or median per-frame force RMS diff < 0.02 eV/\u00c5"
+    }
+   },
+   "status": "stillborn",
+   "born": 3,
+   "died": null,
+   "death_reason": null,
+   "fitness_per_generation": {},
+   "role": null,
+   "ckpt": "results/evolution_c/cache/orb_9685a2250fb66fb9.pt"
+  },
+  {
+   "id": "g3_mace_flagged",
+   "parent": "mace_mpa0",
+   "family": "mace",
+   "kind": "offspring",
+   "generation": 3,
+   "hyperparams": {
+    "lr": 0.001,
+    "energy_weight": 1.0,
+    "force_weight": 1.0,
+    "steps": 200,
+    "reactions_per_batch": 4,
+    "niche": "flagged"
+   },
+   "n_train_labels": 138,
+   "gate": {
+    "passed": true,
+    "checks": [
+     {
+      "name": "holdout_force_rmse_not_worse",
+      "value": 0.7925038529665482,
+      "limit": 0.9392582147587613,
+      "passed": true
+     },
+     {
+      "name": "holdout_rel_energy_mae_not_worse",
+      "value": 0.5689018024647873,
+      "limit": 0.5841014728822751,
+      "passed": true
+     }
+    ],
+    "scope": "select labels in niche flagged",
+    "n_holdout": 87,
+    "n_holdout_reactions": 23,
+    "holdout_components_disjoint": true,
+    "clone_check": {
+     "is_clone": false,
+     "closest": "g1_aimnet2_flagged",
+     "per_member": {
+      "aimnet2": {
+       "corr": -0.24682079719011493,
+       "median_force_diff": 0.6165298977346352
+      },
+      "g1_aimnet2_flagged": {
+       "corr": 0.1886822443677346,
+       "median_force_diff": 0.5305393465400492
+      },
+      "g2_orb_flagged": {
+       "corr": 0.08132117641239353,
+       "median_force_diff": 0.5978963032150707
+      }
+     },
+     "rule": "corr of deviations from population-mean force > 0.95 or median per-frame force RMS diff < 0.02 eV/\u00c5"
+    }
+   },
+   "status": "alive",
+   "born": 3,
+   "died": null,
+   "death_reason": null,
+   "fitness_per_generation": {
+    "3": {
+     "answerer": 0.0270200621767056,
+     "answerer_se": 0.014392200337921005,
+     "answerer_ci": [
+      0.0014923334596903383,
+      0.05442204018285739
+     ],
+     "critic": -0.16796878684133587,
+     "critic_se": 0.046004755144903035,
+     "critic_ci": [
+      -0.2574096005087342,
+      -0.07904281766390864
+     ],
+     "z_answerer": 1.8774100931260886,
+     "z_critic": -3.651117940140705,
+     "fitness": -1.7737078470146164,
+     "role": "answerer",
+     "n_labels": 162,
+     "n_reactions": 50,
+     "swarm_err_oof": 1.6055523475433389,
+     "swarm_auroc_oof": 0.6714506172839506
+    }
+   },
+   "role": "answerer",
+   "ckpt": "results/evolution_c/cache/mace_6f7a28e0b1287d10.pt"
+  }
+ ]
+}

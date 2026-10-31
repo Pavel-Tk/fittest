@@ -1,0 +1,22 @@
+/content/fittest/scripts/evolve_c_offspring.py:220: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:836.)
+  "rel_e_mse": float(el / len(lab_pos))})
+Warp 1.18.0 initialized:
+   CUDA Toolkit 13.4, Driver 13.0
+   Devices:
+     "cpu"      : "x86_64"
+     "cuda:0"   : "NVIDIA L4" (22 GiB, sm_89, mempool enabled)
+   Kernel cache:
+     /root/.cache/warp/1.18.0
+{"step": 0, "loss": 0.5000795370057514, "force_mse": 0.35683968663215637, "rel_e_mse": 0.14323985037359493}
+{"step": 20, "loss": 0.1366549752835656, "force_mse": 0.0964677631855011, "rel_e_mse": 0.0401872120980645}
+{"step": 40, "loss": 0.1745049658171684, "force_mse": 0.10155253112316132, "rel_e_mse": 0.07295243469400707}
+{"step": 60, "loss": 0.05462250975612618, "force_mse": 0.050474658608436584, "rel_e_mse": 0.004147851147689595}
+{"step": 80, "loss": 0.05825675440673142, "force_mse": 0.05425827577710152, "rel_e_mse": 0.0039984786296299}
+{"step": 100, "loss": 0.06861123067515029, "force_mse": 0.04918355494737625, "rel_e_mse": 0.019427675727774044}
+{"step": 120, "loss": 0.03512822715513031, "force_mse": 0.029558176174759865, "rel_e_mse": 0.005570050980370446}
+{"step": 140, "loss": 0.03129277704018189, "force_mse": 0.02473795972764492, "rel_e_mse": 0.006554817312536973}
+{"step": 160, "loss": 0.024208566576441885, "force_mse": 0.023303691297769547, "rel_e_mse": 0.0009048752786723373}
+{"step": 180, "loss": 0.027774588435261646, "force_mse": 0.02660851553082466, "rel_e_mse": 0.0011660729044369838}
+{"step": 199, "loss": 0.0568724816137295, "force_mse": 0.03329182043671608, "rel_e_mse": 0.02358066117701342}
+DONE {"id": "g2_aimnet2_flagged", "ckpt": "results/evolution_c/cache/aimnet2_12af3c7830c624b8.pt", "n_train": 180, "n_train_reactions": 57, "n_head_params": 862665, "train_seconds": 20.768634557724, "predict_seconds": 0.37480807304382324, "wall_seconds": 21.14344334602356, "toolkit": {}}

@@ -3,9 +3,9 @@
 **A swarm of machine-learned interatomic potentials (MLIPs) that decides which model to trust on a
 structure, where, and when to stop trusting any of them and call DFT.**
 
-<!-- TODO(evolution): headline decided by results/evolution/SUMMARY.md.
-     Keep "Survival of the fittest, in materials science" only if the swarm improved across >= 3
-     generations at a fixed DFT budget with paired CIs. Otherwise keep the line above. -->
+*Survival of the fittest, in materials science.* The models compete for the right to answer; the evidence
+for whether *evolving* the population pays off is reported as it came out, failures included
+([`results/evolution/SUMMARY.md`](results/evolution/SUMMARY.md)).
 
 Built at ScienceClaw 2026 (MIT Media Lab) for the NVIDIA ALCHEMI challenge, on
 [NVIDIA ALCHEMI Toolkit](https://github.com/NVIDIA/nvalchemi-toolkit) 0.3.0-rc.
@@ -32,8 +32,12 @@ Formerly **TrustSwarm**; the old GitHub URL redirects here.
 * **Negative result.** The swarm ranks its own errors **worse** than the simple baselines:
   AUROC **0.73** vs 0.80–0.87. Its self-repair (LoRA fine-tune of MACE) halved force error on held-out
   labels but made relative energies worse, so its own gate refused to ship it.
-* **Evolution.** TODO(evolution): one line from `results/evolution/SUMMARY.md` (generations, fixed DFT
-  budget, paired CI vs the static control; improved / did not improve).
+* **Evolution (pre-registered, negative on the primary metric).** Letting the swarm breed, gate and prune its
+  own fine-tuned models did **not** reliably beat the static swarm on served force error at the same DFT
+  budget: the rule (paired CI, every seed, 3 breeding generations) fails in all three runs (A, B, C); it holds
+  in 3 of 10 single seed runs. On the secondary metric, reaction-relative energy error, the evolved swarm is
+  significantly better than static in 9 of 10. Selection is the weak link: it prunes base models in favour of
+  niche specialists, and forces get worse. [`results/evolution/SUMMARY.md`](results/evolution/SUMMARY.md)
 * **Use it now.** Add the hosted MCP server to Claude Code:
   `claude mcp add --transport http fittest https://fittest-mcp.westus2.cloudapp.azure.com/mcp`,
   then ask *"Use fittest to check whether I can trust an ML potential on this water molecule: O 0 0 0,
@@ -337,7 +341,9 @@ equal (aimnet2 0.89, mace_mpa0 0.89, orb 0.89, skeptic 0.86).
 
 ### 2.4 The evolutionary layer
 
-> TODO(evolution): status and outcome from `results/evolution/SUMMARY.md`.
+> **Status: done; the pre-registered claim does not hold.** Three runs (A: MACE LoRA offspring; B: AIMNet2
+> offspring; C: niche specialists of all three families at budgets 200/400/800), two seeds each. Full write-up,
+> controls and exploratory follow-ups: [`results/evolution/SUMMARY.md`](results/evolution/SUMMARY.md).
 
 The static swarm above has a fixed population. The evolutionary loop (`fittest/evolution.py`,
 `scripts/evolve.py`) asks whether a population that breeds, selects and prunes its own members
@@ -394,8 +400,26 @@ flowchart LR
   run's own generation 0 and the static swarm at the same budget, over ≥ 3 generations, with offspring in
   the final population and no significant regression vs static in relative-energy MAE or ECE.
 
-TODO(evolution): results table (generation, population, labels used, served F-RMSE eval, AUROC, paired CI vs
-static control), family-tree figure, verdict sentence.
+**Results** (final generation minus static at the same budget, served on eval, paired 95% CI; * = CI excludes 0).
+Run C used the same engine with niche specialists, a niche gate and no ALCHEMI acceptance check
+([`results/evolution_c/PREREG.md`](results/evolution_c/PREREG.md)).
+
+| run | budget | seed | force RMSE Δ (eV/Å) | rel-E MAE Δ (eV) | rule |
+|---|---|---|---|---|---|
+| A MACE LoRA | 200 | 0 | +0.010 * (worse) | −0.007 * | no |
+| | | 1 | −0.011 * | +0.056 * (worse) | no (rel-E, ECE regress) |
+| B AIMNet2 | 200 | 0 | −0.001 | −0.027 * | no |
+| | | 1 | −0.024 * | −0.029 * | yes |
+| C specialists | 200 | 0 / 1 | +0.034 * / −0.027 * | −0.011 * / −0.008 * | no / yes |
+| | 400 | 0 / 1 | +0.019 * / −0.016 * | −0.025 * / −0.018 * | no / no |
+| | 800 | 0 / 1 | −0.017 * / +0.011 * | −0.044 * / −0.028 * | yes / no |
+
+**Verdict: the flagship claim does not hold under the pre-registered rule** (it needs every seed). Most children
+fail the gate on relative energy (run A: 15 of 18 stillborn), and selection, scored on labels concentrated in the
+high-σ niche, prunes base models in favour of niche specialists that are worse elsewhere. Fine-tuning *without*
+selection, with the base models kept, improved forces and relative energies more consistently in the
+exploratory runs. Family trees: `results/fig/fig8_family_tree_run{A,B}_s{0,1}.png`; per-generation curves:
+`results/fig/fig7_evolution_run{A,B}_s{0,1}.png`; budget axis: `results/evolution_c/fig9_budget.png`.
 
 ### 2.5 How the ALCHEMI Toolkit is used
 
@@ -582,7 +606,11 @@ Everything below is also in [`results/RESULTS.md`](results/RESULTS.md) ("Failure
   oracle queue.
 * **Narrow calibration domain.** Trust numbers are learned on C/H/N/O reaction chemistry with ≤ 7 heavy
   atoms. On water, metals, charged or periodic systems they extrapolate.
-* **Evolution.** TODO(evolution): failures/limits reported in `results/evolution/SUMMARY.md`.
+* **Evolution.** The pre-registered rule needs a win in *every* seed; with two seeds per condition it has
+  little power, and the wins we saw were seed-dependent. Most children fail the gate on reaction-relative
+  energy. Run C's first GPU attempt is invalid (OOM children counted as stillborn) and is not quoted; its CPU
+  rerun bred AIMNet2 specialists only. Extra seeds and design variants are exploratory, run on the same eval
+  split, and labelled so. Details: [`results/evolution/SUMMARY.md`](results/evolution/SUMMARY.md).
 * The synthetic smoke test (`scripts/make_synthetic.py`) shows the pipeline runs; it is not evidence.
 
 ---
@@ -628,7 +656,10 @@ bash scripts/setup_gpu.sh ..            # toolkit 0.3.0-rc (cu13) + core env, Or
 | 7 ablation again | step 5 (arm D replays the fine-tune; B′ uses the seeds) | `results/ablation.*` | ~12 s |
 | 8 report + figures | `python scripts/write_results.py && python scripts/make_figures.py` | `results/RESULTS.md`, `results/fig/*` | seconds |
 | 9 service demo | `python scripts/demo_service.py --snapshot results/trust_snapshot.json` | `results/service_demo.json` | ~1 min |
-| 10 evolution | `python scripts/evolve.py --frames data/frames.pkl --preds data/preds_base --out results/evolution --generations 4 --labels-per-generation 50 --seeds 0 --python <core env python>` TODO(evolution): confirm flags used for the reported run | `results/evolution/` (`SUMMARY.md`, `family_tree.json`, `generations.json`, `blackboard.jsonl`) | TODO |
+| 10 evolution, run A (MACE LoRA offspring) | `python scripts/evolve.py --frames data/frames.pkl --preds data/preds --out results/evolution --seeds 0,1 --threads 2 --parallel 3 --python <core env python>` then `python scripts/write_evolution_summary.py --evo results/evolution` | `results/evolution/` (`summary_tables.md`, `verdict.json`, `family_tree.json`, `generations.json`) | ~85 min per seed (CPU) |
+| 11 evolution, run B (AIMNet2 offspring + newest control) | `python scripts/evolve.py --frames data/frames.pkl --preds data/preds --out results/evolution_aimnet --family aimnet2 --seeds 0,1 --controls newest --control-seeds 0,1 --python <core env python>` then `write_evolution_summary.py --evo results/evolution_aimnet` | `results/evolution_aimnet/` | ~4 min per seed run (CPU) |
+| 12 evolution, run C (niche specialists) | `python scripts/evolve_c.py run --budget {200,400,800} --arms static,evolved[,noselect] --seeds 0,1 --out results/evolution_c --core-python <core> --orb-python <orb>` (CPU: add `--device cpu --families aimnet2`), then `evolve_c.py summarize --out results/evolution_c` | `results/evolution_c/` (`summary.json`, `summary_table.md`, `fig9_budget.png`) | ~40 min (L4 GPU), ~12 min AIMNet2-only (CPU) |
+| 13 evolution figures | `python scripts/make_evolution_figures.py --evo results/evolution --seed 0 --run-label A` | `results/fig/fig7_evolution*.png`, `fig8_family_tree*.png` | seconds |
 
 The arm-D label set is md5-pinned (`ad5f14229a51679267d4fd9456feb589`, `docs/STATUS_core.md`); the v3 and v4
 reporting changes did not alter it. Environment variables (`FITTEST_T1X`, `FITTEST_CORE_PYTHON`,
