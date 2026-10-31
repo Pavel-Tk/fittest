@@ -26,7 +26,8 @@ semicolons.
 A plain `uvx --from git+…` install has **no model agents**. It only serves `--fake-models`, which
 are CPU stand-ins whose verdicts mean nothing, or it reports that no models are installed. For real
 verdicts, install into an environment that has the models and point your client at that
-environment's `fittest-mcp`:
+environment's `fittest-mcp`. This install is documented but has **not been tested end to end**
+(fresh environment through to a verdict); the hosted server is the tested path.
 
 ```bash
 uv venv fittest-env --python 3.12
@@ -179,7 +180,23 @@ The stack runs on an Azure VM (Ubuntu 24.04, 8 vCPU, 32 GB, CPU only):
 
 ### Round 2 (2026-10-31 afternoon): after the adversarial review (16 defects fixed)
 
-Filled in after redeploy. See the section below.
+Live run of `deploy/verify_mcp.py` against the hosted server after the redeploy, every call marked
+internal: **12/12 checks pass.**
+
+- `serverInfo` reports version 0.1.0. The example prompt, used verbatim, gives water `trust`, trust
+  score 0.857 (90% CI 0.61–0.99, 4 labels behind it), served by AIMNet2, σ_F = 0.378 eV/Å.
+- On the 12 held-out Transition1x frames of `results/service_demo.xyz`, σ_F ≥ τ agrees 12/12 with
+  the GPU run (`results/service_demo.json`), max |Δσ_F| = 0.0005 eV/Å, and the verdict rule holds.
+  7 of the 12 are trusted and none of the trusted frames is DFT-wrong; the old τ-only
+  rule trusted 2 DFT-wrong frames.
+- Fe gets `send_to_dft` (unsupported element). A single atom, `Hello` and a periodic input each get
+  their own error entry, and the water in the same batch is still scored. All agents stay active
+  afterwards. An unknown tool gives a clean error. The per-call structure limit holds (checked with 21 structures).
+- The reviewer's scripts t2a/b/c, re-run: every input gives a clean per-structure or call error. In
+  a scan of 60 acetaldehyde frames, 0 verdicts contradict the trust score, and the highest score is
+  0.667.
+- Known issue outside the server: the reviewer's `t3_scan.py` crashes on the new per-structure error
+  entries, which have no `sigma_F`.
 
 ### Round 1 (2026-10-31 morning), superseded
 
