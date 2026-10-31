@@ -2,7 +2,9 @@
 # Port and interpreter come from /etc/fittest-mcp/model-%i.env (written by deploy.sh).
 # Localhost only, random authkey from common.env. Runs as azureuser because the model
 # checkpoints are cached in ~azureuser/.cache, but sandboxed: no privilege escalation (sudo),
-# read-only filesystem except that cache.
+# read-only filesystem except the four caches the models read/write at load time:
+# mace (MACE-MPA-0 weights), aimnet (AIMNet2 weights), warp (AIMNet2's NVIDIA Warp kernel cache)
+# and cached_path (Orb weights + lock file). remote_setup.sh creates them if missing.
 [Unit]
 Description=Fittest model agent %i (CPU, warm)
 After=network.target
@@ -25,7 +27,7 @@ Nice=2
 NoNewPrivileges=yes
 ProtectSystem=strict
 ProtectHome=read-only
-ReadWritePaths=/home/azureuser/.cache
+ReadWritePaths=/home/azureuser/.cache/mace /home/azureuser/.cache/aimnet /home/azureuser/.cache/warp /home/azureuser/.cache/cached_path
 PrivateTmp=yes
 PrivateDevices=yes
 ProtectKernelTunables=yes

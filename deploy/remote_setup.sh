@@ -49,6 +49,8 @@ for m in mace_mpa0 aimnet2 orb; do
 done
 
 echo "== systemd"
+# model agents may write only these caches (ReadWritePaths in fittest-model@.service); must exist
+mkdir -p "$HOME/.cache/mace" "$HOME/.cache/aimnet" "$HOME/.cache/warp" "$HOME/.cache/cached_path"
 sudo cp "$DEP/fittest-mcp.service" "$DEP/fittest-model@.service" "$DEP/fittest-mcp.target" /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable -q fittest-mcp.target fittest-mcp.service \

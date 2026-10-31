@@ -169,9 +169,12 @@ The stack runs on an Azure VM (Ubuntu 24.04, 8 vCPU, 32 GB, CPU only):
   `origin/master` on deploy). The experiments' `~/fittest` is never written; its `results/` dir is
   read for the family trees.
 - **`fittest-model@{mace_mpa0,aimnet2,orb}.service`** are the warm CPU model agents on localhost
-  ports 7300–7302 (`OMP_NUM_THREADS=2`). They are sandboxed the same way (`NoNewPrivileges`, so no
-  sudo; read-only filesystem except the model cache) and use a random socket authkey from
-  `/etc/fittest-mcp/common.env`.
+  ports 7300–7302 (`OMP_NUM_THREADS=2`). They run as the VM's admin user `azureuser` (not the
+  `fittest-mcp` user), because the model weights are cached in `~azureuser/.cache`. They are
+  sandboxed (`NoNewPrivileges`, so no sudo even as azureuser; `ProtectSystem=strict`,
+  `ProtectHome=read-only`; writable only `~/.cache/{mace,aimnet,warp,cached_path}`, the weight and
+  kernel caches the three models use) and use a random socket authkey from
+  `/etc/fittest-mcp/common.env`. They are reachable only from localhost, not from the internet.
 - The model-agent protocol pickles over a socket, so the authkey matters. There is no default key
   any more: `spawn()` gives each server its own random key.
 - `Restart=always` on every unit. The MCP server keeps exactly one link per model agent: it closes
