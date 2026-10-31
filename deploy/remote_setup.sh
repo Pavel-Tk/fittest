@@ -58,7 +58,7 @@ if ! command -v caddy >/dev/null; then
 fi
 caddy version
 sudo mkdir -p /var/log/caddy && sudo chown caddy:caddy /var/log/caddy || true
-caddy validate --adapter caddyfile --config "$DEP/Caddyfile" >/dev/null
+sudo -u caddy caddy validate --adapter caddyfile --config "$DEP/Caddyfile" >/dev/null 2>&1 || { sudo -u caddy caddy validate --adapter caddyfile --config "$DEP/Caddyfile"; exit 1; }
 sudo cp "$DEP/Caddyfile" /etc/caddy/Caddyfile
 sudo systemctl enable -q caddy && sudo systemctl reload-or-restart caddy
 

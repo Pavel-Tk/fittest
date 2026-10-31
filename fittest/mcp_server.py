@@ -907,6 +907,14 @@ def main(argv: Sequence[str] | None = None) -> None:
                   file=sys.stderr)
         start_local_models(engine, have, a.device, a.orb_python, str(data_dir / "logs"))
     atexit.register(engine.close)
+    # Import everything the tools need on the main thread now. On Windows, a worker thread that
+    # imports sklearn/joblib blocks while the stdio transport sits in a blocking stdin read.
+    try:
+        import fittest.agents.calibrator  # noqa: F401
+    except ImportError:
+        pass
+    if engine.mode == "fake":
+        engine.evaluate([WATER])
 
     server = build_server(engine, ulog, transport=a.transport, host=a.host, port=a.port,
                           public_host=a.public_host)
