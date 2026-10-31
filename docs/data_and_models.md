@@ -285,7 +285,7 @@ def committee_spread(F_models):  # list of (N,3)
     S = np.stack(F_models); return np.linalg.norm(S - S.mean(0), axis=-1).mean()
 ```
 
-**Thresholds for the binary "wrong" label.** Report both an absolute label and a threshold-free score.
+**Thresholds for the binary "wrong" label (pre-design research, not what was used).** These were candidate thresholds written before the design was fixed. The project's actual definition is in `docs/DESIGN.md` §2 and README §3.2: wrong ⇔ force RMSE > 0.25 eV/Å or |ΔE_rel| > 0.25 eV. Report both an absolute label and a threshold-free score.
 
 - **Barrier / relative energy:** `> 1 kcal/mol = 0.0434 eV` is "chemical accuracy". Use **> 2 kcal/mol (0.087 eV)** for "wrong", because the level-of-theory gap alone is often ≥1 kcal/mol between hybrids and much larger for PBE.
 - **Forces:** **per-structure F_MAE > 0.1 eV/Å** (≈2.3 kcal/mol/Å). This is about 2× the in-domain error of a T1x-trained PaiNN (F MAE 0.058 eV/Å) and below an ANI1x-trained PaiNN on T1x (0.179 eV/Å) (Schreiner et al., Sci Data 2022). A stricter reference is OC20's EFwT, which requires energy within 0.02 eV and max force error within 0.03 eV/Å (Chanussot et al., ACS Catal 2021).
@@ -301,7 +301,7 @@ def committee_spread(F_models):  # list of (N,3)
 - AIMNet2-rxn (HF card): about 2 kcal/mol RMSD on diverse barrier heights and about 3 kcal/mol on Grambow. A separate study found a barrier MAE of 2.9 kcal/mol (arXiv:2507.10400).
 - Pretrained MACE-OFF23 found 51/960 intended TSs on T1x, and Orb-v2 about 2% (Zhao et al. 2025).
 - On 29 organic TS searches, OMol25-trained models reach 86–97% success, with MACE-OMol25 at 96.6% (arXiv:2604.00405).
-- **[unverified]:** direct force MAE of MACE-MPA-0, Orb-v3, or AIMNet2 on the T1x test split has not been published as far as we found. Our numbers will be new.
+- **[unverified]:** direct force MAE of MACE-MPA-0, Orb-v3, or AIMNet2 on the T1x test split has not been published as far as we found.
 
 ---
 
