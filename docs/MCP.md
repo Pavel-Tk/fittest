@@ -4,7 +4,7 @@ Ask the Fittest swarm, from any MCP client, whether an ML interatomic potential 
 on your molecule or whether it needs DFT.
 
 - **Hosted endpoint (streamable HTTP):** `https://fittest-mcp.westus2.cloudapp.azure.com/mcp`
-- Landing page: <https://fittest-mcp.westus2.cloudapp.azure.com/> · public counts: [`/stats`](https://fittest-mcp.westus2.cloudapp.azure.com/stats) · [`/health`](https://fittest-mcp.westus2.cloudapp.azure.com/health)
+- Landing page: <https://fittest-mcp.westus2.cloudapp.azure.com/> · public counts: [`/stats`](https://fittest-mcp.westus2.cloudapp.azure.com/stats) · [`/health`](https://fittest-mcp.westus2.cloudapp.azure.com/health) (HTTP 503 unless all three model agents are live)
 - Code: `fittest/mcp_server.py`, `fittest/usage_log.py`, `deploy/`
 
 ## Connect
@@ -14,149 +14,194 @@ on your molecule or whether it needs DFT.
 | Claude Code | `claude mcp add --transport http fittest https://fittest-mcp.westus2.cloudapp.azure.com/mcp` |
 | Claude Desktop / claude.ai | Settings → Connectors → Add custom connector → the URL above |
 | Cursor | `~/.cursor/mcp.json`: `{"mcpServers": {"fittest": {"url": "https://fittest-mcp.westus2.cloudapp.azure.com/mcp"}}}` |
-| Local, stdio | `claude mcp add fittest -- uvx --from git+https://github.com/Pavel-Tk/fittest fittest-mcp` |
+| Local demo, no models | `claude mcp add fittest-demo -- uvx --from git+https://github.com/Pavel-Tk/fittest fittest-mcp --fake-models` |
+| Local, real models | see [Local mode](#local-mode) |
 
 Then ask, for example: *"Use fittest to check whether I can trust an ML potential on this water
-molecule: O 0 0 0, H 0.96 0 0, H -0.24 0.93 0."*
+molecule: O 0 0 0, H 0.96 0 0, H -0.24 0.93 0"*. Atoms may be separated by newlines, commas or
+semicolons.
 
 ### Local mode
 
+A plain `uvx --from git+…` install has **no model agents**. It only serves `--fake-models`, which
+are CPU stand-ins whose verdicts mean nothing, or it reports that no models are installed. For real
+verdicts, install into an environment that has the models and point your client at that
+environment's `fittest-mcp`:
+
 ```bash
-uvx --from git+https://github.com/Pavel-Tk/fittest fittest-mcp --fake-models   # demo, no torch
-uvx --from git+https://github.com/Pavel-Tk/fittest fittest-mcp                 # real models if installed
-pip install "fittest[models] @ git+https://github.com/Pavel-Tk/fittest"        # MACE + AIMNet2 (nvalchemi-toolkit)
-FITTEST_ORB_PYTHON=/path/to/orb-env/bin/python fittest-mcp                     # add Orb from its own env
+uv venv fittest-env --python 3.12
+uv pip install --python fittest-env/bin/python "fittest[models] @ git+https://github.com/Pavel-Tk/fittest" \
+    --extra-index-url https://download.pytorch.org/whl/cpu --index-strategy unsafe-best-match
+claude mcp add fittest-local -- $PWD/fittest-env/bin/fittest-mcp          # MACE + AIMNet2
+claude mcp add fittest-local -e FITTEST_ORB_PYTHON=/path/to/orb-env/bin/python -- $PWD/fittest-env/bin/fittest-mcp
 ```
 
-Local mode runs over stdio on CPU (`--device cuda` if you have a GPU). It spawns one process per
-installed model agent and says which are active. With only MACE + AIMNet2 (no Orb env) it serves a
-**partial committee** and every response carries a warning: τ and the trust map were learned on the
-full three-model committee, so the verdicts are approximate. With no models installed the tools
-return a clear error that points to `--fake-models`, the `[models]` extra and the hosted server.
-`--fake-models` gives CPU stand-in predictors whose verdicts mean nothing; use them for
-integration only. Local mode logs only to `~/.fittest-mcp/usage.sqlite` and never reports anywhere.
+The `[models]` extra installs MACE-MPA-0 and AIMNet2 through the ALCHEMI Toolkit. Orb-v3 needs its
+own environment because orb-models pins conflicting dependencies; set `FITTEST_ORB_PYTHON` to that
+environment's Python. With only MACE + AIMNet2 the server says so and serves a **partial
+committee**: every response warns that the Calibrator's buckets and ledger were built on the full
+three-model committee, so verdicts are approximate. Local mode runs over stdio on CPU (pass
+`--device cuda` if you have a GPU), spawns one model process per installed model, each with its own
+random socket key, and logs only to `~/.fittest-mcp/usage.sqlite`. It never reports anywhere.
+
+## How a verdict is made (one rule)
+
+1. Parse each structure on its own. A structure that can't be parsed gets its own `error` entry and
+   the rest of the batch is still scored.
+2. If any model agent does not support an element (AIMNet2 is the limit: the full committee covers
+   **H B C N O F Si P S Cl As Se Br I**), the verdict is `send_to_dft` with reason
+   `unsupported_elements` and no trust score. A partial committee is never trusted for this reason.
+   If an agent rejects one structure, only that structure is affected (`model_failed`); the agent's
+   status does not change.
+3. Otherwise all agents predict forces. σ_F is their disagreement: the mean over atoms of the
+   per-atom RMS deviation from the committee mean.
+4. The Calibrator picks the candidate to serve (one model or a subset mean) by its ledger for the
+   (σ_F, mean |F|) bucket.
+5. **`trust` only if** the forces do not all vanish (max |F| < 0.05 eV/Å for every model means
+   symmetry or exact equilibrium, where disagreement carries no information), **σ_F < τ**, and
+   **trust_score ≥ 0.5**. Otherwise `send_to_dft`, with every failing condition in
+   `verdict_reasons`. The same rule feeds `check_structures`, `explain` and the usage counts.
+
+**τ is fixed.** It is the 70th percentile of σ_F on the round-0 pool (0.620 eV/Å). The Calibrator's
+threshold rule never moved it during the run ([results/RESULTS.md](../results/RESULTS.md)), so τ is a
+percentile rule, not something the swarm learned.
+
+**trust_score** is the Calibrator's Beta posterior mean of P(served answer correct) for the served
+candidate in the structure's bucket. It comes from DFT oracle labels on Transition1x, with prior
+Beta(2, 1). It is never exactly 1. It is reported with `trust_score_90ci` (the 90% credible
+interval) and `labels_behind_score` (DFT labels in that bucket). A bucket with 2 labels gives a wide
+interval; read the score with it. "Correct" means force RMSE ≤ 0.25 eV/Å and relative energy
+error ≤ 0.25.
+
+**Energies.** `served_energy_eV` is the served model's (or blend's) total energy on its own
+reference. Values from different models are not comparable, so when the served model differs within
+a batch the response carries an `energy_warning`. `reference_energy_eV` comes from one fixed model
+(AIMNet2, which is closest to the DFT level) for every structure in the batch; compare that field
+across structures.
 
 ## Tools
 
 | Tool | Input | Returns |
 |---|---|---|
-| `check_structures` | `structures`: XYZ text (single or multi-frame; bare `El x y z` lines also work), one `{Z or symbols, R}` object, or a list mixing both (Å). `include_forces` (default false) | Per structure: `verdict` (`trust` / `send_to_dft`), `trust_score`, `recommended` model or blend (the Calibrator's choice) and its `served_members`, `served_energy_eV`, `max_force_eV_per_A` / `mean_force_eV_per_A`, `sigma_F` vs `tau`, `per_model` energy and max force, `domain_warning`. Full force arrays only with `include_forces`. |
-| `explain` | one structure | σ_F vs τ, the Calibrator bucket (σ_F range, mean force range, oracle labels in it), P(correct) of every candidate in that bucket, each member's deviation from the committee mean, pairwise force RMS, the most divergent member, the three most uncertain atoms. |
-| `swarm_status` | none | Population: answerers (MACE-MPA-0, AIMNet2, Orb-v3, with live status and reputation), critic (Skeptic), coordinators (Calibrator, Oracle, Curator); the ledger (reputations, oracle labels used, budget, global P(correct) per candidate); the calibration domain; and the evolution family tree when `results/evolution/family_tree.json` exists (otherwise `available: false`). |
-| `usage_stats` | none | Distinct users, total / external / internal calls, calls per tool, first and last call time. |
+| `check_structures` | `structures`: XYZ text (single or multi-frame; bare atoms on lines or separated by `,`/`;`), one `{Z or symbols, R}` object, or a list mixing both (Å). `include_forces` (default false) | Per structure: `verdict` + `verdict_reasons`; `trust_score`, `trust_score_90ci`, `labels_behind_score`; `recommended` model or blend and `served_members`; `served_energy_eV`, `reference_energy_eV` (+ model); max/mean force; `sigma_F` vs `tau`; per-model energy and max force; `domain_warning`. Or `{index, error}` for a structure that could not be parsed. |
+| `explain` | one structure | The same verdict, scored by the same rule, with the reason in words. Also: σ_F vs τ; the bucket (σ_F range, mean-force range, label count); the posterior P(correct) with interval for every candidate in it; each member's deviation from the committee mean; pairwise force RMS; the most divergent member; the three most uncertain atoms. |
+| `swarm_status` | none | Answerers (MACE-MPA-0, AIMNet2, Orb-v3: live status, reputation), the critic (Skeptic), coordinators; the ledger; the calibration domain, τ, the verdict rule and the elements the committee supports; the evolution family trees (`results/evolution/family_tree.json`, `results/evolution_c/`) once they exist. |
+| `usage_stats` | none | Users (definition below), total / external / internal calls, calls per tool, first and last call. |
 
-**Limits:** at most 20 structures per call and 100 atoms per structure, non-periodic molecules,
-coordinates within ±1000 Å, no atoms closer than 0.3 Å. A per-client token bucket allows a burst
-of 20 calls, refilled at 1 call every 2 s, plus a per-IP bucket. Each request times out after
-120 s, and model evaluations are serialized, so one user cannot wedge the box. Request bodies are
-capped at 2 MB (Caddy and the server). Errors come back as MCP tool errors with a plain message.
+**Input rules.**
+- Element symbols must be exact (`C`, `Cl`, or lowercase `cl`). PDB-style trailing digits are fine
+  (`C1`, `H12`). Ambiguous labels such as `CA` or `HE1`, and words such as `Hello`, are errors, not
+  guesses. Atomic numbers are also accepted.
+- 2 to 100 atoms per structure; a single atom has zero force by symmetry and is rejected.
+- At most 20 structures per call.
+- Isolated molecules only: `Lattice=`/`pbc="T…"` in an extended-XYZ comment, or `pbc`/`cell` in an
+  object, is rejected.
+- Coordinates within ±1000 Å; no two atoms closer than 0.3 Å.
 
-**Domain.** The Calibrator learned from DFT oracle labels on Transition1x: gas-phase C/H/N/O
-reactions with at most 7 heavy atoms, including transition states and NEB paths. A `domain_warning`
-is added for other elements, larger molecules, isolated atoms or fragments, and unusually short
-bonds. In those cases the trust score is an extrapolation.
+**Operational limits.**
+- Per-client token bucket (burst 20, then 1 call every 2 s) plus a per-IP bucket.
+- 120 s timeout per request. Model calls time out after 300 s, and the socket handshake is bounded.
+- Evaluations are serialized.
+- Request bodies are capped at 2 MB.
+
+**Domain.** The calibration comes from Transition1x: gas-phase C/H/N/O reactions with at most 7
+heavy atoms, including transition states and NEB paths. A `domain_warning` is added for elements
+outside C/H/N/O that the committee still supports, larger molecules, isolated atoms or fragments,
+and unusually short bonds; there the trust score is an extrapolation.
 
 ## Logging policy
 
 The tool descriptions, the server instructions and every `check_structures` response say this too:
 
-- **Logged per call** (SQLite at `/home/azureuser/fittest-mcp-data/usage.sqlite` on the VM): UTC
-  time, tool, transport, an anonymous client id, an internal flag, structure count, atom count,
-  verdict counts, latency, ok/error, and an error *category* (`input_error`, `rate_limited`,
-  `timeout` or the exception type, never the message, because messages can echo user input).
-- **Client id** = `HMAC-SHA256(secret salt, client name | client version | remote IP)`, truncated
-  to 16 hex characters. The salt is a random file on the VM (`fittest-mcp-data/salt`, mode 600,
-  never committed), so ids cannot be reversed. **Raw IPs are never stored.** Caddy's access log
-  drops the client IP and X-Forwarded-For fields.
-- **Never stored:** structures, coordinates, element lists, structure names, results.
-- **Users** = distinct client ids with at least one successful call, excluding internal test
-  clients. A call is internal if it carries the header `X-Fittest-Internal: 1` (or, in local mode,
-  the env var `FITTEST_INTERNAL=1`). The client id of such a call is also registered in the
-  `internal_clients` table, so later calls from the same client and IP stay internal without the
-  header. Every test we ran was marked internal.
-- Caveats: two people with the same client version behind one NAT count as one user. One person
-  on two networks or client versions counts as two.
+- **Logged per call:** UTC time, tool (or `unknown`), transport, an anonymous client id, an internal
+  flag, structure count, atom count, verdict counts, per-structure failures, latency, ok/error, and an
+  error *category*. The categories are `input_error`, `invalid_arguments`, `unknown_tool`,
+  `not_ready`, `rate_limited`, `busy`, `timeout`, or an exception type, never its message. Every
+  call is logged: unknown tools and schema-validation failures go through the same dispatcher.
+  The log is SQLite at `/var/lib/fittest-mcp/usage.sqlite`, owned by the unprivileged
+  `fittest-mcp` user.
+- **Client id** = `HMAC-SHA256(secret salt, client name | remote IP)`, truncated to 16 hex
+  characters. The client *version* is deliberately not part of it, so upgrading or forging a
+  version string does not create new ids. The salt is a random file (`/var/lib/fittest-mcp/salt`,
+  mode 600, never committed), so ids cannot be reversed. Hosted, the IP comes from Caddy, which
+  overwrites X-Forwarded-For. Local HTTP mode ignores X-Forwarded-For.
+- **Raw IPs are never stored.** uvicorn's access log is off. Caddy's access log drops the remote IP,
+  client IP, X-Forwarded-For, X-Real-IP, Forwarded, Cf-Connecting-Ip and True-Client-Ip.
+- **Never stored or logged:** structures, coordinates, element lists, structure names, results. The
+  server's own log lines (systemd journal) carry only the tool name and an error category or
+  exception type. The SDK's protocol logger, which can quote raw input, is silenced. A test scans
+  the raw database bytes for a planted structure name and coordinates, and another checks that a
+  failing call leaves no input in the log records.
+- **Users** = distinct non-internal client ids that received **at least one structure verdict from
+  `check_structures` or `explain`**. Calls to `swarm_status`, `usage_stats`, and calls whose
+  structures all failed to parse do not count. Internal = header `X-Fittest-Internal: 1` (local
+  mode: env `FITTEST_INTERNAL=1`), after which that client id is also registered in
+  `internal_clients`. Every test we ran was marked internal.
+- **Caveats on the users count:**
+  - People who share a public IP and client name merge into one user. That includes an office or
+    venue Wi-Fi, and claude.ai / Claude Desktop custom connectors, which call from Anthropic's
+    shared egress IPs, so all claude.ai users may count as one.
+  - One person on several networks or clients counts several times.
+  - Someone determined could still inflate the count by varying the client *name* from different
+    IPs.
+
+  Read it as a rough activity signal, not a count of people.
 
 ## Deployment
 
 The stack runs on an Azure VM (Ubuntu 24.04, 8 vCPU, 32 GB, CPU only):
 
-- **Caddy 2.11** terminates TLS with Let's Encrypt for `fittest-mcp.westus2.cloudapp.azure.com`,
-  redirects HTTP to HTTPS, and reverse-proxies to `127.0.0.1:8765` (flushes streaming responses
-  immediately, 180 s response timeout).
-- **`fittest-mcp.service`** runs the MCP server in its own torch-free venv (`~/envs/mcp`) from its
-  own checkout `~/fittest-mcp-src`, which deploy resets to `origin/master`. The experiments'
-  `~/fittest` is never touched.
-- **`fittest-model@{mace_mpa0,aimnet2,orb}.service`** run warm CPU model agents on ports
-  7300–7302 (`OMP_NUM_THREADS=2`, so the evolution experiment on the same VM isn't starved;
-  Orb runs from `~/envs/orb`). The socket authkey is a random secret in `/etc/fittest-mcp/common.env`.
-- Every unit has `Restart=always`. The MCP server reconnects to model agents that restart. While
-  one is down it serves a partial committee with a warning, rather than failing.
-- Deploy or update from the laptop with `bash deploy/deploy.sh`. It is idempotent; add
+- **Caddy 2.11** terminates TLS with Let's Encrypt for `fittest-mcp.westus2.cloudapp.azure.com` and
+  reverse-proxies to `127.0.0.1:8765`.
+- **`fittest-mcp.service`**, the internet-facing process, runs as a dedicated system user
+  `fittest-mcp` (no login, no sudo) with:
+  - `NoNewPrivileges`, `ProtectSystem=strict`, `ProtectHome=read-only`, `PrivateTmp`, `PrivateDevices`
+  - no capabilities, restricted address families
+  - write access only to `StateDirectory=/var/lib/fittest-mcp`
+
+  It runs from its own torch-free venv and its own checkout (`~/fittest-mcp-src`, reset to
+  `origin/master` on deploy). The experiments' `~/fittest` is never written; its `results/` dir is
+  read for the family trees.
+- **`fittest-model@{mace_mpa0,aimnet2,orb}.service`** are the warm CPU model agents on localhost
+  ports 7300–7302 (`OMP_NUM_THREADS=2`). They are sandboxed the same way (`NoNewPrivileges`, so no
+  sudo; read-only filesystem except the model cache) and use a random socket authkey from
+  `/etc/fittest-mcp/common.env`.
+- The model-agent protocol pickles over a socket, so the authkey matters. There is no default key
+  any more: `spawn()` gives each server its own random key.
+- `Restart=always` on every unit. The MCP server keeps exactly one link per model agent: it closes
+  the old link before reconnecting, bounds the handshake, and drops the link on a reply timeout.
+  A model rejecting an input never changes its status. While an agent is down, calls are served by
+  a flagged partial committee and `/health` returns 503.
+- Deploy or update from the laptop with `bash deploy/deploy.sh`; it is idempotent. Add
   `RESTART_MODELS=1` to also restart the model agents. Verify with `python deploy/verify_mcp.py`.
 
-## Verification log (2026-10-31, all calls marked internal)
+## Verification log
 
-**(a) Public HTTPS endpoint, MCP Python client from the laptop** (`deploy/verify_mcp.py`): 9/9 pass.
+### Round 2 (2026-10-31 afternoon): after the adversarial review (16 defects fixed)
 
-| Check | Result |
-|---|---|
-| initialize | ok, protocol `2025-11-25`, server `fittest` |
-| list_tools | `check_structures`, `explain`, `swarm_status`, `usage_stats` |
-| check_structures, water | `trust`, trust 1.0, recommended `aimnet2`, σ_F = 0.378 (τ = 0.620), all 3 models live |
-| check_structures, 12 held-out Transition1x frames (`results/service_demo.xyz`) vs the earlier GPU run (`results/service_demo.json`) | verdicts agree 12/12, trust scores identical, max \|Δσ_F\| = 0.0005 eV/Å (CPU vs GPU), 2.2 s for the batch |
-| explain, water | reason + `most_divergent_member` returned |
-| domain warning (SiH) | `elements Si are outside the calibration set (C/H/N/O)…` |
-| limit (21 structures) | tool error `more than 20 structures in one call` |
-| swarm_status | committee complete; family tree `available: false` (not published yet) |
-| usage_stats | `users = 0`, all calls internal |
+Filled in after redeploy. See the section below.
 
-Resilience, live:
+### Round 1 (2026-10-31 morning), superseded
 
-- Killed `fittest-model@orb` with SIGKILL. The next call was served by a flagged partial committee
-  (`mace_mpa0`, `aimnet2`). About 40 s later systemd had restarted Orb, the server had reconnected,
-  and the full committee was back.
-- Killed `fittest-mcp` with SIGKILL. systemd restarted it, it reconnected to the warm model agents,
-  and the next call ran in 0.9 s.
-- 25 rapid `swarm_status` calls: 2 rate-limited (`retry in 1 s`).
-- 6 concurrent clients × 12 Transition1x frames: all succeeded (serialized, 14.4 s wall time).
+The first deploy passed its own checks: the 9-step client run, 12/12 parity with the GPU run, Claude
+Code connected, `uvx` installed. An adversarial review then found 16 defects:
 
-Privacy check: the first deploy left uvicorn's access log on, and it wrote client IPs into the
-systemd journal. I found this during verification, turned the access log off (`access_log=False`),
-redeployed and vacuumed the journal. Re-checked after another full verify run: the laptop's IP
-appears 0 times in the `fittest-mcp` and `caddy` journals and 0 times in the Caddy access log.
+1. One model-rejected element left every model in a permanent `error` state.
+2. The verdict could contradict the trust score.
+3. Single atoms were trusted.
+4. The users count could be inflated.
+5. Element prefixes were guessed.
+6. Errors for unsupported elements were misleading.
+7. Energies were not comparable within a batch.
+8. Periodic input was accepted silently.
+9. The model-server authkey was fixed.
+10. The internet-facing unit was not hardened.
+11. The local install line was misleading.
+12. The example prompt failed verbatim.
+13. Some failures were not logged.
+14. Element numbers reached the journal.
+15. The family-tree link, the server version and the documented ports were wrong.
+16. One bad structure sank the whole batch.
 
-**(b) Claude Code.** From a scratch directory I ran
-`claude mcp add --transport http --scope local fittest https://fittest-mcp.westus2.cloudapp.azure.com/mcp --header "X-Fittest-Internal: 1"`.
-`claude mcp list` showed it ✔ Connected. Then:
-`claude -p "Use the fittest MCP tool check_structures to check whether I can trust an ML potential on this water molecule ..."`.
-Claude answered: *"The verdict is **trust**, with a trust score of **1.0**, and Fittest recommends
-**AIMNet2** for this water molecule. The force disagreement between the three models is sigma_F =
-**0.378 eV/Å**, below the 0.620 eV/Å threshold, and there's no domain warning, so you don't need
-DFT for this geometry."* `/stats` afterwards: `users = 0`, `internal_calls = 8`,
-`internal_client_ids = 2`, so the call was counted as internal. The scratch config was then removed
-(`claude mcp remove fittest --scope local`).
-
-**(c) Local install.**
-
-- Fresh uv cache: `uvx --from git+https://github.com/Pavel-Tk/fittest fittest-mcp` installed in
-  68 s on Windows 11.
-- `--fake-models` over stdio with the MCP Python client: all four tools ok, mode `fake` with the
-  FAKE warning, log written only to the local data dir.
-- Without models: clean error naming the missing models and the fixes.
-- On Linux (VM core env) without an Orb env: detected and spawned MACE + AIMNet2, reported
-  `orb: not installed`, served `mean(aimnet2+mace_mpa0)` with the partial-committee warning.
-
-Test suite: `tests/test_mcp_server.py` and `tests/test_usage_log.py` cover tool schemas, parsing,
-limits, the partial committee, the family tree, rate limiting, the HTTP transport with the
-internal header, and that **no structure data reaches the database file** (raw bytes scanned for a
-planted name and coordinates). Full suite: 123 passed, 2 skipped.
-
-## Known limitations
-
-- The MCP server evaluates one request at a time. Throughput is roughly one 12-frame batch per
-  2 s on this CPU VM while the evolution experiment runs.
-- Absolute energies are on each model's own reference (PBE for MACE/Orb, ωB97M for AIMNet2), so a
-  blend's `served_energy_eV` is only meaningful for differences.
-- On Windows, local mode with *real* models spawns model agents from background threads while
-  stdio is reading. It was only exercised on Linux; the `--fake-models` path is verified on Windows.
+All were fixed with a regression test each (`tests/test_mcp_server.py::test_defect_*`). Round 1 also
+found and fixed uvicorn's access log writing client IPs to the journal.

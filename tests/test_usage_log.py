@@ -17,11 +17,11 @@ def ulog(tmp_path):
 def test_client_id_is_salted_hash_without_ip(tmp_path):
     a = UsageLog(tmp_path / "a.sqlite", salt=b"salt-a")
     b = UsageLog(tmp_path / "b.sqlite", salt=b"salt-b")
-    ida = a.client_id("claude-code", "2.0", "203.0.113.7")
-    assert ida == a.client_id("claude-code", "2.0", "203.0.113.7")  # stable
-    assert ida != b.client_id("claude-code", "2.0", "203.0.113.7")  # depends on the secret salt
-    assert ida != a.client_id("claude-code", "2.0", "203.0.113.8")  # depends on IP
-    assert ida != a.client_id("cursor", "2.0", "203.0.113.7")       # depends on client info
+    ida = a.client_id("claude-code", "203.0.113.7")
+    assert ida == a.client_id("claude-code", "203.0.113.7")  # stable
+    assert ida != b.client_id("claude-code", "203.0.113.7")  # depends on the secret salt
+    assert ida != a.client_id("claude-code", "203.0.113.8")  # depends on IP
+    assert ida != a.client_id("cursor", "203.0.113.7")       # depends on client name
     assert len(ida) == 16 and "203" not in ida
     a.record(CallRecord(tool="swarm_status", client_id=ida))
     raw = (tmp_path / "a.sqlite").read_bytes()
@@ -38,19 +38,21 @@ def test_salt_file_created_once(tmp_path):
 def test_users_exclude_internal_failed_and_registered(ulog):
     ulog.record(CallRecord(tool="check_structures", client_id="u1", n_structures=2, n_atoms=6, n_trust=1, n_dft=1))
     ulog.record(CallRecord(tool="check_structures", client_id="u1"))
-    ulog.record(CallRecord(tool="explain", client_id="u2"))
+    ulog.record(CallRecord(tool="explain", client_id="u2", n_structures=1, n_dft=1))
     ulog.record(CallRecord(tool="check_structures", client_id="u3", ok=False, error="input_error"))  # failed only
-    ulog.record(CallRecord(tool="check_structures", client_id="t1", internal=True))  # flagged internal
+    ulog.record(CallRecord(tool="swarm_status", client_id="u4"))  # status only: not a user
+    ulog.record(CallRecord(tool="check_structures", client_id="u5", n_structures=1, n_failed=1))  # no verdict
+    ulog.record(CallRecord(tool="check_structures", client_id="t1", internal=True, n_trust=1))  # flagged internal
     ulog.mark_internal("t2", "laptop test")
-    ulog.record(CallRecord(tool="swarm_status", client_id="t2"))  # registered internal client
+    ulog.record(CallRecord(tool="check_structures", client_id="t2", n_trust=1))  # registered internal client
     st = ulog.stats()
     assert st["users"] == 2
-    assert st["total_calls"] == 6 and st["successful_calls"] == 5
-    assert st["internal_calls"] == 2 and st["external_calls"] == 4
+    assert st["total_calls"] == 8 and st["successful_calls"] == 7
+    assert st["internal_calls"] == 2 and st["external_calls"] == 6
     assert st["internal_client_ids"] == 2
-    assert st["calls_per_tool"]["check_structures"] == {"calls": 4, "external_calls": 3}
-    assert st["external_verdicts"] == {"trust": 1, "send_to_dft": 1}
-    assert st["external_structures_checked"] == 2 and st["first_call_utc"] <= st["last_call_utc"]
+    assert st["calls_per_tool"]["check_structures"] == {"calls": 6, "external_calls": 4}
+    assert st["external_verdicts"] == {"trust": 1, "send_to_dft": 2}
+    assert st["external_structures_checked"] == 4 and st["first_call_utc"] <= st["last_call_utc"]
 
 
 def test_schema_has_only_counts(ulog):
@@ -89,3 +91,21 @@ def test_token_bucket():
 
     time.sleep(0.05)  # Windows monotonic clock ticks ~16 ms
     assert tb2.allow("k")[0]
+
+
+def test_migrates_old_schema(tmp_path):
+    import sqlite3 as sq
+
+    p = tmp_path / "old.sqlite"
+    con = sq.connect(p)
+    con.executescript("""CREATE TABLE calls (id INTEGER PRIMARY KEY AUTOINCREMENT, ts_utc TEXT NOT NULL,
+        tool TEXT NOT NULL, client_id TEXT NOT NULL, transport TEXT NOT NULL, internal INTEGER NOT NULL DEFAULT 0,
+        n_structures INTEGER NOT NULL DEFAULT 0, n_atoms INTEGER NOT NULL DEFAULT 0,
+        n_trust INTEGER NOT NULL DEFAULT 0, n_dft INTEGER NOT NULL DEFAULT 0, latency_ms REAL NOT NULL DEFAULT 0,
+        ok INTEGER NOT NULL, error TEXT);
+        INSERT INTO calls (ts_utc, tool, client_id, transport, ok) VALUES ('t', 'swarm_status', 'c', 'http', 1);""")
+    con.commit()
+    con.close()
+    lg = UsageLog(p, salt=b"s")
+    lg.record(CallRecord(tool="check_structures", client_id="c", n_trust=1, n_failed=2))
+    assert tuple(lg.rows()[-1]) == CALL_COLUMNS and lg.rows()[-1]["n_failed"] == 2

@@ -20,15 +20,26 @@ from __future__ import annotations
 
 import argparse
 import os
+import secrets
 import subprocess
 import sys
+import threading
 import time
 from dataclasses import dataclass
 from multiprocessing.connection import Client, Listener
 
 import numpy as np
 
-AUTHKEY = os.environ.get("FITTEST_AUTHKEY", "fittest-local").encode()
+# The protocol is pickle over a socket, so the authkey is what keeps other local users out.
+# There is no fixed default: without FITTEST_AUTHKEY each process draws a random key, and
+# ``spawn`` hands a fresh random key to every server it starts (and to its ModelClient).
+AUTHKEY = (os.environ.get("FITTEST_AUTHKEY") or secrets.token_hex(16)).encode()
+CONNECT_HANDSHAKE_TIMEOUT = 15.0
+PREDICT_TIMEOUT = float(os.environ.get("FITTEST_PREDICT_TIMEOUT", "300"))
+
+
+class ModelError(RuntimeError):
+    """The model agent answered, but rejected or failed on this input (the connection is fine)."""
 
 
 # --------------------------------------------------------------------------- backends
@@ -134,6 +145,9 @@ def make_backend(model: str, device: str, model_path: str | None = None) -> Back
 # --------------------------------------------------------------------------- server
 def serve(model: str, port: int, device: str, model_path: str | None = None) -> None:
     backend = make_backend(model, device, model_path)
+    if not os.environ.get("FITTEST_AUTHKEY"):
+        print("[model_server] FITTEST_AUTHKEY not set: using a random key (only spawn() callers can connect)",
+              flush=True)
     with Listener(("127.0.0.1", port), authkey=AUTHKEY) as listener:
         print(f"[model_server] {model} ready on {port}", flush=True)
         while True:
@@ -169,15 +183,51 @@ class ModelClient:
     port: int
     proc: subprocess.Popen | None = None
     log_path: str | None = None
+    authkey: bytes | None = None  # default: this process's AUTHKEY
+    predict_timeout: float = PREDICT_TIMEOUT
 
     def __post_init__(self):
         self._conn = None
+        if self.authkey is None:
+            self.authkey = AUTHKEY
+
+    def _open(self, handshake_timeout: float):
+        """``Client()`` with a bound on the auth handshake (it has none: a server busy with another
+        connection would leave us blocked forever). An abandoned late connection closes itself."""
+        box: dict = {}
+        abandoned = threading.Event()
+
+        def work():
+            try:
+                c = Client(("127.0.0.1", self.port), authkey=self.authkey)
+            except BaseException as exc:  # noqa: BLE001
+                box["exc"] = exc
+                return
+            if abandoned.is_set():
+                c.close()
+            else:
+                box["conn"] = c
+
+        th = threading.Thread(target=work, daemon=True, name=f"connect-{self.model}")
+        th.start()
+        th.join(handshake_timeout)
+        if th.is_alive():
+            abandoned.set()
+            if "conn" in box:  # finished in the race window
+                box["conn"].close()
+            raise TimeoutError(f"{self.model}: handshake on port {self.port} timed out")
+        if "exc" in box:
+            raise box["exc"]
+        return box["conn"]
 
     def connect(self, timeout: float = 600.0) -> "ModelClient":
         t0 = time.time()
         while True:
             try:
-                self._conn = Client(("127.0.0.1", self.port), authkey=AUTHKEY)
+                self._conn = self._open(min(CONNECT_HANDSHAKE_TIMEOUT, max(1.0, timeout)))
+            except TimeoutError:
+                self._conn = None
+                raise
             except (ConnectionRefusedError, OSError):
                 self._conn = None
                 if self.proc is not None and self.proc.poll() is not None:
@@ -207,9 +257,14 @@ class ModelClient:
         self._conn.send({"cmd": "predict", "Z": np.asarray(Z, dtype=np.int64),
                          "R": np.asarray(R, dtype=np.float64),
                          "batch": np.asarray(batch, dtype=np.int64), "charge": np.asarray(charge, dtype=np.float64)})
+        if not self._conn.poll(self.predict_timeout):
+            # the reply may still arrive later and would desynchronize the stream: drop the link
+            self._conn.close()
+            self._conn = None
+            raise TimeoutError(f"{self.model}: no reply within {self.predict_timeout:.0f} s")
         out = self._conn.recv()
         if "error" in out:
-            raise RuntimeError(f"{self.model}: {out['error']}")
+            raise ModelError(f"{self.model}: {out['error']}")
         return out
 
     def info(self) -> dict:
@@ -231,7 +286,10 @@ class ModelClient:
 
 def spawn(model: str, port: int, python: str = sys.executable, device: str = "cuda",
           model_path: str | None = None, log_dir: str = "logs") -> ModelClient:
-    """Start a model agent in its own process (optionally another interpreter/env)."""
+    """Start a model agent in its own process (optionally another interpreter/env).
+
+    Each spawned server gets its own random authkey, known only to it and the returned client.
+    """
     import socket
 
     with socket.socket() as probe:  # fail fast if a stale server still holds the port
@@ -243,9 +301,11 @@ def spawn(model: str, port: int, python: str = sys.executable, device: str = "cu
         cmd += ["--model-path", model_path]
     log_path = os.path.join(log_dir, f"server_{model}.log")
     log = open(log_path, "w")
-    env = dict(os.environ, PYTHONPATH=os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    proc = subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT, env=env)
-    return ModelClient(model, port, proc, log_path)
+    key = secrets.token_hex(16)
+    env = dict(os.environ, PYTHONPATH=os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+               FITTEST_AUTHKEY=key)
+    proc = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT, env=env)
+    return ModelClient(model, port, proc, log_path, authkey=key.encode())
 
 
 if __name__ == "__main__":

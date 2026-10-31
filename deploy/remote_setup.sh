@@ -4,7 +4,8 @@ set -euo pipefail
 export PATH="$HOME/.local/bin:$PATH"
 BRANCH=${BRANCH:-master}
 SRC=$HOME/fittest-mcp-src          # server's own checkout; never touches ~/fittest (experiments)
-DATA=$HOME/fittest-mcp-data        # usage.sqlite + secret salt (never in git)
+STATE=/var/lib/fittest-mcp         # usage.sqlite + salt (never in git), owned by the fittest-mcp user
+OLD_DATA=$HOME/fittest-mcp-data    # pre-hardening location, migrated once
 DEP=$HOME/fittest-mcp-deploy
 CORE_PY=${CORE_PY:-$HOME/envs/core/bin/python}
 ORB_PY=${ORB_PY:-$HOME/envs/orb/bin/python}
@@ -19,17 +20,27 @@ echo "== MCP env (no torch: the server only talks to the model agents)"
 uv pip install -q --python "$HOME/envs/mcp/bin/python" -e "$SRC"
 "$HOME/envs/mcp/bin/python" -c "import importlib.metadata as m; print('mcp', m.version('mcp'))"
 
-echo "== data dir + secrets"
-mkdir -p "$DATA" && chmod 700 "$DATA"
-[ -s "$DATA/salt" ] || { head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n' > "$DATA/salt"; chmod 600 "$DATA/salt"; }
+echo "== service user + state dir + secrets"
+id fittest-mcp >/dev/null 2>&1 || sudo useradd --system --no-create-home --home-dir "$STATE" --shell /usr/sbin/nologin fittest-mcp
+sudo mkdir -p "$STATE"
+if [ -d "$OLD_DATA" ] && ! sudo test -s "$STATE/salt"; then
+  echo "migrating $OLD_DATA -> $STATE"
+  sudo systemctl stop fittest-mcp 2>/dev/null || true
+  sudo cp -a "$OLD_DATA"/. "$STATE"/
+fi
+sudo test -s "$STATE/salt" || head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n' | sudo tee "$STATE/salt" >/dev/null
+sudo chown -R fittest-mcp:fittest-mcp "$STATE"; sudo chmod 700 "$STATE"; sudo chmod 600 "$STATE/salt"
+if [ -d "$OLD_DATA" ] && sudo test -s "$STATE/salt"; then rm -rf "$OLD_DATA"; fi
 sudo mkdir -p /etc/fittest-mcp
 if ! sudo test -s /etc/fittest-mcp/common.env; then
   AK=$(head -c 24 /dev/urandom | od -An -tx1 | tr -d ' \n')
-  printf 'FITTEST_AUTHKEY=%s\nFITTEST_SNAPSHOT=%s\nFITTEST_FAMILY_TREE=%s\n' "$AK" \
-    "$SRC/results/trust_snapshot.json" "$HOME/fittest/results/evolution/family_tree.json" \
+  printf 'FITTEST_AUTHKEY=%s\nFITTEST_SNAPSHOT=%s\n' "$AK" "$SRC/results/trust_snapshot.json" \
     | sudo tee /etc/fittest-mcp/common.env >/dev/null
-  sudo chmod 640 /etc/fittest-mcp/common.env; sudo chown root:azureuser /etc/fittest-mcp/common.env
 fi
+sudo chmod 640 /etc/fittest-mcp/common.env; sudo chown root:azureuser /etc/fittest-mcp/common.env
+# evolution family trees are read (read-only) from the experiments' results dir
+sudo sed -i '/^FITTEST_FAMILY_TREE=/d;/^FITTEST_RESULTS_DIR=/d' /etc/fittest-mcp/common.env
+echo "FITTEST_RESULTS_DIR=$HOME/fittest/results" | sudo tee -a /etc/fittest-mcp/common.env >/dev/null
 port=7300
 for m in mace_mpa0 aimnet2 orb; do
   py=$CORE_PY; [ "$m" = orb ] && py=$ORB_PY

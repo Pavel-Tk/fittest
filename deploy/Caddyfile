@@ -27,6 +27,10 @@ fittest-mcp.westus2.cloudapp.azure.com {
 				request>remote_ip delete
 				request>client_ip delete
 				request>headers>X-Forwarded-For delete
+				request>headers>X-Real-IP delete
+				request>headers>Forwarded delete
+				request>headers>Cf-Connecting-Ip delete
+				request>headers>True-Client-Ip delete
 			}
 		}
 	}

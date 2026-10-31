@@ -3,15 +3,16 @@
 What is stored per call (and nothing else):
 
 * UTC time, tool name, transport (``http`` / ``stdio``)
-* an anonymous client id: ``HMAC-SHA256(secret salt, client name | client version | remote IP)``,
-  truncated to 16 hex chars. The salt is a server-side secret file (never in the repo), so the
+* an anonymous client id: ``HMAC-SHA256(secret salt, client name | remote IP)``, truncated to
+  16 hex chars (the client *version* is deliberately left out, so upgrades or a forged version
+  string do not mint new ids). The salt is a server-side secret file (never in the repo), so the
   id cannot be reversed to an IP. Raw IPs are never written.
 * whether the call is internal (our own tests), structure count, total atom count,
-  verdict counts (trust / send_to_dft), latency, ok/error and a short error *category*
-  (the exception type, never its message, so no user input can leak into the log).
+  verdict counts (trust / send_to_dft), per-structure failures, latency, ok/error and a short
+  error *category* (never an exception message, so no user input can leak into the log).
 
-"Users" = distinct client ids with at least one successful, non-internal call whose id is not
-registered in ``internal_clients``.
+"Users" (see :data:`USERS_DEFINITION`) = distinct non-internal client ids that got at least one
+structure verdict from ``check_structures`` or ``explain``. Status/stats calls alone do not count.
 """
 
 from __future__ import annotations
@@ -41,7 +42,8 @@ CREATE TABLE IF NOT EXISTS calls (
     n_dft        INTEGER NOT NULL DEFAULT 0,
     latency_ms   REAL    NOT NULL DEFAULT 0,
     ok           INTEGER NOT NULL,
-    error        TEXT
+    error        TEXT,
+    n_failed     INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS calls_client ON calls (client_id);
 CREATE TABLE IF NOT EXISTS internal_clients (
@@ -53,7 +55,13 @@ CREATE TABLE IF NOT EXISTS internal_clients (
 
 #: columns of ``calls`` — tests assert nothing else is ever stored.
 CALL_COLUMNS = ("id", "ts_utc", "tool", "client_id", "transport", "internal", "n_structures",
-                "n_atoms", "n_trust", "n_dft", "latency_ms", "ok", "error")
+                "n_atoms", "n_trust", "n_dft", "latency_ms", "ok", "error", "n_failed")
+VERDICT_TOOLS = ("check_structures", "explain")
+USERS_DEFINITION = ("distinct anonymous clients (salted hash of client name + IP) that received at least one "
+                    "structure verdict from check_structures or explain, excluding internal test clients. "
+                    "People sharing one public IP and client (same office, venue Wi-Fi, or claude.ai "
+                    "connectors that egress from shared IPs) merge into one user; one person on several "
+                    "networks or clients counts several times.")
 
 
 def utc_now() -> str:
@@ -85,6 +93,7 @@ class CallRecord:
     n_atoms: int = 0
     n_trust: int = 0
     n_dft: int = 0
+    n_failed: int = 0
     latency_ms: float = 0.0
     ok: bool = True
     error: str | None = None
@@ -106,12 +115,15 @@ class UsageLog:
         if self.db_path != ":memory:":
             self._db.execute("PRAGMA journal_mode=WAL")
         self._db.executescript(SCHEMA)
+        cols = {r[1] for r in self._db.execute("PRAGMA table_info(calls)")}
+        if "n_failed" not in cols:  # migrate logs written before per-structure failures existed
+            self._db.execute("ALTER TABLE calls ADD COLUMN n_failed INTEGER NOT NULL DEFAULT 0")
         self._db.commit()
 
     # ------------------------------------------------------------------ identity
-    def client_id(self, client_name: str | None, client_version: str | None,
-                  remote_ip: str | None) -> str:
-        msg = f"{client_name or '?'}|{client_version or '?'}|{remote_ip or 'local'}".encode()
+    def client_id(self, client_name: str | None, remote_ip: str | None) -> str:
+        name = (client_name or "?").strip().lower()[:64]
+        msg = f"{name}|{remote_ip or 'local'}".encode()
         return hmac.new(self._salt, msg, hashlib.sha256).hexdigest()[:16]
 
     def mark_internal(self, client_id: str, note: str = "") -> None:
@@ -132,10 +144,11 @@ class UsageLog:
         with self._lock:
             self._db.execute(
                 "INSERT INTO calls (ts_utc, tool, client_id, transport, internal, n_structures, n_atoms,"
-                " n_trust, n_dft, latency_ms, ok, error) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                " n_trust, n_dft, n_failed, latency_ms, ok, error)"
+                " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (utc_now(), rec.tool[:64], rec.client_id[:64], rec.transport[:16], int(bool(rec.internal)),
                  int(rec.n_structures), int(rec.n_atoms), int(rec.n_trust), int(rec.n_dft),
-                 round(float(rec.latency_ms), 2), int(bool(rec.ok)), err))
+                 int(rec.n_failed), round(float(rec.latency_ms), 2), int(bool(rec.ok)), err))
             self._db.commit()
 
     # ------------------------------------------------------------------ reading
@@ -145,7 +158,9 @@ class UsageLog:
 
     def stats(self) -> dict:
         ext = ("internal = 0 AND client_id NOT IN (SELECT client_id FROM internal_clients)")
-        users = self._q(f"SELECT COUNT(DISTINCT client_id) FROM calls WHERE ok = 1 AND {ext}")[0][0]
+        tools = ", ".join(f"'{t}'" for t in VERDICT_TOOLS)
+        users = self._q(f"SELECT COUNT(DISTINCT client_id) FROM calls WHERE ok = 1 AND {ext}"
+                        f" AND tool IN ({tools}) AND n_trust + n_dft >= 1")[0][0]
         total, ok_calls = self._q("SELECT COUNT(*), COALESCE(SUM(ok), 0) FROM calls")[0]
         ext_calls = self._q(f"SELECT COUNT(*) FROM calls WHERE {ext}")[0][0]
         internal_ids = self._q(f"SELECT COUNT(DISTINCT client_id) FROM calls WHERE NOT ({ext})")[0][0]
@@ -158,7 +173,7 @@ class UsageLog:
             f" COALESCE(SUM(n_dft),0) FROM calls WHERE ok = 1 AND {ext}")[0]
         return {
             "users": int(users),
-            "users_definition": "distinct anonymous client ids with >=1 successful call, excluding internal test clients",
+            "users_definition": USERS_DEFINITION,
             "total_calls": int(total), "successful_calls": int(ok_calls),
             "external_calls": int(ext_calls), "internal_calls": int(total - ext_calls),
             "internal_client_ids": int(internal_ids),

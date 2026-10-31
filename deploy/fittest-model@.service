@@ -1,5 +1,8 @@
 # One warm model agent per instance: fittest-model@mace_mpa0, @aimnet2, @orb.
 # Port and interpreter come from /etc/fittest-mcp/model-%i.env (written by deploy.sh).
+# Localhost only, random authkey from common.env. Runs as azureuser because the model
+# checkpoints are cached in ~azureuser/.cache, but sandboxed: no privilege escalation (sudo),
+# read-only filesystem except that cache.
 [Unit]
 Description=Fittest model agent %i (CPU, warm)
 After=network.target
@@ -12,13 +15,26 @@ WorkingDirectory=/home/azureuser/fittest-mcp-src
 EnvironmentFile=/etc/fittest-mcp/common.env
 EnvironmentFile=/etc/fittest-mcp/model-%i.env
 # few threads: the VM also runs the evolution experiment
-Environment=OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 PYTHONUNBUFFERED=1
+Environment=OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
 Environment=PYTHONPATH=/home/azureuser/fittest-mcp-src
 ExecStart=/bin/sh -c 'exec "$MODEL_PYTHON" -m fittest.model_server --model %i --port "$MODEL_PORT" --device cpu'
 Restart=always
 RestartSec=5
 MemoryMax=6G
 Nice=2
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/azureuser/.cache
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
 
 [Install]
 WantedBy=fittest-mcp.target

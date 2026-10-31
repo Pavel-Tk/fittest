@@ -6,17 +6,44 @@ PartOf=fittest-mcp.target
 
 [Service]
 Type=simple
-User=azureuser
+# dedicated unprivileged system user (no sudo, no login); code and env are read-only for it
+User=fittest-mcp
+Group=fittest-mcp
 WorkingDirectory=/home/azureuser/fittest-mcp-src
 EnvironmentFile=/etc/fittest-mcp/common.env
-Environment=PYTHONUNBUFFERED=1 OMP_NUM_THREADS=1
+Environment=PYTHONUNBUFFERED=1 OMP_NUM_THREADS=1 PYTHONDONTWRITEBYTECODE=1 HOME=/var/lib/fittest-mcp
 ExecStart=/home/azureuser/envs/mcp/bin/fittest-mcp --transport http --host 127.0.0.1 --port 8765 \
     --public-host fittest-mcp.westus2.cloudapp.azure.com \
     --connect mace_mpa0=7300,aimnet2=7301,orb=7302 \
-    --data-dir /home/azureuser/fittest-mcp-data --log-level WARNING
+    --data-dir /var/lib/fittest-mcp --log-level WARNING
 Restart=always
 RestartSec=3
 MemoryMax=2G
+# usage.sqlite + salt live here (0700, owned by fittest-mcp)
+StateDirectory=fittest-mcp
+StateDirectoryMode=0700
+# hardening
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/var/lib/fittest-mcp
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+RestrictNamespaces=yes
+LockPersonality=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+SystemCallArchitectures=native
+UMask=0077
 
 [Install]
 WantedBy=fittest-mcp.target
