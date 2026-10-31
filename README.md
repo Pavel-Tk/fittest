@@ -36,7 +36,8 @@ Formerly **TrustSwarm**; the old GitHub URL redirects here.
   budget, paired CI vs the static control; improved / did not improve).
 * **Use it now.** Add the hosted MCP server to Claude Code:
   `claude mcp add --transport http fittest https://fittest-mcp.westus2.cloudapp.azure.com/mcp`,
-  then ask "should I trust an ML potential on this structure?". TODO(mcp): confirm against `docs/MCP.md`.
+  then ask *"Use fittest to check whether I can trust an ML potential on this water molecule: O 0 0 0,
+  H 0.96 0 0, H -0.24 0.93 0."* Structures are never stored ([logging policy](#privacy-what-the-hosted-mcp-server-logs)).
 
 ---
 
@@ -55,19 +56,24 @@ Formerly **TrustSwarm**; the old GitHub URL redirects here.
 
 ### 1.1 Hosted MCP server (no install)
 
-`fittest-mcp` exposes the swarm to any MCP client. It runs the three model agents
-(MACE-MPA-0, AIMNet2, Orb-v3) as warm processes and turns their disagreement into a verdict
-with the Calibrator state learned in the final run (`fittest/snapshots/trust_snapshot.json`,
-identical to `results/trust_snapshot.json`).
+`fittest-mcp` exposes the swarm to any MCP client over streamable HTTP. The three model agents
+(MACE-MPA-0, AIMNet2, Orb-v3) run as warm CPU processes on an Azure VM, and their disagreement is
+turned into a verdict with the Calibrator state learned in the final run
+(`fittest/snapshots/trust_snapshot.json`, identical to `results/trust_snapshot.json`). Landing page:
+<https://fittest-mcp.westus2.cloudapp.azure.com/>, public counts at
+[`/stats`](https://fittest-mcp.westus2.cloudapp.azure.com/stats), health at
+[`/health`](https://fittest-mcp.westus2.cloudapp.azure.com/health). Full guide: [`docs/MCP.md`](docs/MCP.md).
 
 | tool | input | returns |
 |---|---|---|
-| `check_structures` | XYZ text (single or multi-frame) and/or `{"Z"` or `"symbols", "R"}` objects, Å; ≤ 20 structures, ≤ 100 atoms each, non-periodic | per structure: `trust` / `send_to_dft`, trust score 0–1, recommended model or blend, served energy and force summary, σ_F vs τ, per-model summary, a `domain_warning` outside C/H/N/O and Transition1x sizes; `include_forces=true` for full force arrays |
-| `explain` | one structure | σ_F vs τ, the Calibrator bucket and P(correct) of every candidate in it, which models disagree most, the most uncertain atoms |
-| `swarm_status` | — | the population (answerers and the Skeptic critic) with reputations, calibration domain, threshold, live models, the evolution family tree if published |
-| `usage_stats` | — | aggregate usage: distinct anonymous clients, calls per tool, first/last call |
+| `check_structures` | `structures`: XYZ text (single or multi-frame; bare `El x y z` lines work), one `{Z or symbols, R}` object, or a list mixing both (Å); `include_forces` (default false) | per structure: `verdict` (`trust` / `send_to_dft`), `trust_score`, `recommended` model or blend and its `served_members`, `served_energy_eV`, max/mean force (eV/Å), `sigma_F` vs `tau`, per-model energy and max force, `domain_warning` |
+| `explain` | one structure | σ_F vs τ; the Calibrator bucket (σ_F range, mean-force range, oracle labels in it) and P(correct) of every candidate in it; each member's deviation from the committee mean; pairwise force RMS; the most divergent member; the three most uncertain atoms |
+| `swarm_status` | none | answerers (MACE-MPA-0, AIMNet2, Orb-v3, live status, reputation), critic (Skeptic), coordinators (Calibrator, Oracle, Curator); the ledger; the calibration domain; the evolution family tree when `results/evolution/family_tree.json` exists |
+| `usage_stats` | none | distinct users, total / external / internal calls, calls per tool, first and last call |
 
-TODO(mcp): verify every config below against `docs/MCP.md` when it lands.
+Limits: ≤ 20 structures per call, ≤ 100 atoms each, non-periodic, coordinates within ±1000 Å, no atoms
+closer than 0.3 Å; per-client rate limit (burst 20, then 1 call per 2 s); 120 s per request; model
+evaluations are serialized.
 
 **Claude Code**
 
@@ -84,24 +90,38 @@ claude mcp add --transport http fittest https://fittest-mcp.westus2.cloudapp.azu
 **Claude Desktop / claude.ai**: Settings → Connectors → Add custom connector →
 `https://fittest-mcp.westus2.cloudapp.azure.com/mcp`.
 
-Example prompt: *"Here is an XYZ of a C3H5NO2 transition-state guess. Use fittest to tell me
-whether AIMNet2 can be trusted on it or whether I need DFT, and explain why."*
+Example prompt: *"Use fittest to check whether I can trust an ML potential on this water molecule:
+O 0 0 0, H 0.96 0 0, H -0.24 0.93 0."* In the verification run Claude Code answered `trust`, trust
+score 1.0, recommended AIMNet2, σ_F = 0.378 eV/Å below τ = 0.620 eV/Å, no domain warning
+([`docs/MCP.md`](docs/MCP.md), verification log).
 
-The verdict is calibrated on Transition1x C/H/N/O reaction chemistry. Outside that domain
-(metals, charged species, periodic systems, water clusters) the trust numbers extrapolate and the
-tool says so with `domain_warning`.
+**Hosted CPU vs the GPU run.** On the 12 held-out Transition1x frames of `results/service_demo.xyz` the
+hosted server's verdicts agree 12/12 with the earlier GPU run (`results/service_demo.json`), with identical
+trust scores and max |Δσ_F| = 0.0005 eV/Å.
+
+**Domain.** The Calibrator learned from gas-phase C/H/N/O Transition1x reactions with at most 7 heavy atoms,
+including transition states and NEB paths. A `domain_warning` is added for other elements, larger molecules,
+isolated atoms or fragments and unusually short bonds; there the trust score is an extrapolation. Absolute
+energies are on each model's own reference (PBE for MACE and Orb, ωB97M for AIMNet2), so a blend's
+`served_energy_eV` is only meaningful for differences.
 
 ### 1.2 Local MCP server
 
 ```bash
 claude mcp add fittest -- uvx --from git+https://github.com/Pavel-Tk/fittest fittest-mcp   # register with Claude Code
 uvx --from git+https://github.com/Pavel-Tk/fittest fittest-mcp                 # stdio; real models if installed
-uvx --from git+https://github.com/Pavel-Tk/fittest fittest-mcp --fake-models   # CPU stand-ins, for wiring tests only
+uvx --from git+https://github.com/Pavel-Tk/fittest fittest-mcp --fake-models   # CPU stand-ins, no torch; wiring only
+pip install "fittest[models] @ git+https://github.com/Pavel-Tk/fittest"        # MACE + AIMNet2 (ALCHEMI Toolkit)
+FITTEST_ORB_PYTHON=/path/to/orb-env/bin/python fittest-mcp                     # add Orb from its own env
 ```
 
-Real model agents need the `models` extra (ALCHEMI Toolkit with MACE and AIMNet2) and, for Orb, a
-separate Python environment pointed to by `FITTEST_ORB_PYTHON` (orb-models pins dependencies that
-conflict with the Toolkit). Local mode logs only to `~/.fittest-mcp` on your machine.
+Local mode runs over stdio on CPU (`--device cuda` with a GPU) and spawns one process per installed model
+agent. Orb needs its own Python environment because orb-models pins dependencies that conflict with the
+Toolkit. With only MACE and AIMNet2 it serves a **partial committee** and every response carries a warning:
+τ and the trust map were learned on the full three-model committee. With no models installed the tools
+return an error pointing to `--fake-models`, the `[models]` extra and the hosted server. Local mode logs
+only to `~/.fittest-mcp/usage.sqlite` and never reports anywhere. Real-model local mode was exercised on
+Linux only; on Windows only `--fake-models` is verified.
 
 ### 1.3 Python API: the trust service
 
@@ -281,17 +301,16 @@ equal (aimnet2 0.89, mace_mpa0 0.89, orb 0.89, skeptic 0.86).
 
 ### 2.4 The evolutionary layer
 
-> TODO(evolution): status and outcome from `results/evolution/SUMMARY.md`. Mechanism below is from
-> `fittest/evolution.py`; verify config values (labels per generation, population bounds, number of
-> generations) against the SUMMARY.
+> TODO(evolution): status and outcome from `results/evolution/SUMMARY.md`.
 
 The static swarm above has a fixed population. The evolutionary loop (`fittest/evolution.py`,
 `scripts/evolve.py`) asks whether a population that breeds, selects and prunes its own members
-improves at the **same DFT budget** as a static control. One generation:
+improves at the **same DFT budget** as a static control. All settings below were fixed before the real
+run ([`results/evolution/METHODS.md`](results/evolution/METHODS.md)). One generation:
 
 ```mermaid
 flowchart LR
-    T["1 Triage<br/>population predicts the pool;<br/>Calibrator chooses what to serve"] --> O["2 Oracle<br/>fixed labels per generation:<br/>high-σ frames + audits of trusted frames"]
+    T["1 Triage<br/>population predicts the pool;<br/>Calibrator chooses what to serve"] --> O["2 Oracle<br/>50 labels per generation:<br/>75% highest σ_F, 25% audits of trusted frames"]
     O --> F["3 Fitness<br/>marginal contribution<br/>answerer Δ_ans · critic Δ_crit"]
     F --> S["4 Selection<br/>prune members whose<br/>contribution CI includes 0"]
     S --> B["5 Breeding<br/>Curator mutates the fittest<br/>MACE recipe; clones rejected"]
@@ -300,25 +319,44 @@ flowchart LR
     H --> T
 ```
 
-* **Fitness = marginal contribution to the swarm**, measured only on oracle labels clean for every
-  member (no member trained on that frame's endpoint-geometry component):
+* **Budget and controls.** 4 generations × 50 Transition1x lookups = 200, the same budget as arm D. The
+  **static control** runs the identical triage/oracle procedure with the population fixed at MACE-MPA-0 +
+  AIMNet2 + Orb. Every generation of every run is scored on the same eval frames with 1,000 shared
+  reaction-bootstrap resamples, so comparisons are paired.
+* **Breed / select split.** The pool's 16 endpoint-geometry components are split once into *select*
+  (7 components, 572 frames, 52 reactions) and *breed* (9 components, 1,100 frames, 100 reactions); each
+  generation labels 20 select + 30 breed frames. Offspring train only on breed labels; fitness and the gate
+  use labels no member trained on, so selection is never measured on a child's own training geometry.
+* **Fitness = marginal contribution to the swarm**, on clean labels:
   * *answerer*: `Δ_ans(m) = err(P \ m) − err(P)`, where err is the mean served error in wrongness units
     (`F_RMSE / 0.25 + |ΔE_rel| / 0.25`) and the served answer comes from a Calibrator fitted out-of-fold
-    (5-fold GroupKFold by reaction), so a member cannot look useful by overfitting the labels it is scored on;
+    (5 reaction-grouped folds), so a member cannot look useful by overfitting the labels it is scored on;
   * *critic*: `Δ_crit(m) = AUROC(σ_F(P) → P wrong) − AUROC(σ_F(P \ m) → P\m wrong)`;
-  * each Δ has a paired reaction-bootstrap SE and 95% CI; fitness = Δ_ans/SE_ans + Δ_crit/SE_crit; the role
-    (answerer or critic) is the larger z-score.
-* **Selection.** A member is eligible for pruning when neither Δ has a CI lower bound above 0 and its
-  fitness is at or below a fixed cut; fitness is recomputed after every removal, so redundant twins are
-  handled one at a time.
-* **Breeding.** The Curator mutates the fine-tuning recipe of the fittest MACE-family members (energy:force
-  loss weight, LoRA rank, learning rate, epochs, label subsample) and trains offspring on the *breed* half
-  of the labels. A child whose force deviations correlate too strongly with an existing member is a clone
-  and is rejected.
-* **Gate.** On the *select* half (component-disjoint from every child's training labels, re-asserted) a
-  child must be no worse than its parent on force RMSE and relative-energy MAE, and must pass the ALCHEMI
-  acceptance report. Failing children are stillborn and kept in the family tree.
-* **Eval never feeds back**: only the final scorer reads eval labels.
+  * 400 paired reaction-bootstrap resamples give each Δ an SE and 95% CI; fitness = Δ_ans/SE_ans +
+    Δ_crit/SE_crit; the role (answerer or critic) is the larger z-score.
+* **Selection.** Recomputed after every death. A member is eligible when neither Δ has a CI lower bound
+  above 0 and fitness ≤ 0.5; the least fit eligible member dies while the population exceeds 3, then the
+  least fit dies while it exceeds 6.
+* **Breeding.** 3 children per generation (generations 0–2) from the fittest MACE-family member(s); the
+  foundation MACE-MPA-0 is the germline if none is alive. Mutations from the parent recipe (E:F loss weight
+  10:10, LoRA rank 16, α 2, lr 10⁻³, 40 epochs): child a energy weight ×3; child b energy weight ×10 and
+  LoRA rank ×½ or ×2; child c learning rate ×½ or ×2, epochs −10/+20, 80% reaction subsample. A child of an
+  offspring starts from its parent's merged weights. **Clone rejection:** Pearson r > 0.95 between the
+  child's and a member's deviations from the population-mean force, or median per-frame force RMS
+  difference < 0.02 eV/Å.
+* **Gate** (select labels, component-disjoint from the child's training labels, asserted twice): force RMSE
+  ≤ parent; reactant-relative ΔE MAE ≤ parent; ALCHEMI `build_acceptance_report` from-scratch ratio
+  (child vs parent) ≤ 1.01. The 1% tolerance was set after a smoke test and before the real run: the
+  Toolkit's energy-per-atom MAE is dominated by frozen E0 offsets identical for child and parent (ratio
+  1.000008), so at exactly 1.00 the check is a float-precision coin flip. The Toolkit's own verdict at 1.0 is
+  recorded too. Failing children are stillborn and kept in the family tree.
+* **Differences from arm D**, stated so the two are not confused: no Skeptic kNN vetoes, no bid auction
+  (σ-ranked oracle + audits instead), no planted cases; the AUROC risk score is the population's σ_F.
+* **Eval never feeds back**: only the final scorer (`EvalScorer`) reads eval labels.
+* **Decision rule** (fixed in advance, `scripts/write_evolution_summary.py`): the flagship claim holds only
+  if, in every seed run, served force RMSE at the final generation is significantly lower than both the
+  run's own generation 0 and the static swarm at the same budget, over ≥ 3 generations, with offspring in
+  the final population and no significant regression vs static in relative-energy MAE or ECE.
 
 TODO(evolution): results table (generation, population, labels used, served F-RMSE eval, AUROC, paired CI vs
 static control), family-tree figure, verdict sentence.
@@ -590,13 +628,25 @@ deploy/             hosted MCP: Caddy (TLS) + systemd units for fittest-mcp and 
 
 ### Privacy: what the hosted MCP server logs
 
-Every call is logged as one SQLite row (`fittest/usage_log.py`): UTC time, tool name, transport, an
-anonymous client id (HMAC-SHA256 of client name, client version and remote IP under a server-side secret
-salt, truncated to 16 hex characters; raw IPs are never written), structure count, total atom count,
-verdict counts, latency, ok/error and the exception *type* (never its message). **Structures, coordinates
-and names are not stored.** Aggregate counts are public at `/stats` and through the `usage_stats` tool. A test (`tests/test_usage_log.py::test_schema_has_only_counts`) asserts the log table has no other
-columns. Caddy's access log drops client IPs (`deploy/Caddyfile`). Local (stdio) mode logs only on your machine.
-TODO(mcp): confirm against `docs/MCP.md` (retention, `/stats` URL).
+Every tool description, the server instructions and every `check_structures` response state this policy
+(`fittest/usage_log.py`, [`docs/MCP.md`](docs/MCP.md)):
+
+* **Logged per call** (one SQLite row): UTC time, tool, transport, an anonymous client id, an internal-test
+  flag, structure count, atom count, verdict counts, latency, ok/error and an error *category*
+  (`input_error`, `rate_limited`, `timeout` or the exception type; never the message, which can echo input).
+* **Client id** = HMAC-SHA256(secret salt, client name | client version | remote IP), truncated to 16 hex
+  characters. The salt is a random server-side file, never committed, so ids cannot be reversed.
+  **Raw IPs are never stored**: uvicorn's access log is off and Caddy's access log drops the client-IP and
+  X-Forwarded-For fields.
+* **Never stored:** structures, coordinates, element lists, structure names, results. A test scans the raw
+  database bytes for a planted structure name and coordinates.
+* **Users** = distinct client ids with at least one successful call, excluding internal test clients
+  (header `X-Fittest-Internal: 1`). Two people with the same client version behind one NAT count as one
+  user; one person on two networks counts as two. Aggregate counts are public at `/stats`.
+* **A privacy bug, found and fixed:** the first deploy left uvicorn's access log on, which wrote client IPs
+  into the systemd journal. It was turned off and the journal vacuumed; a re-check found the test client's
+  IP 0 times in the server and Caddy journals and in the Caddy access log.
+* Local (stdio) mode logs only on your machine.
 
 ### Licence
 
