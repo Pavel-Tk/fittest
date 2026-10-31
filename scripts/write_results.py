@@ -255,7 +255,9 @@ def repair(r: dict[str, Any], preds_dir: Path) -> tuple[list[str], str]:
     for c in acc.get("checks", []):
         v = c.get("value")
         lim = round(c["limit"], 3) if isinstance(c.get("limit"), float) else c.get("limit")
-        out.append(f"  * `{c['name']}` ({c['source']}): " +
+        # The GPU fine-tune ran before the rename; its cached meta still says "trustswarm".
+        src = "fittest" if c["source"] == "trustswarm" else c["source"]
+        out.append(f"  * `{c['name']}` ({src}): " +
                    (f"{v:.3f} {c['comparison']} {lim} → " if isinstance(v, float) else "") +
                    ("pass" if c["passed"] else "**fail**"))
     for key, label in (("geometry_leak_check", "training labels vs eval geometries"),

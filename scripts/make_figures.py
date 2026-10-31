@@ -618,7 +618,9 @@ def fig6(test, preds, nums):
                bbox_to_anchor=(0.025, 0.835), ncol=2, frameon=False, fontsize=13, handletextpad=0.4,
                columnspacing=1.6)
 
-    checks = rep_.get("checks", [])
+    # The GPU fine-tune ran before the rename; its cached meta still labels its own checks "trustswarm".
+    checks = [{**c, "source": "fittest"} if c.get("source") == "trustswarm" else c
+              for c in rep_.get("checks", [])]
     failed = [c for c in checks if not c.get("passed", True)]
     chk_txt = f"{len(failed)} of {len(checks)} checks failed" if failed else "all checks passed"
     med_b, med_c = float(np.median(e_base)), float(np.median(e_cur))

@@ -1,5 +1,5 @@
 {
-  "schema": "trustswarm.ablation/v2",
+  "schema": "fittest.ablation/v2",
   "config": {
     "budget_per_round": 40,
     "rounds": 5,
@@ -875,7 +875,7 @@
       },
       "notes": []
     },
-    "D_trustswarm": {
+    "D_fittest": {
       "models": [
         "mace_mpa0",
         "aimnet2",
@@ -1108,8 +1108,8 @@
     "B_seed: auroc_common undefined (single-class target or empty set)",
     "B_mace_seeds skipped: missing prediction file(s): data/preds/mace_seed0.npz, data/preds/mace_seed1.npz, data/preds/mace_seed2.npz, data/preds/mace_seed3.npz",
     "C_collective: auroc_common undefined (single-class target or empty set)",
-    "D_trustswarm: fine-tune not shipped (no offline fine-tune available for 'mace_mpa0' (None))",
-    "D_trustswarm: auroc_common undefined (single-class target or empty set)",
+    "D_fittest: fine-tune not shipped (no offline fine-tune available for 'mace_mpa0' (None))",
+    "D_fittest: auroc_common undefined (single-class target or empty set)",
     "D vs A_single: auroc_pool significantly WORSE (diff -0.183, paired 95% CI [-0.239, -0.124])",
     "D vs A_single: auroc_eval significantly WORSE (diff -0.129, paired 95% CI [-0.183, -0.076])",
     "D vs A_single: recall_at_k not significantly better (diff -0.006, paired 95% CI [-0.060, +0.056])",

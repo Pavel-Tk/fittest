@@ -1,5 +1,5 @@
 {
-  "schema": "trustswarm.ablation/v2",
+  "schema": "fittest.ablation/v2",
   "config": {
     "budget_per_round": 40,
     "rounds": 5,
@@ -2535,7 +2535,7 @@
       },
       "notes": []
     },
-    "D_trustswarm": {
+    "D_fittest": {
       "models": [
         "mace_mpa0",
         "aimnet2",
@@ -2995,7 +2995,7 @@
     }
   },
   "failures": [
-    "D_trustswarm: fine-tune not shipped (replay file has no train_uids: provenance unknown)",
+    "D_fittest: fine-tune not shipped (replay file has no train_uids: provenance unknown)",
     "D vs A_single: ece_eval not significantly better (diff -0.046, paired 95% CI [-0.132, +0.028])",
     "D vs A_random: ece_eval not significantly better (diff +0.058, paired 95% CI [-0.018, +0.128])",
     "D vs B_seed: recall_at_k not significantly better (diff +0.106, paired 95% CI [-0.084, +0.265])",

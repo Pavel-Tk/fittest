@@ -1,5 +1,5 @@
 {
-  "schema": "trustswarm.ablation_budget/v1",
+  "schema": "fittest.ablation_budget/v1",
   "budgets": [
     20,
     40,
@@ -756,7 +756,7 @@
         }
       ]
     },
-    "D_trustswarm": {
+    "D_fittest": {
       "auroc_pool": [
         {
           "value": 0.5110973770371188,
@@ -892,7 +892,7 @@
   "failures": {
     "20": [
       "B_mace_seeds skipped: missing prediction file(s): data\\preds\\mace_seed0.npz, data\\preds\\mace_seed1.npz, data\\preds\\mace_seed2.npz, data\\preds\\mace_seed3.npz",
-      "D_trustswarm: fine-tune not shipped (78 train uids are held-out frames (e.g. test:C2H3N3O2/rxn10005:path1888))",
+      "D_fittest: fine-tune not shipped (78 train uids are held-out frames (e.g. test:C2H3N3O2/rxn10005:path1888))",
       "D vs A_single: auroc_pool significantly WORSE (diff -0.281, paired 95% CI [-0.337, -0.210])",
       "D vs A_single: auroc_eval significantly WORSE (diff -0.187, paired 95% CI [-0.234, -0.143])",
       "D vs A_single: recall_at_k not significantly better (diff +0.021, paired 95% CI [-0.021, +0.071])",
@@ -925,7 +925,7 @@
     ],
     "40": [
       "B_mace_seeds skipped: missing prediction file(s): data\\preds\\mace_seed0.npz, data\\preds\\mace_seed1.npz, data\\preds\\mace_seed2.npz, data\\preds\\mace_seed3.npz",
-      "D_trustswarm: fine-tune not shipped (78 train uids are held-out frames (e.g. test:C2H3N3O2/rxn10005:path1888))",
+      "D_fittest: fine-tune not shipped (78 train uids are held-out frames (e.g. test:C2H3N3O2/rxn10005:path1888))",
       "D vs A_single: auroc_pool significantly WORSE (diff -0.195, paired 95% CI [-0.240, -0.141])",
       "D vs A_single: auroc_eval significantly WORSE (diff -0.156, paired 95% CI [-0.199, -0.119])",
       "D vs A_single: recall_at_k not significantly better (diff +0.055, paired 95% CI [-0.004, +0.116])",
@@ -955,7 +955,7 @@
     ],
     "80": [
       "B_mace_seeds skipped: missing prediction file(s): data\\preds\\mace_seed0.npz, data\\preds\\mace_seed1.npz, data\\preds\\mace_seed2.npz, data\\preds\\mace_seed3.npz",
-      "D_trustswarm: fine-tune not shipped (78 train uids are held-out frames (e.g. test:C2H3N3O2/rxn10005:path1888))",
+      "D_fittest: fine-tune not shipped (78 train uids are held-out frames (e.g. test:C2H3N3O2/rxn10005:path1888))",
       "D vs A_single: auroc_pool significantly WORSE (diff -0.192, paired 95% CI [-0.242, -0.143])",
       "D vs A_single: auroc_eval significantly WORSE (diff -0.206, paired 95% CI [-0.249, -0.158])",
       "D vs A_single: planted_caught not significantly better (diff +0.050, paired 95% CI [-0.150, +0.282])",

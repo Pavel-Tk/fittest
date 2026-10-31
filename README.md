@@ -481,7 +481,8 @@ Pool and eval still share chemical formulas.
 | C_audit | C + the Skeptic's random audits of trusted systems | σ_F | ensemble mean |
 | **D (Fittest)** | MACE + AIMNet2 + Orb + all agents | Calibrator risk / Skeptic | Calibrator's recommendation |
 
-Arm D is labelled `D_trustswarm` in `results/ablation.json` (the pre-rename name).
+Arm D is `D_fittest` in `results/ablation.json`. Result files written before the rename said `D_trustswarm`;
+only that label was changed, no number.
 
 | arm | AUROC eval | AUROC vs AIMNet2-wrong | Recall@K | planted caught | served F-RMSE eval (eV/Å) | served ΔE MAE eval (eV) | ECE eval | Brier eval | trusted share eval |
 |---|---|---|---|---|---|---|---|---|---|

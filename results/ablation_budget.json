@@ -1,5 +1,5 @@
 {
-  "schema": "trustswarm.ablation_budget/v1",
+  "schema": "fittest.ablation_budget/v1",
   "budgets": [
     20,
     40,
@@ -801,7 +801,7 @@
         }
       ]
     },
-    "D_trustswarm": {
+    "D_fittest": {
       "auroc_pool": [
         {
           "value": 0.5685273884413052,
@@ -936,7 +936,7 @@
   },
   "failures": {
     "20": [
-      "D_trustswarm: fine-tune not shipped (replay was trained on a different label set (102 of 160 train uids are not this run's oracle labels): fine-tune not re-run for this budget/configuration)",
+      "D_fittest: fine-tune not shipped (replay was trained on a different label set (102 of 160 train uids are not this run's oracle labels): fine-tune not re-run for this budget/configuration)",
       "D vs A_single: auroc_pool significantly WORSE (diff -0.223, paired 95% CI [-0.271, -0.159])",
       "D vs A_single: auroc_eval significantly WORSE (diff -0.147, paired 95% CI [-0.186, -0.107])",
       "D vs A_single: recall_at_k not significantly better (diff +0.021, paired 95% CI [-0.021, +0.071])",
@@ -974,7 +974,7 @@
       "D vs C_audit: silent_failures_eval not significantly better (diff -0.025, paired 95% CI [-0.073, +0.000])"
     ],
     "40": [
-      "D_trustswarm: fine-tune not shipped (acceptance verdict 'fail' != 'pass')",
+      "D_fittest: fine-tune not shipped (acceptance verdict 'fail' != 'pass')",
       "D vs A_single: auroc_pool significantly WORSE (diff -0.132, paired 95% CI [-0.174, -0.077])",
       "D vs A_single: auroc_eval significantly WORSE (diff -0.108, paired 95% CI [-0.148, -0.073])",
       "D vs A_single: recall_at_k not significantly better (diff +0.055, paired 95% CI [-0.004, +0.116])",
@@ -1009,7 +1009,7 @@
       "D vs C_audit: silent_failures_eval not significantly better (diff -0.029, paired 95% CI [-0.078, +0.000])"
     ],
     "80": [
-      "D_trustswarm: fine-tune not shipped (replay was trained on a different label set (44 of 160 train uids are not this run's oracle labels): fine-tune not re-run for this budget/configuration)",
+      "D_fittest: fine-tune not shipped (replay was trained on a different label set (44 of 160 train uids are not this run's oracle labels): fine-tune not re-run for this budget/configuration)",
       "D vs A_single: auroc_pool significantly WORSE (diff -0.138, paired 95% CI [-0.186, -0.087])",
       "D vs A_single: auroc_eval significantly WORSE (diff -0.158, paired 95% CI [-0.198, -0.110])",
       "D vs A_single: planted_caught not significantly better (diff +0.050, paired 95% CI [-0.150, +0.282])",

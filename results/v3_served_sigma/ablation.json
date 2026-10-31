@@ -1,5 +1,5 @@
 {
-  "schema": "trustswarm.ablation/v2",
+  "schema": "fittest.ablation/v2",
   "config": {
     "budget_per_round": 40,
     "rounds": 5,
@@ -2132,7 +2132,7 @@
       },
       "notes": []
     },
-    "D_trustswarm": {
+    "D_fittest": {
       "models": [
         "mace_mpa0",
         "aimnet2",
@@ -2624,7 +2624,7 @@
   },
   "failures": [
     "B_mace_seeds skipped: missing prediction file(s): data\\preds\\mace_seed0.npz, data\\preds\\mace_seed1.npz, data\\preds\\mace_seed2.npz, data\\preds\\mace_seed3.npz",
-    "D_trustswarm: fine-tune not shipped (78 train uids are held-out frames (e.g. test:C2H3N3O2/rxn10005:path1888))",
+    "D_fittest: fine-tune not shipped (78 train uids are held-out frames (e.g. test:C2H3N3O2/rxn10005:path1888))",
     "D vs A_single: auroc_pool significantly WORSE (diff -0.195, paired 95% CI [-0.248, -0.143])",
     "D vs A_single: auroc_eval significantly WORSE (diff -0.156, paired 95% CI [-0.198, -0.118])",
     "D vs A_single: recall_at_k not significantly better (diff +0.055, paired 95% CI [-0.008, +0.116])",
