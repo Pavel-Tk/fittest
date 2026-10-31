@@ -1,0 +1,100 @@
+{
+ "id": "g1_a",
+ "out": "results/evolution/preds/evolved_s0/g1_a.npz",
+ "ckpt": "results/evolution/ckpt/evolved_s0/g1_a",
+ "toolkit": {
+  "accepted": false,
+  "worst_ratio": 1.0000541536106147,
+  "max_ratio": 1.0,
+  "baseline": "parent on the same hold-out batches (same E0s)",
+  "detail": "from_scratch_ratio=1.0000541536106147; alchemi_report_accepted=False"
+ },
+ "alchemi_report": {
+  "toolkit_accepted": false,
+  "checks": [
+   {
+    "name": "from_scratch_ratio",
+    "source": "alchemi",
+    "value": 1.0000541536106147,
+    "limit": 1.0,
+    "comparison": "<=",
+    "passed": false,
+    "detail": "worst error ratio against the equal-size from-scratch student"
+   },
+   {
+    "name": "alchemi_report_accepted",
+    "source": "alchemi",
+    "value": false,
+    "limit": true,
+    "comparison": "==",
+    "passed": false,
+    "detail": "build_acceptance_report(...).accepted"
+   }
+  ],
+  "thresholds": {
+   "max_from_scratch_ratio": 1.0,
+   "holdout_force_rmse": "<= base",
+   "holdout_rel_energy_mae": "<= base"
+  },
+  "baseline": "base MACE-MPA-0 with the same refitted E0s",
+  "alchemi_report": {
+   "accepted": false,
+   "thresholds": {
+    "no_divergence": false,
+    "max_from_scratch_ratio": 1.0,
+    "extra": {}
+   },
+   "students": [
+    {
+     "name": "g1_a",
+     "accuracy": {
+      "name": "accuracy",
+      "num_graphs": 20,
+      "num_atoms": 176,
+      "energy_mae": 2644.4350341796876,
+      "energy_rmse": 3565.315778552098,
+      "energy_per_atom_mae": 377.7594909667969,
+      "energy_per_atom_rmse": 509.3308199535116,
+      "forces_mae": 0.5781706805273565,
+      "forces_rmse": 0.9895375052901163,
+      "force_cosine_mean": 0.038785307369995164,
+      "force_cosine_aggregate": 0.17524338884796734,
+      "force_nonfinite_atoms": 0
+     },
+     "baseline_accuracy": {
+      "name": "accuracy",
+      "num_graphs": 20,
+      "num_atoms": 176,
+      "energy_mae": 2644.259619140625,
+      "energy_rmse": 3565.1985448402606,
+      "energy_per_atom_mae": 377.73903503417966,
+      "energy_per_atom_rmse": 509.31407584404104,
+      "forces_mae": 0.7710026100683347,
+      "forces_rmse": 1.3492535758889719,
+      "force_cosine_mean": 0.025819293924007062,
+      "force_cosine_aggregate": 0.09725802470372387,
+      "force_nonfinite_atoms": 0
+     },
+     "weights": "raw",
+     "verdict": {
+      "name": "g1_a",
+      "accepted": false,
+      "checks": [
+       {
+        "name": "from_scratch_ratio",
+        "value": 1.0000541536106147,
+        "limit": 1.0,
+        "comparison": "<=",
+        "passed": false,
+        "detail": "worst error ratio against the equal-size from-scratch student"
+       }
+      ]
+     }
+    }
+   ]
+  }
+ },
+ "wall_seconds": 1103.636140176,
+ "train_seconds": 765.5710026500001,
+ "predict_seconds": 314.8573671480003
+}
