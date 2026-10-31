@@ -20,15 +20,26 @@ agreement between independent models*. We report failures explicitly.
 
 Transition1x (T1x), ωB97x/6-31G(d), C/H/N/O, neutral, non-periodic. Units: eV, Å, eV/Å.
 
-Splits are **by reaction** (never by frame), using the official T1x train/val/test split:
+Splits are never by frame. They start from the official T1x split (by chemical formula) and are
+re-derived **leak-free** by `fittest.data.assign_leakfree_splits(frames, seed=0)`. T1x reuses
+reactant geometries across reactions, so a plain per-reaction split leaked (732 near-duplicate
+endpoint geometries between pool and eval in the first version). Reactions are grouped into
+connected components that share any reactant or product geometry (hash = sorted Z + sorted pair
+distances at 0.01 Å), and whole components are assigned:
 
 | Split name | Source | Who may see labels | Purpose |
 |---|---|---|---|
-| `pool` | T1x test, reactions 50% | Oracle only (revealed per call) | Stream the collective triages |
-| `eval` | T1x test, other 50% | Nobody during the run; final scoring only | Post-fine-tune error, held-out AUROC |
-| `skeptic_ref` | T1x val, 50% of reactions | Skeptic only | Skeptic's private audit references |
-| `planted` | T1x val, other 50%, filtered | Skeptic plants them; labels private | Known failures injected into the pool |
-| `seed_train` | T1x train, small subset | Arm B training only | Seed-ensemble fine-tunes |
+| `pool` | T1x test: ~50% of frames, by endpoint-geometry component | Oracle only (revealed per call) | Stream the collective triages |
+| `eval` | T1x test: the other components | Nobody during the run; final scoring only | Post-fine-tune error, held-out AUROC |
+| `skeptic_ref` | T1x val: 50% of formulas, components kept whole | Skeptic only | Skeptic's private audit references |
+| `planted` | T1x val: the other formulas; planted cases = frames where AIMNet2's force RMSE > 0.4 eV/Å | Skeptic plants them; labels private | Known failures injected into the pool |
+
+With seed 0 (`results/split_report.json`): pool 1,672 frames / 152 reactions, eval 1,485 / 135,
+skeptic_ref 1,221 / 111, planted 1,254 / 114; **0** shared endpoint geometries and **0**
+near-duplicates (max |ΔR| < 10⁻³ Å) between pool and eval and between skeptic_ref and planted.
+Pool and eval share chemical formulas but no endpoint geometry. No split uses T1x train frames;
+the planned `seed_train` split was dropped (arm B uses AIMNet2's shipped ensemble members, arm B′
+MACE LoRA seeds fine-tuned on arm D's oracle labels).
 
 Per reaction we sample frames from the NEB path (reactant, product, TS and intermediate
 images) — role ∈ {reactant, product, ts, path}. The reactant frame of every pool/eval reaction
@@ -153,12 +164,20 @@ slice of oracle labels (NOT `eval`). Ship ⇔ report verdict passes; then re-pre
 
 ## 5. Ablation (same oracle budget K = rounds × k)
 
+Arm names as they appear in `results/ablation.json` (`fittest/ablation.py`):
+
 | Arm | Models | Uncertainty score | Skeptic | Bidding | Fine-tune |
 |---|---|---|---|---|---|
-| A single | AIMNet2 (strongest single model on organics) | max|F| heuristic (and random) | – | top-k score | – |
-| B seed ensemble | AIMNet2 × 4 shipped ensemble members (same data, different seeds) | seed sigma_F | – | top-k sigma | – |
-| C collective | MACE + AIMNet2 + Orb | sigma_F | – | top-k sigma | – |
-| D Fittest | MACE + AIMNet2 + Orb | sigma_F + rep bids | on | sigma + rep | 1 round |
+| `A_single` | AIMNet2 (strongest single model on organics) | max|F| heuristic | – | top-k score | – |
+| `A_random` | AIMNet2 | uniform random | – | top-k score | – |
+| `B_seed` | AIMNet2 × 4 shipped ensemble members (same data, different seeds) | seed sigma_F | – | top-k sigma | – |
+| `B_mace_seeds` (B′) | MACE-MPA-0 × 4 LoRA seeds fine-tuned on 160 of arm D's labels | seed sigma_F | – | top-k sigma | – |
+| `C_collective` | MACE + AIMNet2 + Orb | sigma_F | – | top-k sigma | – |
+| `C_audit` | MACE + AIMNet2 + Orb | sigma_F + random audits of trusted systems | – | top-k sigma | – |
+| `D_fittest` | MACE + AIMNet2 + Orb | sigma_F + rep bids | on | sigma + rep | 1 round |
+
+Result files written before the TrustSwarm → Fittest rename labelled arm D `D_trustswarm`; they
+were relabelled to `D_fittest` with no change to any number.
 
 Metrics (on `pool` for triage, `eval` for generalisation):
 1. AUROC(score → served answer wrong). Also AUROC vs a common target (MACE wrong).
@@ -167,6 +186,25 @@ Metrics (on `pool` for triage, `eval` for generalisation):
 4. Served-answer error (force RMSE mean, rel_e MAE) on `eval`, before/after fine-tune.
 5. Fine-tuned model error on `eval` vs base.
 Bootstrap 95% CI over reactions (1000 resamples). Seeds fixed. Failures reported.
+
+**Evolutionary loop (separate experiment, added after the ablation).** The static committee of
+arm D is replaced by a population that changes over generations. Runs A and B use arm D's budget
+(4 generations × 50 Transition1x look-ups = 200); run C repeats the design at budgets 200, 400 and
+800. The pool is split once, by whole endpoint-geometry component, into *breed* and *select* parts;
+offspring train on breed labels only (run A: LoRA fine-tunes of MACE-MPA-0; run B: AIMNet2
+fine-tunes with a reaction-relative energy loss; run C: head-only niche specialists trained on
+the high-σ_F region). Fitness is a paired-bootstrap z-score of each member's contribution to the
+served answer and to error ranking, measured on labels no member trained on; the least fit
+eligible member dies. A child joins only if it passes a gate (force RMSE and reactant-relative ΔE
+MAE no worse than its parent on component-disjoint select labels, plus the ALCHEMI acceptance
+report for MACE LoRA children in run A) and is not a clone of a living member. A static swarm
+(MACE-MPA-0 + AIMNet2 + Orb, same triage and oracle procedure, population fixed) is the control.
+The decision rule was fixed before the runs: in every seed run, the evolved swarm's served force
+RMSE at the final generation must be significantly lower than both its own generation 0 and the
+static swarm at the same budget (paired CIs), over ≥ 3 generations, with offspring in the final
+population and no significant regression in rel-E MAE or ECE. Full methods:
+`results/evolution/METHODS.md` (run C: `results/evolution_c/PREREG.md`). Outcomes are reported
+only in `results/evolution/SUMMARY.md`.
 
 ## 6. ALCHEMI usage
 * `DisagreementHook`: a Toolkit hook in the in-flight batch; every N steps it gathers forces
@@ -216,5 +254,9 @@ mace_seed0..3, mace_lora_curated}. GPU timings go in `meta` (atoms/s) for the co
 * AIMNet2 checkpoint = `aimnet2` (ωB97M-D3), MACE = `medium-mpa-0`.
 * Arm A single = `aimnet2` (model file `aimnet2`); Arm B = `aimnet2_m0..m3` (the four shipped ensemble members); Arms C/D = `mace_mpa0, aimnet2, orb`. Optional extra arm B' = `mace_seed0..3` if produced.
 * `aimnet2` is the aimnet registry alias of ensemble member 0 (`aimnet2-wb97m-d3_0`): the `aimnet2` and `aimnet2_m0` servers return identical predictions (force RMSE vs DFT 0.316169 eV/Å for both on all 5632 frames), so arm A and arm B member 0 are the same network.
-* T1x official split is by chemical formula (test 8 formulas, val 8). Our `pool`/`eval` split is by reaction within T1x test; report that pool and eval share formulas.
+* T1x official split is by chemical formula (test 8 formulas, val 8). Our `pool`/`eval` split was first by reaction within T1x test; that leaked shared reactant geometries, so it was replaced by the component split of §1 (`assign_leakfree_splits`). Pool and eval share formulas, not endpoint geometries.
 * "Wrong" thresholds are config values; primary reported with threshold-free Spearman(sigma, error) and AUROC at several thresholds.
+* **Rename.** The project was TrustSwarm; it is now Fittest (package `fittest`, env vars `FITTEST_*`, arm `D_fittest`). Pickles written before the rename load through `fittest.cache`.
+* **τ in practice.** The per-round threshold rule of §4 never moved τ off its floor in the final run, so τ = the 70th percentile of σ_F on round 0 (0.620 eV/Å in the snapshot the MCP server uses). It is a percentile rule, not something the swarm learned.
+* **One verdict rule for the MCP server** (`fittest/mcp_server.py`, `docs/MCP.md`). `trust` only if every model agent supports the structure's elements, the forces do not all vanish (max |F| < 0.05 eV/Å for every model), σ_F < τ, and trust_score ≥ 0.5; otherwise `send_to_dft` with every failing condition in `verdict_reasons`. `trust_score` is the Calibrator's Beta posterior mean of P(served answer correct) for the served candidate in the structure's bucket (prior Beta(2, 1), never exactly 1), reported with its 90% credible interval and the number of labels behind it. The same rule feeds `check_structures`, `explain` and the usage counts.
+* **Evolutionary loop.** Added on top of the frozen contract; see the paragraph at the end of §5 and `results/evolution/METHODS.md`. Results: `results/evolution/SUMMARY.md`.
