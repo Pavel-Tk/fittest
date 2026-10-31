@@ -118,7 +118,7 @@ Run the same pipeline again with `aimnet2-rxn` and `orb-v3-conservative-omol` as
 - "Orb-omol / OrbMol were trained on OMol25, which includes Transition1x geometries relabelled at ωB97M-V. We exclude them from the headline numbers."
 - "AIMNet2-rxn is trained on RGD1 reactions (no T1x), so it is in-domain for reactive chemistry. AIMNet2 (base) is the reported member."
 - "No model is trained at ωB97x/6-31G(d). Every reported 'error' includes the level-of-theory gap (PBE or ωB97M vs ωB97x), not just ML error."
-- "Evaluation uses the official T1x formula-held-out test split (8 formulas). Our oracle-labelled fine-tuning set comes from train formulas only."
+- "Evaluation uses held-out reactions from the official T1x test split (8 formulas, none of them in T1x train). The test reactions are split into `pool` and `eval` by connected component of shared reactant/product geometry (`fittest.data.assign_leakfree_splits`, seed 0): 152 pool / 135 eval reactions, 0 shared endpoint geometries ([`results/split_report.json`](../results/split_report.json)). Pool and eval share formulas, not geometries. The oracle-labelled fine-tuning set comes from the pool stream (T1x test formulas, plus planted cases from T1x val), never from eval or T1x train: `scripts/finetune.py` refuses `eval` and `skeptic_ref` frames, drops any labelled frame whose geometry or reaction endpoint matches an eval geometry, and holds out whole components for its acceptance check."
 - "Leakage checks rely on published dataset descriptions, not on geometry hashing against OMol25."
 
 ---
