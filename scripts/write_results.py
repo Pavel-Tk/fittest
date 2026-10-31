@@ -139,9 +139,14 @@ def collective_lines(path: Path) -> list[str]:
     bids = sum(len(e["payload"]["uid"]) for e in events if e["kind"] == "bid")
     flags = kinds.get("flag", 0)
     fin = [e["payload"] for e in events if e["kind"] == "finetune_report"]
-    out = [f"From `{path.as_posix()}` ({len(events)} events, arrays summarised).", "",
-           "| event kind | count |", "|---|---|"]
-    out += [f"| {k} | {v} |" for k, v in kinds.most_common()]
+    items = Counter()
+    for e in events:
+        uid = e["payload"].get("uid")
+        items[e["kind"]] += len(uid) if isinstance(uid, list) else 1
+    out = [f"From `{path.as_posix()}` ({len(events)} events, arrays summarised). `prediction`, "
+           "`pass`, `verdict` and `bid` are posted as batches (one per agent step).", "",
+           "| event kind | events | systems covered |", "|---|---|---|"]
+    out += [f"| {k} | {v} | {items[k]} |" for k, v in kinds.most_common()]
     out += ["", f"* **Oracle calls:** {len(oracle)}, of which {n_audit} exploration audits and "
                 f"{len(oracle) - n_audit} won by bids; {bids} individual bids were placed in total.",
             f"* **Flags / vetoes:** the hook flagged {flags} systems; the Skeptic vetoed "
@@ -155,6 +160,10 @@ def collective_lines(path: Path) -> list[str]:
     if tau_traj:
         out.append("* **τ trajectory (round: τ, labels):** " +
                    "; ".join(f"{r}: {t:.3f} ({n})" for r, t, n in tau_traj))
+        if len({round(t, 9) for _, t, _ in tau_traj}) == 1:
+            out.append("  τ never left its round-0 floor (70th percentile of σ_F): the isotonic rule "
+                       "(smallest τ with P(served wrong | σ ≥ τ) ≥ 0.5 on the labelled points) never "
+                       "exceeded the floor, so the floor set every flag.")
     if reps:
         out.append("* **Reputations at the end:** " +
                    ", ".join(f"{a} {v:.2f}" for a, v in sorted(reps[-1].items())))
@@ -189,6 +198,18 @@ def dispersion(frames_path: Path, preds_dir: Path, seed: int) -> dict[str, dict[
         err = [force_rmse(np.mean([preds[m].forces[f.uid] for m in models], axis=0), f.F) for f in ev]
         out[label] = {"spread": float(np.median(spread)), "error": float(np.median(err))}
     return out
+
+
+def naive_leak(frames_path: Path) -> int | None:
+    """Near-duplicate pool/eval endpoints under the per-reaction split stored in frames.pkl."""
+    try:
+        from trustswarm.cache import load_frames
+        from trustswarm.data import EVAL, POOL, near_duplicate_endpoints
+    except ImportError:
+        return None
+    if not frames_path.exists():
+        return None
+    return near_duplicate_endpoints(load_frames(frames_path), POOL, EVAL)
 
 
 def repair_lines(r: dict[str, Any], preds_dir: Path) -> list[str]:
@@ -282,14 +303,19 @@ def main(argv: list[str] | None = None) -> None:
     ]
     if disp:
         summary.append("* **Ranking ≠ calibration:** on eval the median seed spread is " + "; ".join(
-            f"{k} {v['spread']:.3f} vs median error {v['error']:.3f} eV/Å (×{v['error'] / v['spread']:.0f} "
-            f"under-dispersed)" for k, v in disp.items()) + ".")
+            f"{k} {v['spread']:.3f} vs median error {v['error']:.3f} eV/Å (×{v['error'] / v['spread']:.1f} "
+            f"under-dispersed)" for k, v in disp.items()) + f"; yet {best_auc} ranks errors best.")
+    hm = ((ft.get("report") or {}).get("acceptance_report") or {}).get("holdout_metrics") or {}
+    repair = (f"forces {hm['before']['force_rmse']:.3f} → {hm['after']['force_rmse']:.3f} eV/Å but "
+              f"relative-energy MAE {hm['before']['rel_energy_mae']:.3f} → {hm['after']['rel_energy_mae']:.3f} eV "
+              "on held-out labels, so our gate refuses it") if hm else (ft.get("report") or {}).get("reason", "")
+    leak_before = naive_leak(Path(args.frames))
     summary += [
-        f"* **Self-repair:** the Curator fine-tuned `{ft.get('model')}` on its oracle labels; not shipped — "
-        f"{(ft.get('report') or {}).get('reason', 'see below')}." if ft and not ft.get("shipped") else
-        f"* **Self-repair:** fine-tune of `{ft.get('model')}` shipped." if ft else "",
-        f"* **Leakage controlled:** pool/eval and skeptic_ref/planted share 0 endpoint geometries "
-        f"(Transition1x reuses reactants; the naive split shared 732 near-duplicates).",
+        f"* **Self-repair:** the Curator chose and LoRA-fine-tuned `{ft.get('model')}` on its oracle labels; "
+        f"{'shipped' if ft.get('shipped') else 'not shipped'} — {repair}." if ft else "",
+        "* **Leakage controlled:** pool/eval and skeptic_ref/planted share 0 endpoint geometries"
+        + (f" (Transition1x reuses reactants: a per-reaction split had {leak_before} near-duplicate "
+           "pool/eval endpoints)." if leak_before else "."),
         "* Full tables, per-version history and failures: `results/RESULTS.md`.",
         "<!-- SUMMARY:END -->",
     ]

@@ -8,9 +8,9 @@
 * **Negative result — error ranking:** TrustSwarm's AUROC (eval 0.730) is significantly worse than A_single, B_seed, B_mace_seeds, C_collective, C_audit. Best ranker on eval: B_mace_seeds (0.853).
 * **Heterogeneous disagreement detects AIMNet2's failures best:** AUROC vs 'AIMNet2 wrong' 0.917 (C_collective).
 * **Recall@K:** TrustSwarm 0.186; significantly better than A_random.
-* **Ranking ≠ calibration:** on eval the median seed spread is MACE LoRA seeds 0.009 vs median error 0.266 eV/Å (×30 under-dispersed); AIMNet2 ensemble members 0.109 vs median error 0.257 eV/Å (×2 under-dispersed).
-* **Self-repair:** the Curator fine-tuned `mace_mpa0` on its oracle labels; not shipped — acceptance verdict 'fail' != 'pass'.
-* **Leakage controlled:** pool/eval and skeptic_ref/planted share 0 endpoint geometries (Transition1x reuses reactants; the naive split shared 732 near-duplicates).
+* **Ranking ≠ calibration:** on eval the median seed spread is MACE LoRA seeds 0.009 vs median error 0.266 eV/Å (×29.7 under-dispersed); AIMNet2 ensemble members 0.109 vs median error 0.257 eV/Å (×2.4 under-dispersed); yet B_mace_seeds ranks errors best.
+* **Self-repair:** the Curator chose and LoRA-fine-tuned `mace_mpa0` on its oracle labels; not shipped — forces 0.878 → 0.500 eV/Å but relative-energy MAE 0.402 → 0.414 eV on held-out labels, so our gate refuses it.
+* **Leakage controlled:** pool/eval and skeptic_ref/planted share 0 endpoint geometries (Transition1x reuses reactants: a per-reaction split had 732 near-duplicate pool/eval endpoints).
 * Full tables, per-version history and failures: `results/RESULTS.md`.
 <!-- SUMMARY:END -->
 
@@ -66,29 +66,30 @@ A seed ensemble can rank errors well (high AUROC) while being badly under-disper
 
 ## What the collective decided (arm D)
 
-From `results/blackboard_armD.jsonl` (5921 events, arrays summarised).
+From `results/blackboard_armD.jsonl` (5921 events, arrays summarised). `prediction`, `pass`, `verdict` and `bid` are posted as batches (one per agent step).
 
-| event kind | count |
-|---|---|
-| system | 3157 |
-| veto | 1788 |
-| flag | 601 |
-| oracle_result | 200 |
-| plant | 75 |
-| bid | 50 |
-| prediction | 18 |
-| threshold | 7 |
-| tick | 7 |
-| verdict | 6 |
-| pass | 6 |
-| reputation | 5 |
-| finetune_report | 1 |
+| event kind | events | systems covered |
+|---|---|---|
+| system | 3157 | 3157 |
+| veto | 1788 | 1788 |
+| flag | 601 | 601 |
+| oracle_result | 200 | 200 |
+| plant | 75 | 75 |
+| bid | 50 | 9745 |
+| prediction | 18 | 9696 |
+| threshold | 7 | 7 |
+| tick | 7 | 7 |
+| verdict | 6 | 7480 |
+| pass | 6 | 2631 |
+| reputation | 5 | 5 |
+| finetune_report | 1 | 1 |
 
 * **Oracle calls:** 200, of which 50 exploration audits and 150 won by bids; 9745 individual bids were placed in total.
 * **Flags / vetoes:** the hook flagged 601 systems; the Skeptic vetoed 1788 trusted verdicts (1202 on pool systems, the rest advisory on eval).
 * **Recommended candidate, eval (served):** `mean(aimnet2+orb)` 1373, `aimnet2` 112
 * **Recommended candidate, pool (last verdict before reveal):** `mean(aimnet2+orb)` 1593, `aimnet2` 114, `consensus` 40
 * **τ trajectory (round: τ, labels):** 0: 0.620 (0); 1: 0.620 (40); 2: 0.620 (80); 3: 0.620 (120); 4: 0.620 (160); 5: 0.620 (200); 6: 0.620 (200)
+  τ never left its round-0 floor (70th percentile of σ_F): the isotonic rule (smallest τ with P(served wrong | σ ≥ τ) ≥ 0.5 on the labelled points) never exceeded the floor, so the floor set every flag.
 * **Reputations at the end:** aimnet2 0.89, mace_mpa0 0.89, orb 0.89, skeptic 0.86
 * **Curator:** chose `mace_mpa0` as the worst model (ledger force RMSE aimnet2 0.431, mace_mpa0 0.804, orb 0.508); shipped: False.
 

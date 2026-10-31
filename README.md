@@ -11,7 +11,31 @@ NVIDIA ALCHEMI Toolkit 0.3.0-rc.
 > verdicts, and fine-tunes the weakest model on what the oracle returns.
 
 <!-- RESULTS:START -->
-_Results are being produced; see `results/`._
+## Results
+
+**TrustSwarm on Transition1x (leak-free split, 40×5 = 200 oracle calls per arm, 95% reaction-bootstrap CIs).**
+
+* **Better served answers:** TrustSwarm's served force RMSE on held-out eval is **0.206 eV/Å** vs 0.286–0.317 for every baseline; wrong on 40% of eval frames vs 54%–68%. It learned to serve the subset mean of the models that is most often right.
+* **Calibrated trust:** ECE 0.080, Brier 0.185; significantly better than A_single, A_random, B_seed, B_mace_seeds, C_collective, tied with C_audit — the gain comes from the Skeptic's random audits of trusted answers.
+* **Negative result — error ranking:** TrustSwarm's AUROC (eval 0.730) is significantly worse than A_single, B_seed, B_mace_seeds, C_collective, C_audit. Best ranker on eval: B_mace_seeds (0.853).
+* **Heterogeneous disagreement detects AIMNet2's failures best:** AUROC vs 'AIMNet2 wrong' 0.917 (C_collective).
+* **Recall@K:** TrustSwarm 0.186; significantly better than A_random.
+* **Ranking ≠ calibration:** on eval the median seed spread is MACE LoRA seeds 0.009 vs median error 0.266 eV/Å (×29.7 under-dispersed); AIMNet2 ensemble members 0.109 vs median error 0.257 eV/Å (×2.4 under-dispersed); yet B_mace_seeds ranks errors best.
+* **Self-repair:** the Curator chose and LoRA-fine-tuned `mace_mpa0` on its oracle labels; not shipped — forces 0.878 → 0.500 eV/Å but relative-energy MAE 0.402 → 0.414 eV on held-out labels, so our gate refuses it.
+* **Leakage controlled:** pool/eval and skeptic_ref/planted share 0 endpoint geometries (Transition1x reuses reactants: a per-reaction split had 732 near-duplicate pool/eval endpoints).
+* Full tables, per-version history and failures: `results/RESULTS.md`.
+
+![Ablation](results/fig/fig5_ablation.png)
+
+| Science finding | Figure |
+|---|---|
+| Every model's force error rises toward the transition state (AIMNet2: 2.1× reactant) | `results/fig/fig1_ts_failure.png` |
+| Independent-model spread tracks error (Spearman 0.73); a seed ensemble's spread is 0.4× its error | `results/fig/fig2_spread_vs_error.png` |
+| In ALCHEMI batched NEB, spread follows force error along the path (median ρ 0.96, 8 reactions) | `results/fig/fig3_neb.png` |
+| Averaging AIMNet2 + Orb halves wrong answers (57% → 26%); adding MACE undoes it | `results/fig/fig4_best_subset.png` |
+| Curator's LoRA repair: forces 0.88 → 0.50 eV/Å, relative energies slightly worse, gate refuses | `results/fig/fig6_repair.png` |
+
+Pitch deck: see the link in the hackathon submission. Announcement text: `docs/discord_post.md`.
 <!-- RESULTS:END -->
 
 ## How it works
@@ -41,14 +65,20 @@ the round driver advances the clock and makes no decisions.
 **1. `DisagreementHook`** — drop into any ALCHEMI Toolkit run with any set of models:
 
 ```python
+from trustswarm import paths
 from trustswarm.hook import DisagreementHook
 from trustswarm.model_server import spawn
-clients = [spawn("mace_mpa0", 6000).connect(), spawn("aimnet2", 6001).connect(),
-           spawn("orb", 6002, python="/path/to/orb-env/bin/python").connect()]
-hook = DisagreementHook(clients, tau=0.35)   # graduates systems with σ_F ≥ τ out of the batch
-# FusedStage(sub_stages=[(0, FIRE2(...))], sampler=SizeAwareSampler(...), hooks=[hook, ...]).run(...)
-hook.flagged  # → oracle queue
+
+committee = {m: spawn(m, 6100 + k, python=paths.model_python(m)).connect()   # one process per model agent
+             for k, m in enumerate(["mace_mpa0", "aimnet2", "orb"])}
+hook = DisagreementHook(committee, tau=0.56, every=10, stage="both",   # admission + every 10 steps
+                        graduate=True,                                 # σ_F ≥ τ → leaves batch, sampler refills
+                        id_map=lambda sid: ds.load_order[sid])
+fused = FusedStage(sub_stages=[(0, relax)], sampler=sampler, refill_frequency=1, hooks=[hook])
+fused.run(batch=None, n_steps=20000)
+hook.flagged   # → your DFT / oracle queue; hook.records holds σ per system and step
 ```
+Full working example (dataset protocol, neighbour hooks, NEB variant): `docs/REPRODUCE.md`.
 
 **2. Trust service** — structures in, per-system trust and recommended model out:
 
@@ -63,12 +93,15 @@ python -m trustswarm.service score my_molecules.xyz --snapshot results/trust_sna
 
 ```bash
 # GPU (Colab L4 used here). Core env: nvalchemi-toolkit[cu13,mace,aimnet,ase] @ 0.3.0-rc; Orb in its own venv.
+bash scripts/setup_gpu.sh                               # envs + Transition1x (see docs/REPRODUCE.md)
 python3 scripts/predict_pool.py --build-frames          # T1x frames + every model's predictions
 python3 scripts/analyze_signal.py                       # disagreement vs DFT error
 python3 scripts/screen_alchemi.py                       # ALCHEMI in-flight batch + DisagreementHook
 python3 scripts/run_neb.py                              # batched NEB, σ along the path
 python3 scripts/run_ablation.py --frames data/frames.pkl --preds data/preds --out results/
-python3 scripts/finetune.py ...                         # Curator: LoRA repair + acceptance report
+python3 scripts/finetune.py --labelled-uids results/oracle_labels_armD.json ...   # Curator: LoRA repair + gate
+python3 scripts/write_results.py && python scripts/make_figures.py
+python3 scripts/demo_service.py                         # trust service against the real model agents
 # CPU-only smoke test, no GPU or data needed:
 python scripts/make_synthetic.py && python scripts/run_ablation.py --frames data/synthetic/frames.pkl --preds data/synthetic/preds --out results/synthetic
 pytest -q
@@ -83,8 +116,10 @@ pytest -q
 * Leakage: Orb models trained on OMol25 have seen Transition1x geometries (OMol25 recomputed
   T1x), so we use `orb-v3-conservative-inf-omat` instead. MACE-MPA-0 is crystals-only.
   AIMNet2's training set contains no T1x as far as we could verify.
-* The official T1x split is by chemical formula; our pool/eval split is by reaction within the
-  T1x test formulas, so pool and eval share formulas (but not reactions).
+* The official T1x split is by chemical formula. Transition1x builds many reactions from the same
+  reactant, so a per-reaction split leaks geometry; our pool/eval split is by connected components of
+  reactions that share an endpoint geometry (37 components, 0 shared geometries; `results/split_report.json`).
+  Pool and eval still share chemical formulas.
 * The oracle is a DFT label lookup, not live DFT.
 
 See `docs/DESIGN.md` for the full contract, `docs/data_and_models.md` and
