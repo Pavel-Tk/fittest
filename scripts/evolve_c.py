@@ -74,17 +74,18 @@ class GPUFactory:
                 "result": f"{base}.result.json"}
 
     def _slot(self):
-        while True:
-            for i in range(self.gpu_slots):
-                fh = open(self.cache / f".gpu_slot{i}", "w")
-                try:
-                    import fcntl
+        """Try once to take a free GPU slot; None if all are busy. Never blocks: the caller must keep
+        polling its own running children, or a run with parallel > gpu_slots deadlocks on itself."""
+        import fcntl
 
-                    fcntl.flock(fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                    return fh
-                except OSError:
-                    fh.close()
-            time.sleep(2)
+        for i in range(self.gpu_slots):
+            fh = open(self.cache / f".gpu_slot{i}", "w")
+            try:
+                fcntl.flock(fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                return fh
+            except OSError:
+                fh.close()
+        return None
 
     def __call__(self, requests):
         specs = [self.spec(r) for r in requests]
@@ -97,6 +98,9 @@ class GPUFactory:
                     print(f"[factory] {s['id']}: cached {s['key']}", flush=True)
                     continue
                 slot = self._slot()
+                if slot is None:  # all GPU slots busy: poll running children first, retry next tick
+                    pending.insert(0, s)
+                    break
                 sp = Path(s["result"]).with_suffix("").with_suffix(".spec.json")
                 sp.write_text(json.dumps({k: v for k, v in s.items() if not k.startswith("_")}))
                 log = open(Path(s["result"]).with_suffix("").with_suffix(".log"), "w")
