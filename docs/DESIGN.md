@@ -1,4 +1,4 @@
-# Fittest — design contract (v1, frozen for overnight build)
+# Fittest — design contract (v1, revised through v4 and the evolution runs; see §10)
 
 > A collective that decides which MLIP to trust, where, and repairs it where none can be.
 
@@ -174,13 +174,13 @@ Arm names as they appear in `results/ablation.json` (`fittest/ablation.py`):
 | `B_mace_seeds` (B′) | MACE-MPA-0 × 4 LoRA seeds fine-tuned on 160 of arm D's labels | seed sigma_F | – | top-k sigma | – |
 | `C_collective` | MACE + AIMNet2 + Orb | sigma_F | – | top-k sigma | – |
 | `C_audit` | MACE + AIMNet2 + Orb | sigma_F + random audits of trusted systems | – | top-k sigma | – |
-| `D_fittest` | MACE + AIMNet2 + Orb | sigma_F + rep bids | on | sigma + rep | 1 round |
+| `D_fittest` | MACE + AIMNet2 + Orb | max(isotonic P(served wrong \| feature), Skeptic p_S), feature (σ_F or σ_served) chosen by reaction-grouped 5-fold CV AUROC | on | sigma + rep | 1 round |
 
 Result files written before the TrustSwarm → Fittest rename labelled arm D `D_trustswarm`; they
 were relabelled to `D_fittest` with no change to any number.
 
 Metrics (on `pool` for triage, `eval` for generalisation):
-1. AUROC(score → served answer wrong). Also AUROC vs a common target (MACE wrong).
+1. AUROC(score → served answer wrong). Also AUROC vs a common target (AIMNet2 wrong).
 2. Recall@K: fraction of wrong served answers that received an oracle call.
 3. Planted failures caught: fraction of planted cases flagged, vetoed, or oracle-checked.
 4. Served-answer error (force RMSE mean, rel_e MAE) on `eval`, before/after fine-tune.
@@ -219,7 +219,9 @@ only in `results/evolution/SUMMARY.md`.
 * `fittest.hook.DisagreementHook` — drop-in for any Toolkit run, any set of models.
 * `fittest.service` — FastAPI: `POST /trust` with structures (xyz or JSON Z/R) →
   per-system `{sigma_F, trust, recommended_model, flagged, per_model_energy}`; `GET /health`.
-  CLI: `fittest score file.xyz`.
+  CLI: `python -m fittest.service score --snapshot results/trust_snapshot.json file.xyz`
+  (`serve` for the HTTP API).
+* `fittest.mcp_server` — the MCP server (`fittest-mcp`), hosted and local; see `docs/MCP.md`.
 
 ## 8. Repo layout
 ```
@@ -230,10 +232,14 @@ fittest/            package
   agents/              model_agent.py oracle.py skeptic.py calibrator.py curator.py
   hook.py              DisagreementHook (ALCHEMI)
   model_server.py      per-model process server + client (own process/env)
-  models/              orb_wrapper.py (Toolkit BaseModelMixin) + loaders
+  models/              mace_batched.py, aimnet2_calc.py, toolkit_io.py (loaders / Toolkit I/O)
   ablation.py          arms A-D, metrics, bootstrap
   service.py           FastAPI trust service + CLI
-scripts/               colab job scripts: predict_pool.py, run_neb.py, finetune.py, run_ablation.py
+  mcp_server.py        MCP server (hosted + local); usage_log.py its privacy-preserving log
+  evolution.py         evolutionary loop, runs A/B; evolution_c.py run C
+scripts/               job scripts: predict_pool.py, run_neb.py, finetune.py, run_ablation.py, evolve*.py,
+                       setup_cpu.sh / setup_gpu.sh (environments)
+deploy/                hosted MCP: Caddyfile, systemd units, remote_setup.sh, verify_mcp.py
 tests/                 pytest, CPU-only, synthetic data (no GPU, no T1x needed)
 results/               json + figures (committed)
 docs/                  this file, API notes, results.md
