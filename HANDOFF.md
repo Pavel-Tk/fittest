@@ -58,3 +58,14 @@ Deadline from Pavel: **Sat Oct 31, 19:00 EST** for everything; slides due Sun No
    write in his voice here.
 7. **Cost**: this VM (Standard_D8as_v5, westus2, rg `rg-fittest-eus`) must stay up to host the MCP. After the
    evolution runs finish, consider downsizing it (that restarts the VM; the services auto-start).
+
+## Evolution jobs on the VM (fallback notes, in case HANDOFF_evolution.md is missing)
+- Working copy: `/home/azureuser/fittest_evo` (a separate checkout, so `git pull` there only after the jobs finish).
+- Run A, seed 1: `scripts/evolve.py ... --out results/evo_s1 --seeds 1`. Run A, seed 0: `results/evolution/`.
+- Run B: `scripts/evolve.py ... --out results/evolution_aimnet --family aimnet2 --seeds 0,1 --controls newest --control-seeds 0,1`.
+- Check progress: `pgrep -af evolve`, then `ls -t ~/fittest_evo/results/*/`, and see `generations.json` and `family_tree.json`
+  in each out dir.
+- When they finish: copy the out dirs into `~/fittest/results/`, write `results/evolution/SUMMARY.md` (runs A/B/C side by
+  side, with the verdict under the decision rule), make the figures, then commit and push.
+- The original `~/fittest` had an unmerged `scripts/finetune.py`; it was reset to origin/master, and the old file is
+  backed up at `~/handoff/finetune.py.vm_unmerged_backup`.
