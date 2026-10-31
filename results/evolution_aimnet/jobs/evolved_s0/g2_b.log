@@ -1,0 +1,21 @@
+Warp CUDA warning: Could not find or load the NVIDIA CUDA driver. GPU execution will not be available.
+Warp 1.18.0 initialized:
+   CUDA Toolkit 13.4, CUDA driver not available (NVRTC compilation available)
+   Devices:
+     "cpu"      : "x86_64"
+   Kernel cache:
+     /home/azureuser/.cache/warp/1.18.0
+=== g2_b: parent results/evolution_aimnet/ckpt/evolved_s0/g1_a, 60 train (35 with a labelled same-reaction partner), 2205557 trainable params (all), 67 epochs x 3 steps, recipe {'lr': 3.3333333333333335e-05, 'trainable': 'all', 'force_weight': 1.0, 'rel_weight': 3.0, 'epochs': 60, 'batch_size': 16, 'label_fraction': 1.0, 'min_steps': 200}
+/home/azureuser/fittest_evoB/scripts/evolve_offspring_aimnet.py:160: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /__w/pytorch/pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:820.)
+  tot += float(loss)
+  epoch    1  loss 0.11336  (1.7 s)
+  epoch    8  loss 0.03209  (11.9 s)
+  epoch   16  loss 0.01575  (23.3 s)
+  epoch   24  loss 0.01115  (34.8 s)
+  epoch   32  loss 0.00846  (46.2 s)
+  epoch   40  loss 0.00837  (57.9 s)
+  epoch   48  loss 0.00680  (69.5 s)
+  epoch   56  loss 0.00637  (81.4 s)
+  epoch   64  loss 0.00625  (93.0 s)
+--- g2_b: train 97 s, predict 17 s, total 130 s

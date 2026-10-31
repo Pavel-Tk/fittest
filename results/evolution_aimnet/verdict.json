@@ -1,0 +1,28 @@
+{
+ "rule": "the flagship \"Survival of the fittest\" holds iff,\nin every seed run, the evolved swarm's served force RMSE on eval is significantly lower\n(paired 95 % reaction-bootstrap CI of the difference below 0) both (i) at the final generation\nvs its own generation 0 and (ii) at the final generation vs the static swarm at the same total\nDFT budget, over >= 3 generations, with offspring alive in the final population, and without\na significant regression vs static in served rel-E MAE or ECE.",
+ "per_run": {
+  "evolved_s0": {
+   "generations": 4,
+   "offspring_in_final_population": [
+    "g1_a"
+   ],
+   "force_better_than_gen0": true,
+   "force_better_than_static": false,
+   "no_rel_e_regression_vs_static": true,
+   "no_ece_regression_vs_static": true,
+   "holds": false
+  },
+  "evolved_s1": {
+   "generations": 4,
+   "offspring_in_final_population": [
+    "g2_b"
+   ],
+   "force_better_than_gen0": true,
+   "force_better_than_static": true,
+   "no_rel_e_regression_vs_static": true,
+   "no_ece_regression_vs_static": true,
+   "holds": true
+  }
+ },
+ "flagship_holds": false
+}

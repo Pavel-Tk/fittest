@@ -262,7 +262,17 @@ def cmd_summarize(args) -> None:
             rows.append((B, d.parent.name, name, r))
         summary["budgets"][d.parent.name] = {"budget": B, **entry}
     ev = [r["verdict"]["holds"] for _, _, n, r in rows if "verdict" in r]
-    summary["verdict"] = {"evolution_holds_any_budget": any(ev), "per_run": {
+    # Pre-registered aggregation: at a budget, evolution holds iff it holds in EVERY seed run there.
+    by_budget: dict[int, list[bool]] = {}
+    for B, _, _, r in rows:
+        if "verdict" in r:
+            by_budget.setdefault(B, []).append(bool(r["verdict"]["holds"]))
+    per_budget = {str(B): {"seeds_holding": sum(v), "seeds": len(v), "holds": bool(v) and all(v)}
+                  for B, v in sorted(by_budget.items())}
+    crossover = next((int(B) for B, v in per_budget.items() if v["holds"]), None)
+    summary["verdict"] = {"rule": "holds at a budget iff it holds in every seed run (PREREG.md)",
+                          "per_budget": per_budget, "evolution_holds_any_budget": crossover is not None,
+                          "crossover_budget": crossover, "any_single_run_holds": any(ev), "per_run": {
         f"{dn}/{n}": r["verdict"] for _, dn, n, r in rows if "verdict" in r}}
     (root / "summary.json").write_text(json.dumps(jsonable(summary), indent=1))
     lines = ["| budget | run | served F-RMSE [95% CI] | Δ vs static F-RMSE [CI] | served rel-E MAE | "
