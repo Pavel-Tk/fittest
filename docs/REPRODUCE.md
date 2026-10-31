@@ -43,6 +43,24 @@ share a machine. `spawn` refuses a port that is already in use.
 force RMSE vs DFT on all 5632 frames is 0.316169 eV/Å for both. Arm A (single model) and
 member 0 of arm B are the same network.
 
+### CPU-only machine (Azure VM, no GPU)
+
+```bash
+bash scripts/setup_cpu.sh $HOME              # CPU torch, toolkit 0.3.0-rc [mace,aimnet,ase], Orb env, mcp
+rsync -a data/ <vm>:~/fittest/data/          # frames.pkl + preds/ (23 MB); no Transition1x needed
+```
+
+`setup_cpu.sh` mirrors what runs on our Standard_D8as_v5 VM (8 vCPU, 32 GB, Ubuntu 24.04): two
+Python 3.12 venvs (`envs/core`, `envs/orb`) with torch 2.15+cpu from `download.pytorch.org/whl/cpu`,
+mace-torch 0.3.15, aimnet 0.2.5, orb-models 0.5.0. It also installs `g++` and `python3.12-dev`,
+because the toolkit's `NeighborListHook` is `torch.compile`d and inductor builds C++ on CPU.
+Pass `--device cpu` to `model_server`, `finetune.py` and the service (their default is `cuda`).
+cuEquivariance is skipped automatically on CPU. Set threads with `OMP_NUM_THREADS`.
+
+On CPU all seven model servers reproduce the cached `data/preds/*.npz` to within 2e-5 eV/Å in
+forces and 2e-5 eV in energy (20 random frames). Per-frame latency for one ~13-atom frame per
+call: MACE-MPA-0 53 ms, Orb 48 ms, AIMNet2 9 ms.
+
 ## 1. Pipeline (in order)
 
 All commands run from the repo root with the core interpreter (`python` below).
