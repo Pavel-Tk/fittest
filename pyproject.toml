@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "trustswarm"
 version = "0.1.0"
 description = "A collective of agents that decides which MLIP to trust, where, and repairs it where none can be."
-readme = "docs/DESIGN.md"
+readme = "README.md"
 license = { text = "MIT" }
 authors = [{ name = "Pavel Tkachyk" }]
 requires-python = ">=3.10"
@@ -27,4 +27,4 @@ include = ["trustswarm*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-q"
+addopts = ""

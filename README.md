@@ -71,7 +71,7 @@ from trustswarm.model_server import spawn
 
 committee = {m: spawn(m, 6100 + k, python=paths.model_python(m)).connect()   # one process per model agent
              for k, m in enumerate(["mace_mpa0", "aimnet2", "orb"])}
-hook = DisagreementHook(committee, tau=0.56, every=10, stage="both",   # admission + every 10 steps
+hook = DisagreementHook(committee, tau=0.57, every=10, stage="both",   # admission + every 10 steps
                         graduate=True,                                 # σ_F ≥ τ → leaves batch, sampler refills
                         id_map=lambda sid: ds.load_order[sid])
 fused = FusedStage(sub_stages=[(0, relax)], sampler=sampler, refill_frequency=1, hooks=[hook])
@@ -89,23 +89,33 @@ curl -X POST localhost:8000/trust -H 'content-type: application/json' \
 python -m trustswarm.service score my_molecules.xyz --snapshot results/trust_snapshot.json
 ```
 
-## Reproduce
+## Try it on a laptop (CPU, 2 minutes)
 
 ```bash
-# GPU (Colab L4 used here). Core env: nvalchemi-toolkit[cu13,mace,aimnet,ase] @ 0.3.0-rc; Orb in its own venv.
+git clone https://github.com/Pavel-Tk/trustswarm && cd trustswarm
+uv venv .venv --python 3.11 && source .venv/bin/activate      # Windows: .venv\Scriptsctivate
+uv pip install -e ".[dev,service]"
+pytest                                                          # 82 CPU tests
+python scripts/make_synthetic.py                                # synthetic molecules + models
+python scripts/run_ablation.py --frames data/synthetic/frames.pkl --preds data/synthetic/preds --out results/synthetic
+# trust service API with CPU stand-in models (verdicts meaningless; for integration only):
+python -m trustswarm.service serve --snapshot results/trust_snapshot.json --fake-models --port 8000
+```
+
+## Reproduce the real results (GPU)
+
+```bash
 bash scripts/setup_gpu.sh                               # envs + Transition1x (see docs/REPRODUCE.md)
-python3 scripts/predict_pool.py --build-frames          # T1x frames + every model's predictions
+python3 scripts/predict_pool.py --build-frames          # T1x frames + every model's predictions (~2.5 min, L4)
 python3 scripts/analyze_signal.py                       # disagreement vs DFT error
 python3 scripts/screen_alchemi.py                       # ALCHEMI in-flight batch + DisagreementHook
 python3 scripts/run_neb.py                              # batched NEB, σ along the path
-python3 scripts/run_ablation.py --frames data/frames.pkl --preds data/preds --out results/
+python3 scripts/run_ablation.py --frames data/frames.pkl --preds data/preds --out results --budgets 20,40,80
 python3 scripts/finetune.py --labelled-uids results/oracle_labels_armD.json ...   # Curator: LoRA repair + gate
-python3 scripts/write_results.py && python scripts/make_figures.py
+python3 scripts/run_ablation.py ... && python3 scripts/write_results.py && python3 scripts/make_figures.py
 python3 scripts/demo_service.py                         # trust service against the real model agents
-# CPU-only smoke test, no GPU or data needed:
-python scripts/make_synthetic.py && python scripts/run_ablation.py --frames data/synthetic/frames.pkl --preds data/synthetic/preds --out results/synthetic
-pytest -q
 ```
+Step-by-step with runtimes and environment variables: `docs/REPRODUCE.md`.
 
 ## Honest caveats
 
@@ -121,6 +131,12 @@ pytest -q
   reactions that share an endpoint geometry (37 components, 0 shared geometries; `results/split_report.json`).
   Pool and eval still share chemical formulas.
 * The oracle is a DFT label lookup, not live DFT.
+* The trust service's calibration is learned on Transition1x-like C/H/N/O reaction chemistry; outside that
+  domain (e.g. water, metals, charged species) its trust numbers extrapolate and should not be believed.
+  `results/service_demo.json` shows it scoring 12 held-out frames with the real model agents.
+* In the ablation, agents replay predictions cached by the model-agent processes on the GPU, and the hook's
+  logic runs as its CPU twin (`DisagreementMonitor`); the ALCHEMI `DisagreementHook` itself is demonstrated in
+  the in-flight screen (`results/screen_alchemi.json`).
 
 See `docs/DESIGN.md` for the full contract, `docs/data_and_models.md` and
 `docs/alchemi_api_notes.md` for the research notes.

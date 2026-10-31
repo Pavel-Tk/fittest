@@ -36,14 +36,40 @@ def test_read_uid_list_accepts_common_layouts(tmp_path: Path, wrap) -> None:
     assert ft.read_uid_list(path) == uids
 
 
-def test_holdout_is_by_reaction_and_nonempty() -> None:
-    frames = _frames()
-    train, hold = ft.holdout_by_reaction(frames, 0.15, seed=0)
-    assert hold and train
-    assert not {f.reaction for f in train} & {f.reaction for f in hold}
-    assert len({f.reaction for f in hold}) == 3
-    _, hold2 = ft.holdout_by_reaction(frames[:10], 0.15, seed=0)  # 2 reactions -> 1 held out
-    assert len({f.reaction for f in hold2}) == 1
+def _with_reactants(n_reactions: int, share: dict[int, int]) -> list[Frame]:
+    """Path frames plus one reactant per reaction; reaction r reuses the reactant of share[r]."""
+    frames = _frames(n_reactions, 5)
+    rng = np.random.default_rng(1)
+    geo = {r: rng.normal(size=(5, 3)) * 2 for r in range(n_reactions)}
+    for r in range(n_reactions):
+        R = geo[share.get(r, r)]
+        frames.append(Frame(f"test:r{r}:reactant", f"r{r}", "CH4", "pool", "reactant",
+                            np.array([6, 1, 1, 1, 1]), R.copy(), -100.0, np.zeros((5, 3))))
+    return frames
+
+
+def test_holdout_is_component_disjoint() -> None:
+    share = {1: 0, 2: 0, 5: 4, 9: 8, 13: 12}  # reactions sharing a reactant geometry
+    frames = _with_reactants(20, share)
+    labelled = [f for f in frames if f.role == "path"]
+    for seed in range(5):
+        train, hold, check = ft.holdout_by_component(labelled, frames, 0.15, seed)
+        held = {f.reaction for f in hold}
+        for r, src in share.items():  # linked reactions are never split across train/hold-out
+            assert (f"r{r}" in held) == (f"r{src}" in held)
+        assert not held & {f.reaction for f in train}
+        assert 0.10 <= check["holdout_fraction"] <= 0.5 and check["shared_geometries_train_holdout"] == 0
+
+
+def test_holdout_lifts_to_ten_percent_when_components_are_coarse() -> None:
+    # 4 reactions, components {r0,r1,r2} and {r3}: 15 % cap fits nothing -> smallest lift (r3, 25 %)
+    frames = _with_reactants(4, {1: 0, 2: 0})
+    labelled = [f for f in frames if f.role == "path"]
+    train, hold, check = ft.holdout_by_component(labelled, frames, 0.15, 0)
+    assert {f.reaction for f in hold} == {"r3"} and check["holdout_fraction"] == 0.25
+    with pytest.raises(ValueError, match="single"):
+        one = _with_reactants(3, {1: 0, 2: 0})
+        ft.holdout_by_component([f for f in one if f.role == "path"], one, 0.15, 0)
 
 
 @pytest.mark.parametrize("split", ["eval", "skeptic_ref"])

@@ -646,6 +646,13 @@ def fig6(test, preds, nums):
 
 
 def main():
+    import argparse
+
+    argparse.ArgumentParser(description="Rebuild results/fig/* from data/frames.pkl, data/preds/*.npz "
+                            "and results/*.json (data/ comes from scripts/predict_pool.py; not in git).").parse_args()
+    if not os.path.exists(os.path.join(ROOT, "data", "frames.pkl")):
+        raise SystemExit("data/frames.pkl not found: run scripts/predict_pool.py on a GPU first "
+                         "(see docs/REPRODUCE.md). The committed figures in results/fig/ are the reference.")
     test, preds, split_report = load_all()
     nums: dict = {"split_report": split_report}
     fig1(test, preds, nums)

@@ -142,7 +142,13 @@ class DisagreementMonitor:
         if isinstance(clients, Mapping):
             self.clients = dict(clients)
         else:
-            self.clients = {client_name(c, i): c for i, c in enumerate(clients)}
+            self.clients = {}
+            for i, c in enumerate(clients):
+                name = client_name(c, i)
+                if name in self.clients:  # two members must never collapse into one silently
+                    raise ValueError(f"duplicate committee member name {name!r}; pass a dict "
+                                     "{name: client} or give each callable a distinct __name__")
+                self.clients[name] = c
         if len(self.clients) < 2:
             raise ValueError("a disagreement committee needs at least two models")
         if keep_forces not in ("flag", "last", "none"):

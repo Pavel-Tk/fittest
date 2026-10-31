@@ -22,8 +22,10 @@ Pipeline
    its own geometry, or an endpoint (reactant/product) geometry of its reaction, has the same
    ``data.geometry_hash`` (sorted Z + sorted pair distances at 0.01 Å) as an eval frame; the
    result is recorded as ``geometry_leak_check``.
-2. 15 % of the labelled *reactions* are held out for the acceptance report (by reaction, never
-   by frame; seeded by ``--split-seed`` so every ``--seeds`` member sees identical data).
+2. ~15 % of the labelled frames are held out for acceptance as whole connected components of
+   reactions linked by a shared endpoint geometry, so train and hold-out share no geometry
+   (asserted, recorded as ``holdout_leak_check``; >= 10 % if components are coarse). Seeded by
+   ``--split-seed`` so every ``--seeds`` member sees identical data.
 3. Per-element reference energies are re-fitted on the training frames
    (``fit_atomic_reference_energies`` on the residual ωB97x − MACE-MPA-0, added to the
    checkpoint E0s): T1x labels are ωB97x/6-31G(d) *total* energies, MACE-MPA-0 is PBE.
@@ -91,7 +93,7 @@ from trustswarm import mace_lora  # noqa: E402
 from trustswarm.cache import load_frames, save_predictions  # noqa: E402
 from trustswarm.config import CURATED_BASE_MODEL, CURATED_MODEL, WRONG_F  # noqa: E402
 from trustswarm.data import (ENDPOINT_ROLES, EVAL, PLANTED, POOL, SKEPTIC_REF, Frame,  # noqa: E402
-                             assign_leakfree_splits, geometry_hash, split_reactions)
+                             assign_leakfree_splits, geometry_hash, reaction_components)
 
 BASE_CHECKPOINTS = {"mace_mpa0": "medium-mpa-0"}
 ALLOWED_TRAIN_SPLITS = (POOL, PLANTED)  # oracle labels come from the pool stream (planted inside it)
@@ -205,16 +207,68 @@ def trustswarm_checks(before: dict, after: dict) -> list[dict]:
     return checks
 
 
-def holdout_by_reaction(frames: Sequence[Frame], fraction: float,
-                        seed: int) -> tuple[list[Frame], list[Frame]]:
-    """(train, holdout) with ≈``fraction`` of *reactions* (≥ 1) held out."""
-    reactions = sorted({f.reaction for f in frames})
-    if len(reactions) < 2:
-        raise ValueError("need labelled frames from at least two reactions to hold one out")
-    frac = max(fraction, 1.0 / len(reactions))  # always hold out at least one reaction
-    held, _ = split_reactions(reactions, frac, np.random.default_rng(seed))
-    held = set(held)
-    return [f for f in frames if f.reaction not in held], [f for f in frames if f.reaction in held]
+MIN_HOLDOUT_FRACTION = 0.10
+
+
+def holdout_by_component(labelled: Sequence[Frame], frames: Sequence[Frame], fraction: float,
+                         seed: int) -> tuple[list[Frame], list[Frame], dict[str, Any]]:
+    """(train, holdout, holdout_leak_check). The hold-out is a set of whole *connected
+    components* of labelled reactions linked by a shared endpoint (reactant/product) geometry
+    (``data.reaction_components``, the helper behind ``assign_leakfree_splits``; endpoints are
+    taken from ``frames`` because the oracle rarely labels them). T1x reuses reactant geometries
+    across reactions, so a by-reaction hold-out would share endpoints with training.
+
+    Components are taken in a seeded order while the hold-out stays <= ``fraction`` of the
+    labelled frames. If that leaves it below ``MIN_HOLDOUT_FRACTION``, the smallest component
+    that lifts it to >= 10 % is added (the largest component-disjoint hold-out still leaving
+    >= 50 % for training). Train and hold-out sharing any endpoint or labelled-frame geometry is
+    an error, never a warning."""
+    reactions = {f.reaction for f in labelled}
+    comp = reaction_components([f for f in frames if f.reaction in reactions])
+    sizes: dict[int, int] = defaultdict(int)
+    for f in labelled:
+        sizes[comp[f.reaction]] += 1
+    comps = sorted(sizes)
+    if len(comps) < 2:
+        raise ValueError("labelled frames form a single endpoint-geometry component: no "
+                         "leak-free hold-out is possible")
+    n, cap = len(labelled), fraction * len(labelled)
+    held: set[int] = set()
+    for i in np.random.default_rng(seed).permutation(len(comps)):
+        c = comps[i]
+        if sum(sizes[h] for h in held) + sizes[c] <= cap:
+            held.add(c)
+    n_held = sum(sizes[h] for h in held)
+    note = "greedy component fill up to the target fraction"
+    if n_held < MIN_HOLDOUT_FRACTION * n:
+        lift = [c for c in comps if c not in held
+                and n_held + sizes[c] >= MIN_HOLDOUT_FRACTION * n and n_held + sizes[c] <= 0.5 * n]
+        if lift:
+            held.add(min(lift, key=lambda c: (sizes[c], c)))
+            note = "target fraction unreachable with whole components: smallest component lifting it to >= 10 %"
+        elif not held:
+            held.add(min(comps, key=lambda c: (sizes[c], c)))
+            note = "no component fits 10-50 %: smallest single component held out"
+        else:
+            note = "components too coarse: hold-out below 10 % (largest component-disjoint choice <= 50 %)"
+    train = [f for f in labelled if comp[f.reaction] not in held]
+    hold = [f for f in labelled if comp[f.reaction] in held]
+
+    def geometries(fs: Sequence[Frame], rxns: set[str]) -> set[str]:
+        ends = {geometry_hash(f.Z, f.R) for f in frames if f.reaction in rxns and f.role in ENDPOINT_ROLES}
+        return ends | {geometry_hash(f.Z, f.R) for f in fs}
+
+    shared = geometries(train, {f.reaction for f in train}) & geometries(hold, {f.reaction for f in hold})
+    if shared:
+        raise AssertionError(f"hold-out shares {len(shared)} geometries with training")
+    return train, hold, {
+        "method": "whole components of labelled reactions linked by shared endpoint geometry "
+                  "(trustswarm.data.reaction_components / geometry_hash)",
+        "n_components": len(comps), "n_holdout_components": len(held),
+        "largest_component_frames": max(sizes.values()),
+        "target_fraction": fraction, "holdout_fraction": len(hold) / n,
+        "n_holdout_frames": len(hold), "n_holdout_reactions": len({f.reaction for f in hold}),
+        "shared_geometries_train_holdout": 0, "passed": True, "note": note}
 
 
 def error_metrics(frames: Sequence[Frame], energy: np.ndarray,
@@ -533,7 +587,7 @@ def _fmt(before: dict, after: dict) -> str:
 
 def run_one(*, name: str, seed: int, frames: list[Frame], train: list[Frame], hold: list[Frame],
             e0: dict[int, float], e0_info: dict, base_eval: dict, args, out: Path, ckpt: Path,
-            leak_check: dict, split_report: dict) -> dict:
+            leak_check: dict, holdout_check: dict, split_report: dict) -> dict:
     import torch
 
     device = torch.device(args.device)
@@ -564,7 +618,8 @@ def run_one(*, name: str, seed: int, frames: list[Frame], train: list[Frame], ho
     report["checks"] += trustswarm_checks(base_eval["holdout"], after["holdout"])
     accepted = toolkit_accepted and all(c["passed"] for c in report["checks"])
     report.update({"verdict": "pass" if accepted else "fail", "accepted": accepted,
-                   "geometry_leak_check": leak_check, "split_report": split_report})
+                   "geometry_leak_check": leak_check, "holdout_leak_check": holdout_check,
+                   "split_report": split_report})
     report.update({"holdout_metrics": {"before": base_eval["holdout"], "after": after["holdout"]},
                    "train_metrics": {"before": base_eval["train"], "after": after["train"]},
                    "alchemi_accuracy": {"before": base_eval["alchemi"].to_dict(), "after": after["alchemi"]},
@@ -584,7 +639,8 @@ def run_one(*, name: str, seed: int, frames: list[Frame], train: list[Frame], ho
     meta = {"base_model": args.model, "base_checkpoint": BASE_CHECKPOINTS[args.model],
             "weights": str(ckpt), "checkpoint": str(ckpt), "checkpoint_format": mace_lora.FORMAT,
             "shipped": accepted, "acceptance_report": slim_report,
-            "geometry_leak_check": leak_check, "data_seed": args.data_seed,
+            "geometry_leak_check": leak_check, "holdout_leak_check": holdout_check,
+            "data_seed": args.data_seed,
             "epochs": args.epochs, "seed": seed, "n_train": len(train), "n_holdout": len(hold),
             "train_uids": [f.uid for f in train], "holdout_uids": [f.uid for f in hold],
             "finetune_wall_seconds": finetune_seconds, "train_seconds": info["train_seconds"],
@@ -653,7 +709,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     ap.add_argument("--lora-rank", type=int, default=LORA_RANK)
     ap.add_argument("--lora-alpha", type=float, default=LORA_ALPHA)
     ap.add_argument("--seed", type=int, default=0, help="training seed (LoRA init, shuffling)")
-    ap.add_argument("--split-seed", type=int, default=0, help="seed of the by-reaction hold-out split")
+    ap.add_argument("--split-seed", type=int, default=0, help="seed of the by-component hold-out split")
     ap.add_argument("--data-seed", type=int, default=0,
                     help="seed of the leak-free pool/eval re-split; must equal run_ablation --seed")
     ap.add_argument("--holdout-fraction", type=float, default=0.15)
@@ -678,7 +734,11 @@ def main(argv: Sequence[str] | None = None) -> None:
     labelled = select_labelled(frames, read_uid_list(args.labelled_uids))
     labelled, leak_check = exclude_eval_geometry(labelled, frames)
     print(f"geometry leak check: {leak_check['detail']}", flush=True)
-    train, hold = holdout_by_reaction(labelled, args.holdout_fraction, args.split_seed)
+    train, hold, holdout_check = holdout_by_component(labelled, frames, args.holdout_fraction,
+                                                      args.split_seed)
+    print(f"hold-out: {holdout_check['n_holdout_components']}/{holdout_check['n_components']} "
+          f"endpoint-geometry components, {len(hold)} frames ({holdout_check['holdout_fraction']:.1%}); "
+          f"0 geometries shared with training; {holdout_check['note']}", flush=True)
     if len(train) < 8 or not hold:
         raise ValueError(f"too few labelled frames to fine-tune: {len(train)} train / {len(hold)} hold-out")
     print(f"{len(labelled)} labelled frames from {len({f.reaction for f in labelled})} reactions "
@@ -703,7 +763,8 @@ def main(argv: Sequence[str] | None = None) -> None:
         runs = [(args.name, args.seed, out, ckpt)]
     results = [run_one(name=n, seed=s, frames=frames, train=train, hold=hold, e0=e0, e0_info=e0_info,
                        base_eval=base_eval, args=args, out=o, ckpt=c, leak_check=leak_check,
-                       split_report=split_report) for n, s, o, c in runs]
+                       holdout_check=holdout_check, split_report=split_report)
+               for n, s, o, c in runs]
     print(f"\nDONE {len(results)} run(s) in {time.perf_counter() - t0:.1f} s: "
           + ", ".join(f"{r['name']}={r['verdict']}" for r in results), flush=True)
 

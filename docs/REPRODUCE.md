@@ -62,7 +62,7 @@ All commands run from the repo root with the core interpreter (`python` below).
 Steps 2, 5, 7 and the figures need only numpy/scipy/sklearn/matplotlib. Copy `data/` and
 `results/neb.json` to a laptop and run them there.
 
-Checks we ran: `python -m pytest -q` (CPU, 76 tests); on the GPU, `python -m pytest tests/test_hook.py`
+Checks we ran: `python -m pytest -q` (CPU, 82 tests); on the GPU, `python -m pytest tests/test_hook.py`
 (7 tests, including a real `FusedStage` + `SizeAwareSampler` + FIRE2 run); and
 `python scripts/check_mace_server.py --base-port 6100` (MACE-MPA-0 server: force RMSE 0.58 eV/Å on 25 T1x test frames).
 `screen_alchemi.py` also checks that the in-flight hook's sigma at admission matches the offline

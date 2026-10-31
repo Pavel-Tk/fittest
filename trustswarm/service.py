@@ -98,12 +98,18 @@ class TrustSnapshot:
 
 
 def _pack(systems: Sequence[dict]) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    if not systems:
+        raise ValueError("send at least one system")
     Z, R, b = [], [], []
     for k, s in enumerate(systems):
         z = np.asarray(s["Z"], dtype=np.int64).reshape(-1)
         r = np.asarray(s["R"], dtype=np.float64).reshape(-1, 3)
         if len(z) != len(r) or len(z) == 0:
             raise ValueError(f"system {k}: Z and R must be non-empty and the same length")
+        if not np.isfinite(r).all():
+            raise ValueError(f"system {k}: coordinates must be finite")
+        if z.min() < 1 or z.max() > 118:
+            raise ValueError(f"system {k}: atomic numbers must be in 1..118")
         Z.append(z); R.append(r); b.append(np.full(len(z), k))
     return np.concatenate(Z), np.concatenate(R), np.concatenate(b)
 
@@ -175,6 +181,24 @@ def read_xyz(path: str | Path) -> list[dict]:
     return out
 
 
+def fake_predictors(models: Sequence[str], seed: int = 0) -> dict:
+    """CPU stand-ins for the model agents (harmonic forces + per-model noise), for trying the API.
+
+    Verdicts from fake models mean nothing chemically; use them to test integration only.
+    """
+    def make(k: int):
+        def predict(Z, R, batch):
+            rng = np.random.default_rng(seed + k)
+            R = np.asarray(R, dtype=float)
+            centre = np.zeros_like(R)
+            for s in np.unique(batch):
+                centre[batch == s] = R[batch == s].mean(axis=0)
+            F = -(R - centre) + 0.05 * (k + 1) * rng.standard_normal(R.shape)
+            return {"energy": np.zeros(int(np.max(batch)) + 1), "forces": F}
+        return predict
+    return {m: make(k) for k, m in enumerate(models)}
+
+
 def connect_models(models: Sequence[str], base_port: int, orb_python: str | None,
                    device: str) -> dict:
     from trustswarm.model_server import spawn
@@ -231,8 +255,11 @@ def main(argv: Sequence[str] | None = None) -> None:
         p.add_argument("--snapshot", required=True)
         p.add_argument("--models", default=None, help="comma list; default: snapshot models")
         p.add_argument("--base-port", type=int, default=6300)
-        p.add_argument("--orb-python", default="/content/envs/orb/bin/python")
+        p.add_argument("--orb-python", default=None,
+                       help="python of the Orb env (default: $TRUSTSWARM_ORB_PYTHON or this interpreter)")
         p.add_argument("--device", default="cuda")
+        p.add_argument("--fake-models", action="store_true",
+                       help="CPU stand-in predictors to try the API without GPUs (verdicts are meaningless)")
         if name == "serve":
             p.add_argument("--port", type=int, default=8000)
             p.add_argument("--host", default="127.0.0.1")
@@ -241,8 +268,13 @@ def main(argv: Sequence[str] | None = None) -> None:
     a = ap.parse_args(argv)
     snap = TrustSnapshot.load(a.snapshot)
     models = a.models.split(",") if a.models else snap.models
-    clients = connect_models(models, a.base_port, a.orb_python, a.device)
-    predictors = {m: c.predict for m, c in clients.items()}
+    if a.fake_models:
+        clients, predictors = {}, fake_predictors(models)
+    else:
+        from trustswarm import paths
+
+        clients = connect_models(models, a.base_port, a.orb_python or paths.model_python("orb"), a.device)
+        predictors = {m: c.predict for m, c in clients.items()}
     try:
         if a.cmd == "score":
             systems = read_xyz(a.xyz)

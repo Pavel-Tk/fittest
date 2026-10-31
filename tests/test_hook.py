@@ -209,3 +209,15 @@ def test_hook_graduates_flagged_systems_and_sampler_refills():
             assert rec["reason"] == "dynamics" and rec["n_steps"] >= 15 - 1
     assert sum(e["event"] == "admission" for e in hook.events) > 1   # refills happened
     hook.close()
+
+
+def test_duplicate_member_names_rejected():
+    from trustswarm.hook import DisagreementMonitor
+
+    def predict(Z, R, batch):  # two different callables that share a __name__
+        return np.zeros(int(np.max(batch)) + 1), np.zeros((len(Z), 3))
+
+    other = lambda Z, R, batch: predict(Z, R, batch)  # noqa: E731
+    other.__name__ = "predict"
+    with pytest.raises(ValueError, match="duplicate"):
+        DisagreementMonitor([predict, other], tau=0.1)

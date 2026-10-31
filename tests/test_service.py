@@ -92,8 +92,30 @@ def test_trust_from_risk_iso(snapshot):
 
 
 def test_bad_input_rejected(snapshot):
+    preds = {m: fake(1.0) for m in "abc"}
     with pytest.raises(ValueError):
-        score([{"Z": [1, 1], "R": [[0, 0, 0]]}], {m: fake(1.0) for m in "abc"}, snapshot)
+        score([{"Z": [1, 1], "R": [[0, 0, 0]]}], preds, snapshot)
+    with pytest.raises(ValueError, match="at least one"):
+        score([], preds, snapshot)
+    with pytest.raises(ValueError, match="finite"):
+        score([{"Z": [1], "R": [[float("nan"), 0, 0]]}], preds, snapshot)
+    with pytest.raises(ValueError, match="1..118"):
+        score([{"Z": [999], "R": [[0, 0, 0]]}], preds, snapshot)
+
+
+def test_fake_models_cli(tmp_path, capsys):
+    import json as _json
+
+    from trustswarm.service import main
+
+    snap = tmp_path / "s.json"
+    snap.write_text(_json.dumps({"models": ["a", "b", "c"], "tau": 0.3, "sigma_edges": [0.05, 0.15, 0.3],
+                                 "fbar_edges": [0.5, 1.5], "p_correct": {m: [[0.7] * 3] * 4 for m in "abc"}}))
+    xyz = tmp_path / "w.xyz"
+    xyz.write_text("3\nwater\nO 0 0 0\nH 0.96 0 0\nH -0.24 0.93 0\n")
+    main(["score", str(xyz), "--snapshot", str(snap), "--fake-models"])
+    out = [_json.loads(l) for l in capsys.readouterr().out.splitlines() if l.startswith("{")]
+    assert len(out) == 1 and out[0]["recommended_model"] in "abc"
 
 
 def test_snapshot_roundtrip(tmp_path, snapshot):

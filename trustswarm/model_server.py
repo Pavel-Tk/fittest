@@ -168,6 +168,7 @@ class ModelClient:
     model: str
     port: int
     proc: subprocess.Popen | None = None
+    log_path: str | None = None
 
     def __post_init__(self):
         self._conn = None
@@ -180,7 +181,13 @@ class ModelClient:
             except (ConnectionRefusedError, OSError):
                 self._conn = None
                 if self.proc is not None and self.proc.poll() is not None:
-                    raise RuntimeError(f"{self.model} server exited with {self.proc.returncode}")
+                    tail = ""
+                    if self.log_path and os.path.exists(self.log_path):
+                        with open(self.log_path, errors="replace") as fh:
+                            tail = "".join(fh.readlines()[-8:])
+                    raise RuntimeError(f"{self.model} server exited with {self.proc.returncode}"
+                                       f" (log {self.log_path}):
+{tail}")
                 if time.time() - t0 > timeout:
                     raise TimeoutError(f"{self.model} server did not come up on {self.port}")
                 time.sleep(1.0)
@@ -235,10 +242,11 @@ def spawn(model: str, port: int, python: str = sys.executable, device: str = "cu
     cmd = [python, "-m", "trustswarm.model_server", "--model", model, "--port", str(port), "--device", device]
     if model_path:
         cmd += ["--model-path", model_path]
-    log = open(os.path.join(log_dir, f"server_{model}.log"), "w")
+    log_path = os.path.join(log_dir, f"server_{model}.log")
+    log = open(log_path, "w")
     env = dict(os.environ, PYTHONPATH=os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     proc = subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT, env=env)
-    return ModelClient(model, port, proc)
+    return ModelClient(model, port, proc, log_path)
 
 
 if __name__ == "__main__":
