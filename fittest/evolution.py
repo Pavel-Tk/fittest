@@ -633,14 +633,16 @@ class Evolution:
         current = first
         while (len(self.population) > self.cfg.min_population and self.cfg.selection
                and self.cfg.selection_mode != "newest"):
-            elig = [m for m in self.population if self._eligible(current[m], self.cfg.prune_fitness_max)]
+            protect = getattr(self.cfg, "protect_base", False)  # run C exploratory amendment
+            pool_ = [m for m in self.population if not (protect and self.members[m].kind == "base")]
+            elig = [m for m in pool_ if self._eligible(current[m], self.cfg.prune_fitness_max)]
             over = len(self.population) > self.cfg.max_population
-            if not elig and not over:
+            if (not elig and not over) or not pool_:
                 break
             if self.cfg.selection_mode == "random":
-                victim = str(self.rng.choice(sorted(elig or self.population)))
+                victim = str(self.rng.choice(sorted(elig or pool_)))
             else:
-                victim = min(elig or self.population, key=lambda m: current[m]["fitness"])
+                victim = min(elig or pool_, key=lambda m: current[m]["fitness"])
             reason = ("no significant contribution, fitness ≈ 0 or negative" if victim in elig
                       else f"population cap {self.cfg.max_population}")
             mem = self.members[victim]

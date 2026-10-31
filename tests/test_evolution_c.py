@@ -205,3 +205,14 @@ def test_verdict_rule():
 def test_offspring_script_imports_without_torch():
     mod = _load_script("evolve_c_offspring")
     assert set(mod.HEAD_PREFIX) == {"aimnet2", "orb", "mace"}
+
+
+def test_exploratory_knobs_default_off_and_explore_base_recipes():
+    from fittest.evolution_c import BASE_RECIPES, budget_config, mutate_recipe
+    cfg = budget_config(400)
+    assert (cfg.children_per_niche, cfg.explore_base, cfg.gate_rel_e_tol, cfg.protect_base) == (1, False, 0.0, False)
+    assert mutate_recipe(None, "aimnet2", cfg, 0, 0) == BASE_RECIPES["aimnet2"]  # pre-registered
+    ex = budget_config(400, explore_base=True)
+    ws = [mutate_recipe(None, "aimnet2", ex, 0, 0, sibling=j)["energy_weight"] for j in range(3)]
+    assert ws == [3.0, 10.0, 1.0]
+    assert mutate_recipe(None, "aimnet2", ex, 0, 0, sibling=3)["lr"] == BASE_RECIPES["aimnet2"]["lr"] * 0.5

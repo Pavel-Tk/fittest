@@ -150,7 +150,9 @@ def cmd_run(args) -> None:
     out.mkdir(parents=True, exist_ok=True)
     frames, split_report = assign_leakfree_splits(load_frames(args.frames), 0)
     base_cfg = budget_config(args.budget, args.generations, n_bootstrap_eval=args.n_boot,
-                             families=tuple(f for f in args.families.split(",") if f))
+                             families=tuple(f for f in args.families.split(",") if f),
+                             children_per_niche=args.children, explore_base=args.explore_base,
+                             gate_rel_e_tol=args.gate_tol, protect_base=args.protect_base)
     base = load_models(args.preds, list(base_cfg.base_models))
     scorer = EvalScorer(args.n_boot, 0)
     factory = GPUFactory(Path(args.out), args.frames, args.core_python, args.orb_python, args.device,
@@ -353,6 +355,11 @@ def main(argv=None) -> None:
     r.add_argument("--n-boot", type=int, default=1000)
     r.add_argument("--families", default="aimnet2,orb,mace",
                    help="specialist families to breed (CPU VM: aimnet2 only)")
+    # exploratory amendments (not pre-registered; defaults = PREREG.md)
+    r.add_argument("--children", type=int, default=1, help="children per family per generation")
+    r.add_argument("--explore-base", action="store_true", help="base-parent children explore energy weight / lr")
+    r.add_argument("--gate-tol", type=float, default=0.0, help="relative rel-E tolerance of the gate")
+    r.add_argument("--protect-base", action="store_true", help="never prune base models")
     s = sub.add_parser("summarize")
     s.add_argument("--out", default="results/evolution_c")
     args = ap.parse_args(argv)

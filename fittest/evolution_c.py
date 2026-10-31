@@ -57,6 +57,16 @@ class EvoCConfig(EvoConfig):
     """'gate' (evolved arm) or 'all' (no-selection control: admit every child, newest only)."""
     lr_mutation: tuple[float, ...] = (0.5, 2.0)
     energy_weight_mutation: tuple[float, ...] = (0.5, 2.0)
+    # --- exploratory amendments (NOT pre-registered; defaults reproduce PREREG.md exactly) ---
+    children_per_niche: int = 1
+    """children per family and niche per breeding generation (siblings get distinct mutations)."""
+    explore_base: bool = False
+    """children of a base parent also explore: energy weight from ``explore_energy_weights``, lr ×{1, 0.5, 2}."""
+    explore_energy_weights: tuple[float, ...] = (3.0, 10.0, 1.0)
+    gate_rel_e_tol: float = 0.0
+    """gate passes rel-E if child MAE ≤ parent MAE × (1 + tol) (0 = pre-registered 'not worse')."""
+    protect_base: bool = False
+    """base models are never pruned (specialists can only be added on top of the base swarm)."""
 
 
 def budget_config(total: int, generations: int = 4, **kw: Any) -> EvoCConfig:
@@ -89,11 +99,18 @@ def niche_labels(sigma: np.ndarray, pool: np.ndarray, q: float) -> tuple[np.ndar
 
 
 def mutate_recipe(parent_recipe: Mapping[str, Any] | None, family: str, cfg: EvoCConfig,
-                  g: int, k: int) -> dict[str, Any]:
+                  g: int, k: int, sibling: int = 0) -> dict[str, Any]:
     """Generation-0 children of a base model use the family's base recipe; later children
-    mutate their parent's recipe (lr and energy weight, ×0.5 or ×2, seeded)."""
+    mutate their parent's recipe (lr and energy weight, ×0.5 or ×2, seeded).
+    Exploratory (cfg.explore_base): children of a base parent take energy weight
+    explore_energy_weights[sibling % n] and lr × (1, 0.5, 2)[(sibling // n) % 3]."""
     if not parent_recipe:
-        return dict(BASE_RECIPES[family])
+        r = dict(BASE_RECIPES[family])
+        if cfg.explore_base:
+            n = len(cfg.explore_energy_weights)
+            r["energy_weight"] = float(cfg.explore_energy_weights[sibling % n])
+            r["lr"] = float(r["lr"] * (1.0, 0.5, 2.0)[(sibling // n) % 3])
+        return r
     r = {k_: v for k_, v in parent_recipe.items() if k_ in BASE_RECIPES[family]}
     rng = np.random.default_rng([cfg.seed, g, k, 505])
     r["lr"] = float(np.clip(r["lr"] * rng.choice(cfg.lr_mutation), 1e-6, 1e-2))
@@ -138,16 +155,18 @@ class NicheEvolution(Evolution):
         requests, skipped = [], []
         k = 0
         for fam in self.cfg.families:
-            for niche in self.cfg.niches:
+            for niche, sib in ((n_, j) for n_ in self.cfg.niches for j in range(self.cfg.children_per_niche)):
                 idx = breed_idx[self.niche[breed_idx] == niche]
                 if len(idx) < self.cfg.min_niche_labels:
-                    skipped.append({"family": fam, "niche": niche, "n_labels": int(len(idx))})
+                    if sib == 0:
+                        skipped.append({"family": fam, "niche": niche, "n_labels": int(len(idx))})
                     continue
                 parent = self.members[self.parent_for(fam, niche, g).id]
-                recipe = mutate_recipe(parent.recipe if parent.kind == "offspring" else None, fam, self.cfg, g, k)
+                recipe = mutate_recipe(parent.recipe if parent.kind == "offspring" else None, fam, self.cfg, g, k,
+                                       sibling=sib + g * self.cfg.children_per_niche)
                 hold = hold_all[self.niche[hold_all] == niche]
                 assert not set(self.component[idx]) & set(self.component[hold_all]), "gate set leaks"
-                cid = f"g{g + 1}_{fam}_{niche}"
+                cid = f"g{g + 1}_{fam}_{niche}" + ("" if sib == 0 else f"_{chr(97 + sib)}")
                 requests.append(NicheRequest(
                     id=cid, parent=parent, recipe=recipe, train_uids=[self.store.uids[i] for i in idx],
                     holdout_uids=[self.store.uids[i] for i in hold], seed=self.cfg.seed * 1000 + g * 10 + k,
@@ -215,7 +234,8 @@ class NicheEvolution(Evolution):
             {"name": "holdout_force_rmse_not_worse", "value": rmse(f_c), "limit": rmse(f_p),
              "passed": bool(rmse(f_c) <= rmse(f_p))},
             {"name": "holdout_rel_energy_mae_not_worse", "value": float(e_c.mean()),
-             "limit": float(e_p.mean()), "passed": bool(e_c.mean() <= e_p.mean())},
+             "limit": float(e_p.mean()) * (1.0 + self.cfg.gate_rel_e_tol),
+             "passed": bool(e_c.mean() <= e_p.mean() * (1.0 + self.cfg.gate_rel_e_tol))},
         ]
         return {"passed": all(c["passed"] for c in checks), "checks": checks, "scope": scope,
                 "n_holdout": int(len(hold)), "n_holdout_reactions": int(len(np.unique(self.store.reaction[hold]))),
