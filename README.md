@@ -3,9 +3,9 @@
 **A swarm of machine-learned interatomic potentials (MLIPs) that decides which model to trust on a
 structure, where, and when to stop trusting any of them and call DFT.**
 
-*Survival of the fittest, in materials science.* The models compete for the right to answer; the evidence
-for whether *evolving* the population pays off is reported as it came out, failures included
-([`results/evolution/SUMMARY.md`](results/evolution/SUMMARY.md)).
+*Survival of the fittest, in materials science.* The models compete for the right to answer, and the fittest
+answer is served. Whether *breeding* new models on top pays off was tested against a pre-registered rule; it did
+not pass ([`results/evolution/SUMMARY.md`](results/evolution/SUMMARY.md)).
 
 Built at ScienceClaw 2026 (MIT Media Lab) for the NVIDIA ALCHEMI challenge, on
 [NVIDIA ALCHEMI Toolkit](https://github.com/NVIDIA/nvalchemi-toolkit) 0.3.0-rc.
@@ -35,9 +35,9 @@ Formerly **TrustSwarm**; the old GitHub URL redirects here.
 * **Evolution (pre-registered, negative on the primary metric).** Letting the swarm breed, gate and prune its
   own fine-tuned models did **not** reliably beat the static swarm on served force error at the same DFT
   budget: the rule (paired CI, every seed, 3 breeding generations) fails in all three runs (A, B, C); it holds
-  in 3 of 10 single seed runs. On the secondary metric, reaction-relative energy error, the evolved swarm is
-  significantly better than static in 9 of 10. Selection is the weak link: it prunes base models in favour of
-  niche specialists, and forces get worse. [`results/evolution/SUMMARY.md`](results/evolution/SUMMARY.md)
+  in 3 of 10 single seed runs. Reaction-relative energy error (secondary for run C) is lower than static in 9 of
+  10, but fine-tuning without selection gains as much, so that is not evidence for selection.
+  [`results/evolution/SUMMARY.md`](results/evolution/SUMMARY.md)
 * **Use it now.** Add the hosted MCP server to Claude Code:
   `claude mcp add --transport http fittest https://fittest-mcp.westus2.cloudapp.azure.com/mcp`,
   then ask *"Use fittest to check whether I can trust an ML potential on this water molecule: O 0 0 0,
@@ -415,10 +415,12 @@ Run C used the same engine with niche specialists, a niche gate and no ALCHEMI a
 | | 800 | 0 / 1 | −0.017 * / +0.011 * | −0.044 * / −0.028 * | yes / no |
 
 **Verdict: the flagship claim does not hold under the pre-registered rule** (it needs every seed). Most children
-fail the gate on relative energy (run A: 15 of 18 stillborn), and selection, scored on labels concentrated in the
-high-σ niche, prunes base models in favour of niche specialists that are worse elsewhere. Fine-tuning *without*
-selection, with the base models kept, improved forces and relative energies more consistently in the
-exploratory runs. Family trees: `results/fig/fig8_family_tree_run{A,B}_s{0,1}.png`; per-generation curves:
+fail the gate on relative energy (run A: 15 of 18 stillborn; GPU run C: 36 of 54 stillborn, 35 of them on rel-E). Why the evolved
+swarm sometimes ends up *worse* than static is not established: base models were pruned in the worse runs but
+also in most of the runs that passed. The paired CIs cover eval resampling only; run-to-run noise is about
+0.02 eV/Å (the static swarm alone moves 0.202 → 0.220 between seeds). Fine-tuning *without* selection looked
+more consistent in exploratory runs, but it changes several things at once and lost to the evolved arm in one of
+the two pre-registered seeds. Family trees: `results/fig/fig8_family_tree_run{A,B}_s{0,1}.png`; per-generation curves:
 `results/fig/fig7_evolution_run{A,B}_s{0,1}.png`; budget axis: `results/evolution_c/fig9_budget.png`.
 
 ### 2.5 How the ALCHEMI Toolkit is used
@@ -608,8 +610,8 @@ Everything below is also in [`results/RESULTS.md`](results/RESULTS.md) ("Failure
   atoms. On water, metals, charged or periodic systems they extrapolate.
 * **Evolution.** The pre-registered rule needs a win in *every* seed; with two seeds per condition it has
   little power, and the wins we saw were seed-dependent. Most children fail the gate on reaction-relative
-  energy. Run C's first GPU attempt is invalid (OOM children counted as stillborn) and is not quoted; its CPU
-  rerun bred AIMNet2 specialists only. Extra seeds and design variants are exploratory, run on the same eval
+  energy. Run C's first GPU attempt is invalid (OOM children counted as stillborn) and is not quoted; the clean
+  GPU rerun (three families) is the faithful run C, and C′ (CPU, AIMNet2 only) is a reported deviation. Extra seeds and design variants are exploratory, run on the same eval
   split, and labelled so. Details: [`results/evolution/SUMMARY.md`](results/evolution/SUMMARY.md).
 * The synthetic smoke test (`scripts/make_synthetic.py`) shows the pipeline runs; it is not evidence.
 
@@ -657,9 +659,9 @@ bash scripts/setup_gpu.sh ..            # toolkit 0.3.0-rc (cu13) + core env, Or
 | 8 report + figures | `python scripts/write_results.py && python scripts/make_figures.py` | `results/RESULTS.md`, `results/fig/*` | seconds |
 | 9 service demo | `python scripts/demo_service.py --snapshot results/trust_snapshot.json` | `results/service_demo.json` | ~1 min |
 | 10 evolution, run A (MACE LoRA offspring) | `python scripts/evolve.py --frames data/frames.pkl --preds data/preds --out results/evolution --seeds 0,1 --threads 2 --parallel 3 --python <core env python>` then `python scripts/write_evolution_summary.py --evo results/evolution` | `results/evolution/` (`summary_tables.md`, `verdict.json`, `family_tree.json`, `generations.json`) | ~85 min per seed (CPU) |
-| 11 evolution, run B (AIMNet2 offspring + newest control) | `python scripts/evolve.py --frames data/frames.pkl --preds data/preds --out results/evolution_aimnet --family aimnet2 --seeds 0,1 --controls newest --control-seeds 0,1 --python <core env python>` then `write_evolution_summary.py --evo results/evolution_aimnet` | `results/evolution_aimnet/` | ~4 min per seed run (CPU) |
-| 12 evolution, run C (niche specialists) | `python scripts/evolve_c.py run --budget {200,400,800} --arms static,evolved[,noselect] --seeds 0,1 --out results/evolution_c --core-python <core> --orb-python <orb>` (CPU: add `--device cpu --families aimnet2`), then `evolve_c.py summarize --out results/evolution_c` | `results/evolution_c/` (`summary.json`, `summary_table.md`, `fig9_budget.png`) | ~40 min (L4 GPU), ~12 min AIMNet2-only (CPU) |
-| 13 evolution figures | `python scripts/make_evolution_figures.py --evo results/evolution --seed 0 --run-label A` | `results/fig/fig7_evolution*.png`, `fig8_family_tree*.png` | seconds |
+| 11 evolution, run B (AIMNet2 offspring + newest control) | `python scripts/evolve.py --frames data/frames.pkl --preds data/preds --out results/evolution_aimnet --family aimnet2 --seeds 0,1 --controls newest --control-seeds 0,1 --python <core env python>` then `write_evolution_summary.py --evo results/evolution_aimnet` | `results/evolution_aimnet/` | ~5 min per seed run (CPU, `--parallel 3`) |
+| 12 evolution, run C (niche specialists) | `python scripts/evolve_c.py run --budget {200,400} --arms static,evolved --seeds 0,1 $O`, `--budget 800 --arms static,evolved,noselect --seeds 0 $O`, `--budget 800 --tag _s1 --arms static,evolved,noselect --seeds 1 $O` with `O="--out results/evolution_c --core-python <core> --orb-python <orb> --gpu-slots 2 --parallel 3"`, then `evolve_c.py summarize --out results/evolution_c`. C′: same with `--out results/evolution_c/cpu_aimnet2_run --device cpu --families aimnet2` | `results/evolution_c/` (`summary.json`, `summary_table.md`, `fig9_budget.png`) | ~1 h on one L4 (two processes); C′ ~12 min (CPU) |
+| 13 evolution figures | `python scripts/make_evolution_figures.py --evo results/evolution --seed {0,1} --run-label A` and `--evo results/evolution_aimnet --run-label B`; rename outputs to `*_run{A,B}_s{0,1}` | `results/fig/fig7_evolution*.png`, `fig8_family_tree*.png` | seconds |
 
 The arm-D label set is md5-pinned (`ad5f14229a51679267d4fd9456feb589`, `docs/STATUS_core.md`); the v3 and v4
 reporting changes did not alter it. Environment variables (`FITTEST_T1X`, `FITTEST_CORE_PYTHON`,
