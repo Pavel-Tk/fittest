@@ -650,14 +650,14 @@ class Evolution:
         if self.cfg.breeding_mode == "clone":
             return r
         rng = np.random.default_rng([self.cfg.seed, g, k, 404])
+        ew = lambda x: float(np.clip(x, 1.0, 300.0))  # noqa: E731
         if k % 3 == 0:  # energy-weighted child: rel-E failed the gate last time
-            r["energy_weight"] = float(base["energy_weight"] * 3.0)
-        elif k % 3 == 1:  # capacity / step size
+            r["energy_weight"] = ew(base["energy_weight"] * 3.0)
+        elif k % 3 == 1:  # strongly energy-weighted, different capacity
+            r["energy_weight"] = ew(base["energy_weight"] * 10.0)
             r["lora_rank"] = int(np.clip(base["lora_rank"] * rng.choice([0.5, 2.0]), 4, 64))
+        else:  # same loss, different step size / schedule / label subsample
             r["lr"] = float(base["lr"] * rng.choice([0.5, 2.0]))
-            r["label_fraction"] = 0.8
-        else:  # energy weight down or up, more/fewer epochs, label subsample
-            r["energy_weight"] = float(base["energy_weight"] * rng.choice([1 / 3, 3.0]))
             r["epochs"] = int(np.clip(base["epochs"] + rng.choice([-10, 20]), 20, 80))
             r["label_fraction"] = 0.8
         return r
