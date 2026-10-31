@@ -596,6 +596,26 @@ def test_defect_15_both_evolution_trees(tmp_path, monkeypatch):
     assert [t["tree"]["best"] for t in ft["trees"]] == ["g3", "c7"]
 
 
+def test_family_tree_paths_runs_a_b_c_and_budget_subruns(tmp_path, monkeypatch):
+    r = tmp_path / "results"
+    trees = {"evolution": "a", "evolution_aimnet": "b", "evolution_c/b400": "c400",
+             "evolution_c/b200": "c200", "evolution_c/b800_s1": "c800s1"}
+    for d, best in trees.items():
+        (r / d).mkdir(parents=True)
+        (r / d / "family_tree.json").write_text(json.dumps({"best": best}))
+    (r / "evolution_c" / "b200" / "deeper").mkdir()  # only one level below evolution_c is read
+    (r / "evolution_c" / "b200" / "deeper" / "family_tree.json").write_text("{}")
+    monkeypatch.setenv("FITTEST_RESULTS_DIR", str(r))
+    monkeypatch.delenv("FITTEST_FAMILY_TREE", raising=False)
+    found = [p.relative_to(r).as_posix() for p in ms.family_tree_paths() if p.exists()]
+    assert found == ["evolution/family_tree.json", "evolution_aimnet/family_tree.json",
+                     "evolution_c/b200/family_tree.json", "evolution_c/b400/family_tree.json",
+                     "evolution_c/b800_s1/family_tree.json"]
+    ft = ms.family_tree_summary()
+    assert [t["tree"]["best"] for t in ft["trees"]] == ["a", "b", "c200", "c400", "c800s1"]
+    assert ft["trees"][1]["github"].endswith("/blob/master/results/evolution_aimnet/family_tree.json")
+
+
 def test_defect_16_one_bad_structure_does_not_sink_the_batch(tmp_path):
     _, ulog, srv = make(tmp_path)
     out = payload(call(srv, "check_structures", {"structures": [WATER, "Hello 0 0 0\nH 1 0 0", WATER_XYZ]}))

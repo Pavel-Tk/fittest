@@ -717,10 +717,14 @@ def results_dir() -> Path:
 
 
 def family_tree_paths() -> list[Path]:
+    """Evolution family trees in run order: A (evolution/), B (evolution_aimnet/), C (evolution_c/,
+    one tree per budget sub-run, e.g. evolution_c/b800/family_tree.json)."""
     r = results_dir()
-    paths = [r / "evolution" / "family_tree.json", r / "evolution_c" / "family_tree.json"]
+    paths = [r / "evolution" / "family_tree.json", r / "evolution_aimnet" / "family_tree.json",
+             r / "evolution_c" / "family_tree.json"]
     if (r / "evolution_c").is_dir():
         paths += sorted(p for p in (r / "evolution_c").glob("*family_tree*.json") if p not in paths)
+        paths += sorted(p for p in (r / "evolution_c").glob("*/family_tree.json") if p not in paths)
     if os.environ.get("FITTEST_FAMILY_TREE"):
         paths.insert(0, Path(os.environ["FITTEST_FAMILY_TREE"]))
     seen, out = set(), []
