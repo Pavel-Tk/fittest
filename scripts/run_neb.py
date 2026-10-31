@@ -35,7 +35,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from trustswarm import paths  # noqa: E402
+from fittest import paths  # noqa: E402
 
 
 
@@ -56,7 +56,7 @@ def match_dft_forces(h5_path, reaction_id, Z, images, tol=2e-3):
     try:
         import h5py
 
-        from trustswarm.t1x import FORCES_KEY
+        from fittest.t1x import FORCES_KEY
 
         formula, rxn = reaction_id.split("/")
         with h5py.File(h5_path, "r") as f:
@@ -78,8 +78,8 @@ def match_dft_forces(h5_path, reaction_id, Z, images, tol=2e-3):
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--neb-dir", default=paths.neb_dir(),
-                    help="toolkit examples/advanced/batched_neb_endpoints [$TRUSTSWARM_NEB_DIR]")
-    ap.add_argument("--h5", default=paths.t1x_path(), help="Transition1x HDF5 [$TRUSTSWARM_T1X]")
+                    help="toolkit examples/advanced/batched_neb_endpoints [$FITTEST_NEB_DIR]")
+    ap.add_argument("--h5", default=paths.t1x_path(), help="Transition1x HDF5 [$FITTEST_T1X]")
     ap.add_argument("--driver", default="aimnet2", choices=["aimnet2", "mace"])
     ap.add_argument("--models", default="mace_mpa0,aimnet2,orb")
     ap.add_argument("--images", type=int, default=10)
@@ -88,7 +88,7 @@ def main() -> int:
     ap.add_argument("--fmax", type=float, default=0.05)
     ap.add_argument("--tau", type=float, default=0.30, help="flag threshold (recorded only)")
     ap.add_argument("--device", default="cuda")
-    ap.add_argument("--log-dir", default=paths.log_dir(), help="server logs [$TRUSTSWARM_LOG_DIR]")
+    ap.add_argument("--log-dir", default=paths.log_dir(), help="server logs [$FITTEST_LOG_DIR]")
     ap.add_argument("--base-port", type=int, default=6103,
                     help="committee member k of --models listens on base-port + k")
     ap.add_argument("--out", default=str(ROOT / "results" / "neb.json"))
@@ -99,8 +99,8 @@ def main() -> int:
     from nvalchemi.data import AtomicData, Batch
     from nvalchemi.dynamics.mep import NEB, ClimbingImageConfig, IDPPModel, interpolate_paths, prepare_idpp_targets
 
-    from trustswarm.hook import DisagreementHook, DisagreementMonitor
-    from trustswarm.model_server import spawn
+    from fittest.hook import DisagreementHook, DisagreementMonitor
+    from fittest.model_server import spawn
 
     dev = torch.device(a.device)
     endpoints = json.loads((Path(a.neb_dir) / "endpoints.json").read_text())["paths"]
@@ -133,11 +133,11 @@ def main() -> int:
 
     # ---------------------------------------------------------------- driver
     if a.driver == "aimnet2":
-        from trustswarm.models.aimnet2_calc import AIMNet2CalculatorWrapper
+        from fittest.models.aimnet2_calc import AIMNet2CalculatorWrapper
 
         model = AIMNet2CalculatorWrapper("aimnet2", device=dev).eval()
     else:
-        from trustswarm.models.mace_batched import BatchedMACE
+        from fittest.models.mace_batched import BatchedMACE
 
         model = BatchedMACE(device=a.device).model
     out["config"]["driver_model"] = type(model).__name__

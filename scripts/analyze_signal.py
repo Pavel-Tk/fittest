@@ -20,8 +20,8 @@ import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from trustswarm.cache import load_frames, load_predictions  # noqa: E402
-from trustswarm.signals import force_spread  # noqa: E402
+from fittest.cache import load_frames, load_predictions  # noqa: E402
+from fittest.signals import force_spread  # noqa: E402
 
 HET = ["mace_mpa0", "aimnet2", "orb"]
 SEED = ["aimnet2_m0", "aimnet2_m1", "aimnet2_m2", "aimnet2_m3"]

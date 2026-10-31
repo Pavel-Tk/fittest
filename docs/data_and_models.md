@@ -1,4 +1,4 @@
-# TrustSwarm: data and models reference
+# Fittest: data and models reference
 
 Verified 2026-10-30 against source (GitLab/GitHub/HF/figshare API). Items marked **[unverified]** could not be confirmed from primary source in the time available.
 
@@ -246,7 +246,7 @@ def mace_batch(atoms_list, bs=64):
 
 **Primary (cheapest, defensible): K=4 fine-tunes of the worst model (MACE-MPA-0) with seeds 0–3.**
 
-- Use the **identical** oracle-labelled subset and the same hyperparameters as the TrustSwarm fine-tune. Vary only the seed: data order, plus LoRA A-init or head re-init.
+- Use the **identical** oracle-labelled subset and the same hyperparameters as the Fittest fine-tune. Vary only the seed: data order, plus LoRA A-init or head re-init.
 - Compute UQ as σ_F, the per-structure std of forces across the 4 members.
 - This is exactly the configuration the claim is about ("ensembles of one fine-tuned model collapse due to shared weights").
 - Cost is 4× one LoRA run, typically minutes each on an L4.
@@ -317,7 +317,7 @@ def committee_spread(F_models):  # list of (N,3)
 
 4. Kahle, Zipoli. "Quality of uncertainty estimates from neural network potential ensembles." *Phys. Rev. E* 105, 015311 (2022).
 5. Bilbrey (Pope), Firoz, Lee, Choudhury. "Uncertainty quantification for neural network potential foundation models." *npj Comput. Mater.* 11, 109 (2025). doi:10.1038/s41524-025-01572-y.
-6. Liu, Wei, Gao, Dey, Sluiter, Shuang. "Heterogeneous Ensemble Enables a Universal Uncertainty Metric for Atomistic Foundation Models." arXiv:2507.21297 (2025). This is the closest prior art to TrustSwarm (a cross-architecture committee of uMLIPs on materials). Our novelty: molecules/TS, an oracle budget, and fine-tuning the worst member.
+6. Liu, Wei, Gao, Dey, Sluiter, Shuang. "Heterogeneous Ensemble Enables a Universal Uncertainty Metric for Atomistic Foundation Models." arXiv:2507.21297 (2025). This is the closest prior art to Fittest (a cross-architecture committee of uMLIPs on materials). Our novelty: molecules/TS, an oracle budget, and fine-tuning the worst member.
 
 **Committee disagreement as an error signal / query-by-committee AL:**
 

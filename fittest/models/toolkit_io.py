@@ -1,6 +1,6 @@
-"""Conversions between TrustSwarm's flat numpy layout and ALCHEMI Toolkit ``AtomicData``/``Batch``.
+"""Conversions between Fittest's flat numpy layout and ALCHEMI Toolkit ``AtomicData``/``Batch``.
 
-Flat layout (the model-server protocol, ``trustswarm.model_server``):
+Flat layout (the model-server protocol, ``fittest.model_server``):
 ``Z`` int (N,), ``R`` float (N, 3) Å, ``batch`` int (N,) system index 0..S-1 (contiguous,
 non-decreasing), optional ``charge`` float (S,).
 

@@ -3,7 +3,7 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "trustswarm"
+name = "fittest"
 version = "0.1.0"
 description = "A collective of agents that decides which MLIP to trust, where, and repairs it where none can be."
 readme = "README.md"
@@ -23,7 +23,7 @@ service = ["fastapi>=0.110", "uvicorn>=0.27", "httpx>=0.27", "ase>=3.22"]
 dev = ["pytest>=7.4"]
 
 [tool.setuptools.packages.find]
-include = ["trustswarm*"]
+include = ["fittest*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

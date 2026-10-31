@@ -7,10 +7,10 @@ from typing import Any
 
 import pytest
 
-from trustswarm.ablation import AblationConfig, run_ablation
-from trustswarm.cache import load_frames
-from trustswarm.data import Frame
-from trustswarm.synthetic import SyntheticSpec, write_synthetic
+from fittest.ablation import AblationConfig, run_ablation
+from fittest.cache import load_frames
+from fittest.data import Frame
+from fittest.synthetic import SyntheticSpec, write_synthetic
 
 SMALL_SPEC = SyntheticSpec(n_train=4, n_val=30, n_test=60, n_path=4, seed=0)
 SMALL_CFG = AblationConfig(budget_per_round=12, rounds=3, seed=0, n_bootstrap=60, max_planted=15)

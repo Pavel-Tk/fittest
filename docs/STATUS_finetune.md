@@ -1,6 +1,6 @@
 # STATUS: fine-tune agent (scripts/finetune.py)
 
-## Working CLI (VM, from /content/trustswarm)
+## Working CLI (VM, from /content/fittest)
 ```
 python3 scripts/finetune.py --frames data/frames.pkl --labelled-uids results/oracle_labels_armD.json \
   --model mace_mpa0 --out data/preds/mace_lora_curated.npz --ckpt data/ckpt/mace_lora_curated \
@@ -58,15 +58,15 @@ Train-set force RMSE goes 0.653 -> 0.146. Unlabelled pool/eval frames: mean F-RM
 * E0 refit uses `fit_atomic_reference_energies` (ωB97x − MACE residual, added to the checkpoint E0s), fitted on the training frames only.
 * Acceptance: see the gates above. `evaluate_accuracy` compares base+E0 with the reloaded checkpoint on the same hold-out batches. There is no absolute `max_forces_mae` bar: the Curator ships "better than what it replaces".
 
-## Checkpoint format (for `BatchedMACE(model_path=...)`): `trustswarm/mace_lora.py`, `trustswarm.mace_lora/1`
+## Checkpoint format (for `BatchedMACE(model_path=...)`): `fittest/mace_lora.py`, `fittest.mace_lora/1`
 ```
 <ckpt>/model.pt               merged plain mace-torch module (e3nn, float32, LoRA folded in, E0s baked in)
-<ckpt>/trustswarm.json        manifest: format, base_checkpoint, atomic_energies, training config
+<ckpt>/fittest.json        manifest: format, base_checkpoint, atomic_energies, training config
 <ckpt>/atomic_energies.json   {Z: E0}
 <ckpt>/manifest.json, strategy.json, models/ ...   ALCHEMI PEFT checkpoint (trainable-only) at the same root
 <ckpt>/acceptance_report.json
 ```
-* I verified that BatchedMACE loads both `<ckpt>` (PEFT branch) and `<ckpt>/model.pt`. Both reproduce the script's predictions to 1e-3 eV (the float32 ulp at 1e4 eV) and 5e-6 eV/Å. `trustswarm.mace_lora.load_mace_lora(<ckpt>, enable_cueq=True)` is the canonical loader.
+* I verified that BatchedMACE loads both `<ckpt>` (PEFT branch) and `<ckpt>/model.pt`. Both reproduce the script's predictions to 1e-3 eV (the float32 ulp at 1e4 eV) and 5e-6 eV/Å. `fittest.mace_lora.load_mace_lora(<ckpt>, enable_cueq=True)` is the canonical loader.
 * Never call `MACEWrapper.from_checkpoint(<local path>)`. In 0.3.0-rc it tries to download the path as a URL and caches it by basename, so files with the same name collide.
 
 ## Predictions meta (for ReplayFinetune)

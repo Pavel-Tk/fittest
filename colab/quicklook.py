@@ -1,7 +1,7 @@
 import sys, os, numpy as np, json
-os.chdir("/content/trustswarm"); sys.path.insert(0, "/content/trustswarm")
-for m in [k for k in list(sys.modules) if k.startswith("trustswarm")]: del sys.modules[m]
-from trustswarm.cache import load_frames, load_predictions
+os.chdir("/content/fittest"); sys.path.insert(0, "/content/fittest")
+for m in [k for k in list(sys.modules) if k.startswith("fittest")]: del sys.modules[m]
+from fittest.cache import load_frames, load_predictions
 from scipy.stats import spearmanr
 from sklearn.metrics import roc_auc_score
 fr = load_frames("data/frames.pkl")

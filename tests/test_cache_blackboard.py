@@ -3,10 +3,10 @@ import json
 import numpy as np
 import pytest
 
-from trustswarm.blackboard import TICK, Blackboard, load_jsonl
-from trustswarm.cache import (load_frames, load_models, load_predictions, save_frames,
+from fittest.blackboard import TICK, Blackboard, load_jsonl
+from fittest.cache import (load_frames, load_models, load_predictions, save_frames,
                               save_predictions)
-from trustswarm.data import Frame, strip_labels
+from fittest.data import Frame, strip_labels
 
 
 def _frame(uid: str, n: int, labelled: bool = True) -> Frame:

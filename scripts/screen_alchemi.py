@@ -32,17 +32,17 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from trustswarm import paths  # noqa: E402
+from fittest import paths  # noqa: E402
 
 
 def load_frames(a):
     if a.frames and Path(a.frames).exists():
-        from trustswarm.cache import load_frames as _load
+        from fittest.cache import load_frames as _load
 
         frames = [f for f in _load(a.frames) if a.split in (None, "all") or f.split == a.split]
         src = f"{a.frames}:{a.split}"
     else:
-        from trustswarm import t1x
+        from fittest import t1x
 
         frames = t1x.sample_split(a.h5, "test", a.n_reactions, a.n_path, seed=a.seed)
         src = f"{a.h5}:test sample (n_reactions={a.n_reactions}, n_path={a.n_path}, seed={a.seed})"
@@ -61,9 +61,9 @@ def auto_tau(a, frames) -> tuple[float, str]:
     Also fills ``CACHED_SIGMA`` (uid -> sigma_F from data/preds via ``signals.force_spread``) so the
     hook's in-flight admission sigma can be cross-checked against the offline pipeline."""
     try:
-        from trustswarm.cache import load_models
-        from trustswarm.config import HETERO_MODELS, TAU_FLOOR_QUANTILE
-        from trustswarm.signals import force_spread
+        from fittest.cache import load_models
+        from fittest.config import HETERO_MODELS, TAU_FLOOR_QUANTILE
+        from fittest.signals import force_spread
 
         preds = load_models(ROOT / "data" / "preds", HETERO_MODELS)
         uids = [f.uid for f in frames if all(f.uid in p.forces for p in preds.values())]
@@ -78,7 +78,7 @@ def auto_tau(a, frames) -> tuple[float, str]:
 
 
 class FrameDataset:
-    """Toolkit sampler dataset protocol over ``trustswarm.data.Frame`` (labels never exposed)."""
+    """Toolkit sampler dataset protocol over ``fittest.data.Frame`` (labels never exposed)."""
 
     def __init__(self, frames, device):
         self.frames, self.device, self.load_order = frames, device, []
@@ -90,7 +90,7 @@ class FrameDataset:
         return len(self.frames[i].Z), 0
 
     def __getitem__(self, i):
-        from trustswarm.models.toolkit_io import atomic_data
+        from fittest.models.toolkit_io import atomic_data
 
         f = self.frames[i]
         self.load_order.append(i)   # sampler stamps system_id = len(load_order) - 1 right after
@@ -98,7 +98,7 @@ class FrameDataset:
 
 
 def start_servers(names, log_dir, report, base_port):
-    from trustswarm.model_server import spawn
+    from fittest.model_server import spawn
 
     procs = {}
     for k, n in enumerate(names):
@@ -131,7 +131,7 @@ def make_driver(name, device):
     import torch
 
     if name == "mace":
-        from trustswarm.models.mace_batched import BatchedMACE
+        from fittest.models.mace_batched import BatchedMACE
 
         return BatchedMACE(device=device).model, "MACE-MPA-0 (Toolkit MACEWrapper)"
     if name == "aimnet2":
@@ -147,7 +147,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--frames", default=str(ROOT / "data" / "frames.pkl"))
     ap.add_argument("--split", default="pool")
-    ap.add_argument("--h5", default=paths.t1x_path(), help="Transition1x HDF5 [$TRUSTSWARM_T1X]")
+    ap.add_argument("--h5", default=paths.t1x_path(), help="Transition1x HDF5 [$FITTEST_T1X]")
     ap.add_argument("--n-reactions", type=int, default=30)
     ap.add_argument("--n-path", type=int, default=3)
     ap.add_argument("--max-frames", type=int, default=200)
@@ -165,7 +165,7 @@ def main() -> int:
     ap.add_argument("--max-engine-steps", type=int, default=20000)
     ap.add_argument("--score-labels", action="store_true")
     ap.add_argument("--device", default="cuda")
-    ap.add_argument("--log-dir", default=paths.log_dir(), help="server logs [$TRUSTSWARM_LOG_DIR]")
+    ap.add_argument("--log-dir", default=paths.log_dir(), help="server logs [$FITTEST_LOG_DIR]")
     ap.add_argument("--base-port", type=int, default=6100,
                     help="committee member k of --models listens on base-port + k")
     ap.add_argument("--out", default=str(ROOT / "results" / "screen_alchemi.json"))
@@ -176,7 +176,7 @@ def main() -> int:
     from nvalchemi.dynamics import FIRE2, ConvergenceHook, FusedStage, SizeAwareSampler
     from nvalchemi.dynamics.base import DynamicsStage
 
-    from trustswarm.hook import DisagreementHook
+    from fittest.hook import DisagreementHook
 
     frames, src = load_frames(a)
     tau, tau_src = (float(a.tau), "cli") if a.tau != "auto" else auto_tau(a, frames)
@@ -285,7 +285,7 @@ def main() -> int:
             "n": len(both), "max_abs_diff": float(d.max()), "median_abs_diff": float(np.median(d)),
             "note": "in-flight hook sigma at admission vs offline data/preds + signals.force_spread"}
     if a.score_labels and per_frame and "force_rmse_admission" in per_frame[0]:
-        from trustswarm.config import WRONG_F
+        from fittest.config import WRONG_F
 
         def mean_err(rows):
             v = [np.mean(list(r["force_rmse_admission"].values())) for r in rows if "force_rmse_admission" in r]

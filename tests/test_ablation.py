@@ -12,20 +12,20 @@ import numpy as np
 import pytest
 from conftest import SMALL_CFG, SMALL_SPEC
 
-from trustswarm.ablation import (AblationConfig, arm_specs, auroc_mann_whitney, brier, build_trustswarm, topk_stream,
+from fittest.ablation import (AblationConfig, arm_specs, auroc_mann_whitney, brier, build_fittest, topk_stream,
                                  expected_calibration_error, plot_ablation, prepare_data,
-                                 run_ablation, trustswarm_score)
-from trustswarm.agents import (Calibrator, FinetuneReport, ModelAgent, NullFinetune,
+                                 run_ablation, fittest_score)
+from fittest.agents import (Calibrator, FinetuneReport, ModelAgent, NullFinetune,
                                ReplayFinetune)
-from trustswarm.agents.base import iter_rows
-from trustswarm.agents.calibrator import grouped_cv_auroc
-from trustswarm.blackboard import ORACLE_RESULT, Blackboard, Event, load_jsonl
-from trustswarm.cache import load_models, load_predictions
-from trustswarm.candidates import candidate_members
-from trustswarm.data import Frame, arrival_rounds, assign_leakfree_splits
-from trustswarm.round_driver import RoundDriver
-from trustswarm.signals import served_spread
-from trustswarm.synthetic import write_curated
+from fittest.agents.base import iter_rows
+from fittest.agents.calibrator import grouped_cv_auroc
+from fittest.blackboard import ORACLE_RESULT, Blackboard, Event, load_jsonl
+from fittest.cache import load_models, load_predictions
+from fittest.candidates import candidate_members
+from fittest.data import Frame, arrival_rounds, assign_leakfree_splits
+from fittest.round_driver import RoundDriver
+from fittest.signals import served_spread
+from fittest.synthetic import write_curated
 
 ARMS = [name for name, _, _ in arm_specs(SMALL_CFG)]
 HEADLINE = ("auroc_pool", "auroc_common", "auroc_eval", "spearman_pool", "recall_at_k",
@@ -62,7 +62,7 @@ def test_same_oracle_budget_exactly_k_per_round(ablation_run: dict[str, Any]) ->
 def test_artifacts_written(ablation_run: dict[str, Any], tmp_path: Path) -> None:
     out = ablation_run["out"]
     log = load_jsonl(out / "blackboard_armD.jsonl")
-    assert len(log) == ablation_run["results"]["arms"]["D_trustswarm"]["blackboard"]["n_events"]
+    assert len(log) == ablation_run["results"]["arms"]["D_fittest"]["blackboard"]["n_events"]
     assert [e.id for e in log] == list(range(len(log)))
     snap = json.loads((out / "trust_snapshot.json").read_text())
     assert set(snap) == {"models", "candidates", "candidate_members", "p_global", "tiebreak_order",
@@ -106,7 +106,7 @@ def test_audits_target_only_trusted_systems_within_budget(ablation_run: dict[str
         this_round = [p for p in results if p["bid_round"] == r]
         assert len(this_round) == k  # audits come out of the same budget
         assert sum(p["audit"] for p in this_round) <= quota
-    d = ablation_run["results"]["arms"]["D_trustswarm"]
+    d = ablation_run["results"]["arms"]["D_fittest"]
     by_source = d["oracle_labels_by_source"]
     assert len(by_source["audit"]) + len(by_source["bid"]) == k * SMALL_CFG.rounds
     assert d["metrics"]["audit_hit_rate"]["value"] is not None
@@ -153,21 +153,21 @@ def test_fast_auroc_matches_sklearn() -> None:
     assert auroc_mann_whitney(np.zeros(5, bool), np.arange(5.0)) is None
 
 
-def test_trustswarm_score_is_sigma_order_unless_skeptic_speaks() -> None:
+def test_fittest_score_is_sigma_order_unless_skeptic_speaks() -> None:
     uids = ["a", "b", "c", "d"]
     sigma = {"a": 0.1, "b": 0.2, "c": 0.3, "d": 0.4}
 
     def plateau(candidate: str, s: float) -> float:  # an isotonic fit with a flat step
         return 0.2 if s < 0.35 else 0.8
 
-    plain = trustswarm_score(uids, sigma, {}, plateau)
+    plain = fittest_score(uids, sigma, {}, plateau)
     assert sorted(uids, key=plain.get) == ["a", "b", "c", "d"]  # ties broken by σ
-    vetoed = trustswarm_score(uids, sigma, {"a": 0.9}, plateau)
+    vetoed = fittest_score(uids, sigma, {"a": 0.9}, plateau)
     assert max(uids, key=vetoed.get) == "a"  # the Skeptic's p_S lifts a vetoed system
-    fallback = trustswarm_score(uids, sigma, {}, lambda c, s: None)
+    fallback = fittest_score(uids, sigma, {}, lambda c, s: None)
     assert sorted(uids, key=fallback.get) == ["a", "b", "c", "d"]
     # per-candidate maps: a riskier candidate outranks a calmer one at equal σ
-    by_cand = trustswarm_score(["x", "y"], {"x": 0.3, "y": 0.3}, {},
+    by_cand = fittest_score(["x", "y"], {"x": 0.3, "y": 0.3}, {},
                                lambda c, s: 0.9 if c == "orb" else 0.1, {"x": "orb", "y": "consensus"})
     assert by_cand["x"] > by_cand["y"]
 
@@ -195,7 +195,7 @@ def test_leakfree_split_keeps_shared_reactants_together(frames: list[Frame]) -> 
 
 
 def test_risk_feature_is_selected_from_own_labels(ablation_run: dict[str, Any]) -> None:
-    d = ablation_run["results"]["arms"]["D_trustswarm"]
+    d = ablation_run["results"]["arms"]["D_fittest"]
     cv = d["risk_feature_cv_auroc"]
     assert d["risk_feature"] in ("sigma_F", "sigma_served")
     if cv["sigma_served"] is not None and cv["sigma_F"] is not None:
@@ -222,7 +222,7 @@ def test_served_spread_definition() -> None:
 
 
 def test_finetune_without_offline_replay_is_reported(ablation_run: dict[str, Any]) -> None:
-    ft = ablation_run["results"]["arms"]["D_trustswarm"]["finetune"]
+    ft = ablation_run["results"]["arms"]["D_fittest"]["finetune"]
     assert ft["model"] == max(ft["ledger_force_rmse"], key=ft["ledger_force_rmse"].get)
     assert not ft["shipped"]
     assert any("fine-tune not shipped" in f for f in ablation_run["results"]["failures"])
@@ -249,7 +249,7 @@ def test_two_pass_finetune_ships_only_with_matching_provenance(
     model, uids = rec.request
     write_curated(tmp_path, uids, SMALL_SPEC)                           # "GPU" fine-tune
     again = run_ablation(frames, tmp_path / "preds", cfg)               # pass 2: replay
-    ft = again["arms"]["D_trustswarm"]["finetune"]
+    ft = again["arms"]["D_fittest"]["finetune"]
     if model == cfg.curated_base_model:
         assert ft["shipped"], ft["report"]
         assert ft["eval"]["finetuned_force_rmse"]["value"] is not None
@@ -257,7 +257,7 @@ def test_two_pass_finetune_ships_only_with_matching_provenance(
         assert not ft["shipped"]
     # a different budget means different oracle labels: the replay must not ship
     other = run_ablation(frames, tmp_path / "preds", dataclasses.replace(cfg, budget_per_round=6))
-    ft_other = other["arms"]["D_trustswarm"]["finetune"]
+    ft_other = other["arms"]["D_fittest"]["finetune"]
     assert not ft_other["shipped"]
     if model == cfg.curated_base_model:
         assert "not re-run" in ft_other["report"]["reason"]
@@ -273,11 +273,11 @@ def test_missing_model_skips_arm_without_crashing(synthetic_dir: Path, frames: l
     cfg = AblationConfig(**{**SMALL_CFG.__dict__, "n_bootstrap": 20})
     results = run_ablation(frames, preds, cfg, finetune_fn=NullFinetune())
     arms = results["arms"]
-    for name in ("C_collective", "D_trustswarm", "B_mace_seeds"):
+    for name in ("C_collective", "D_fittest", "B_mace_seeds"):
         assert arms[name]["status"] == "skipped" and "missing" in arms[name]["reason"]
     assert arms["A_single"]["status"] == arms["B_seed"]["status"] == "ok"
     assert any(f.startswith("C_collective skipped") and "orb.npz" in f for f in results["failures"])
-    assert "D_trustswarm did not run: no comparisons possible" in results["failures"]
+    assert "D_fittest did not run: no comparisons possible" in results["failures"]
     json.dumps(results, allow_nan=False)
     plot_ablation(results, tmp_path / "partial.png")  # still plots, with "skipped" markers
 
@@ -285,7 +285,7 @@ def test_missing_model_skips_arm_without_crashing(synthetic_dir: Path, frames: l
 def test_null_finetune_is_reported(synthetic_dir: Path, frames: list[Frame]) -> None:
     cfg = AblationConfig(**{**SMALL_CFG.__dict__, "n_bootstrap": 10, "mace_seed_models": None})
     results = run_ablation(frames, synthetic_dir / "preds", cfg, finetune_fn=NullFinetune())
-    d = results["arms"]["D_trustswarm"]
+    d = results["arms"]["D_fittest"]
     assert d["finetune"]["shipped"] is False
     assert d["metrics"]["eval_force_rmse_pre"] == d["metrics"]["eval_force_rmse_post"]
     assert any("NullFinetune" in f for f in results["failures"])
@@ -309,7 +309,7 @@ def test_service_reproduces_calibrator_recommendations(synthetic_dir: Path, fram
                                                        tmp_path: Path) -> None:
     """The trust service, given the exported snapshot and the same predictions, must pick the
     same served candidate as the Calibrator did for every eval system."""
-    service = pytest.importorskip("trustswarm.service")
+    service = pytest.importorskip("fittest.service")
     cfg = dataclasses.replace(SMALL_CFG, mace_seed_models=None)
     preds = load_models(synthetic_dir / "preds", cfg.hetero_models)
     data = prepare_data(frames, load_predictions(
@@ -317,7 +317,7 @@ def test_service_reproduces_calibrator_recommendations(synthetic_dir: Path, fram
     arrival = arrival_rounds(data.pool, cfg.rounds, cfg.seed)
     arrival.update({f.uid: 0 for f in data.injected})
     bb = Blackboard()
-    driver, agents = build_trustswarm(data, preds, arrival, cfg, NullFinetune(), bb)
+    driver, agents = build_fittest(data, preds, arrival, cfg, NullFinetune(), bb)
     driver.run(cfg.rounds + 2)
     (tmp_path / "snap.json").write_text(json.dumps(agents["calibrator"].export_snapshot()))
     snapshot = service.TrustSnapshot.load(tmp_path / "snap.json")
@@ -392,7 +392,7 @@ def test_labels_reach_agents_only_through_oracle_results(synthetic_dir: Path,
     arrival = arrival_rounds(data.pool, cfg.rounds, cfg.seed)
     arrival.update({f.uid: 0 for f in data.injected})
     bb = Blackboard()
-    driver, agents = build_trustswarm(data, preds, arrival, cfg, NullFinetune(), bb)
+    driver, agents = build_fittest(data, preds, arrival, cfg, NullFinetune(), bb)
     watched = {name: a for name, a in agents.items() if isinstance(a, (ModelAgent, Calibrator))}
     seen: dict[str, list[Event]] = {name: [] for name in watched}
     for name, agent in watched.items():

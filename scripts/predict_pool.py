@@ -1,9 +1,9 @@
-"""Build the TrustSwarm frame set from Transition1x and cache every model's predictions.
+"""Build the Fittest frame set from Transition1x and cache every model's predictions.
 
-Each model agent runs in its own process (``trustswarm.model_server``); this script
+Each model agent runs in its own process (``fittest.model_server``); this script
 only ships coordinates to them and stores what comes back (DESIGN.md §9).
 
-    python scripts/predict_pool.py --h5 $TRUSTSWARM_T1X --build-frames \
+    python scripts/predict_pool.py --h5 $FITTEST_T1X --build-frames \
         --models aimnet2,aimnet2_m0,aimnet2_m1,aimnet2_m2,aimnet2_m3,orb,mace_mpa0
 """
 
@@ -19,10 +19,10 @@ import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from trustswarm import paths, t1x  # noqa: E402
-from trustswarm.cache import load_frames, save_frames, save_predictions  # noqa: E402
-from trustswarm.data import assign_splits  # noqa: E402
-from trustswarm.model_server import spawn  # noqa: E402
+from fittest import paths, t1x  # noqa: E402
+from fittest.cache import load_frames, save_frames, save_predictions  # noqa: E402
+from fittest.data import assign_splits  # noqa: E402
+from fittest.model_server import spawn  # noqa: E402
 
 
 def build_frames(h5: str, n_path: int, seed: int, max_test: int | None, max_val: int | None):
@@ -32,7 +32,7 @@ def build_frames(h5: str, n_path: int, seed: int, max_test: int | None, max_val:
 
 
 def predict_model(model: str, frames, port: int, batch_atoms: int, log_dir: str):
-    python = paths.model_python(model)  # $TRUSTSWARM_ORB_PYTHON / $TRUSTSWARM_CORE_PYTHON
+    python = paths.model_python(model)  # $FITTEST_ORB_PYTHON / $FITTEST_CORE_PYTHON
     client = spawn(model, port, python=python, log_dir=log_dir).connect(timeout=900)
     info = client.info()
     energies, forces, seconds = [], [], 0.0
@@ -63,7 +63,7 @@ def predict_model(model: str, frames, port: int, batch_atoms: int, log_dir: str)
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--h5", default=paths.t1x_path(), help="Transition1x HDF5 [$TRUSTSWARM_T1X]")
+    ap.add_argument("--h5", default=paths.t1x_path(), help="Transition1x HDF5 [$FITTEST_T1X]")
     ap.add_argument("--frames", default="data/frames.pkl")
     ap.add_argument("--preds", default="data/preds")
     ap.add_argument("--build-frames", action="store_true")
@@ -75,7 +75,7 @@ def main():
                     help="model k of --models listens on base-port + k")
     ap.add_argument("--batch-atoms", type=int, default=4096)
     ap.add_argument("--seed", type=int, default=0)
-    ap.add_argument("--log-dir", default=paths.log_dir(), help="server logs [$TRUSTSWARM_LOG_DIR]")
+    ap.add_argument("--log-dir", default=paths.log_dir(), help="server logs [$FITTEST_LOG_DIR]")
     a = ap.parse_args()
 
     if a.build_frames or not os.path.exists(a.frames):

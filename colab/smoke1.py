@@ -1,8 +1,8 @@
 import subprocess, sys, os, time
-os.chdir("/content/trustswarm"); sys.path.insert(0, "/content/trustswarm")
+os.chdir("/content/fittest"); sys.path.insert(0, "/content/fittest")
 import importlib, numpy as np, h5py
-for m in [k for k in list(sys.modules) if k.startswith("trustswarm")]: del sys.modules[m]
-from trustswarm import t1x
+for m in [k for k in list(sys.modules) if k.startswith("fittest")]: del sys.modules[m]
+from fittest import t1x
 P="/content/data/Transition1x.h5"
 with h5py.File(P) as f:
     print(list(f.keys()), {k: len(f[k]) for k in f.keys()})
@@ -11,7 +11,7 @@ with h5py.File(P) as f:
     print("n test rxns", sum(len(f["test"][k]) for k in f["test"]), "val", sum(len(f["val"][k]) for k in f["val"]))
 fr = t1x.sample_split(P, "test", 3, 4, seed=0)
 print(len(fr), [(x.uid, x.role, len(x.Z), round(x.E,2)) for x in fr[:8]])
-from trustswarm.model_server import spawn
+from fittest.model_server import spawn
 cl = [spawn("orb", 6003, python="/content/envs/orb/bin/python", log_dir="/content/logs"), spawn("aimnet2", 6002, python="/usr/bin/python3", log_dir="/content/logs")]
 Z=np.concatenate([x.Z for x in fr]); R=np.concatenate([x.R for x in fr]); b=np.concatenate([np.full(len(x.Z),i) for i,x in enumerate(fr)])
 Fd=np.concatenate([x.F for x in fr])

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Reproduce the TrustSwarm GPU environment (what we ran on a Colab L4, CUDA 13 driver).
+# Reproduce the Fittest GPU environment (what we ran on a Colab L4, CUDA 13 driver).
 #
 #   bash scripts/setup_gpu.sh [WORKDIR]        # WORKDIR default: $PWD/.. (holds toolkit, envs, data)
 #
@@ -12,7 +12,7 @@
 #   orb env   : $WORKDIR/envs/orb (Python 3.12 venv): orb-models + torch from the cu130 index.
 #               Separate because orb-models pins different deps than the toolkit.
 #   data      : $WORKDIR/data/Transition1x.h5 (6.6 GB, md5 faab0413cf6b042b6d50e6272dea9a8c)
-# and prints the TRUSTSWARM_* exports to use afterwards (see trustswarm/paths.py).
+# and prints the FITTEST_* exports to use afterwards (see fittest/paths.py).
 set -euo pipefail
 
 WORKDIR=$(cd "${1:-$PWD/..}" && pwd)
@@ -60,9 +60,9 @@ echo "$T1X_MD5  data/Transition1x.h5" | md5sum -c -
 cat <<EOF
 
 Done. Add to your shell (or colab/env.sh):
-  export TRUSTSWARM_T1X=$WORKDIR/data/Transition1x.h5
-  export TRUSTSWARM_CORE_PYTHON=$CORE_PYTHON
-  export TRUSTSWARM_ORB_PYTHON=$WORKDIR/envs/orb/bin/python
-  export TRUSTSWARM_NEB_DIR=$WORKDIR/nvalchemi-toolkit/examples/advanced/batched_neb_endpoints
-  export TRUSTSWARM_LOG_DIR=$WORKDIR/logs
+  export FITTEST_T1X=$WORKDIR/data/Transition1x.h5
+  export FITTEST_CORE_PYTHON=$CORE_PYTHON
+  export FITTEST_ORB_PYTHON=$WORKDIR/envs/orb/bin/python
+  export FITTEST_NEB_DIR=$WORKDIR/nvalchemi-toolkit/examples/advanced/batched_neb_endpoints
+  export FITTEST_LOG_DIR=$WORKDIR/logs
 EOF

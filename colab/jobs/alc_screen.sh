@@ -1,1 +1,1 @@
-. /content/trustswarm/colab/env.sh && $TRUSTSWARM_CORE_PYTHON scripts/screen_alchemi.py --split pool --max-frames 600 --every 10 --n-steps 50 --score-labels --base-port 6100 --log-dir $TRUSTSWARM_LOG_DIR/alc_screen 2>&1
+. /content/fittest/colab/env.sh && $FITTEST_CORE_PYTHON scripts/screen_alchemi.py --split pool --max-frames 600 --every 10 --n-steps 50 --score-labels --base-port 6100 --log-dir $FITTEST_LOG_DIR/alc_screen 2>&1

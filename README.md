@@ -1,4 +1,4 @@
-# TrustSwarm
+# Fittest
 
 **A collective of agents that decides which machine-learned interatomic potential (MLIP) to trust,
 where, and repairs it where none can be.** Built overnight at ScienceClaw 2026 (MIT Media Lab) on
@@ -6,21 +6,21 @@ NVIDIA ALCHEMI Toolkit 0.3.0-rc.
 
 > Labs spend months deciding whether a foundation MLIP is good enough for their chemistry, and
 > the models fail silently off-distribution — at transition states, exactly where reactions are
-> decided. TrustSwarm turns *disagreement between independent foundation models* into a
+> decided. Fittest turns *disagreement between independent foundation models* into a
 > label-free signal, spends a fixed DFT budget where it matters, audits its own "trusted"
 > verdicts, and fine-tunes the weakest model on what the oracle returns.
 
 <!-- RESULTS:START -->
 ## Results
 
-**TrustSwarm on Transition1x** — leak-free split, 200 Transition1x label lookups per arm (40 per round × 5 rounds; no live DFT); B′ additionally uses MACE LoRA seeds fine-tuned on 160 of arm D's labels; 95% reaction-bootstrap CIs.
+**Fittest on Transition1x** — leak-free split, 200 Transition1x label lookups per arm (40 per round × 5 rounds; no live DFT); B′ additionally uses MACE LoRA seeds fine-tuned on 160 of arm D's labels; 95% reaction-bootstrap CIs.
 
-* **Better served answers, by discovery:** TrustSwarm's served force RMSE on held-out eval is **0.206 eV/Å** vs 0.286–0.317 for the baselines (wrong on 40% of eval frames vs 54%–73%). It served `mean(aimnet2+orb)` on 1373/1485 eval frames: the gain comes from discovering that combination from 200 oracle labels; no baseline had subset candidates. A fixed AIMNet2+Orb average chosen in hindsight (using eval labels) scores 0.202 eV/Å — as good.
+* **Better served answers, by discovery:** Fittest's served force RMSE on held-out eval is **0.206 eV/Å** vs 0.286–0.317 for the baselines (wrong on 40% of eval frames vs 54%–73%). It served `mean(aimnet2+orb)` on 1373/1485 eval frames: the gain comes from discovering that combination from 200 oracle labels; no baseline had subset candidates. A fixed AIMNet2+Orb average chosen in hindsight (using eval labels) scores 0.202 eV/Å — as good.
 * **Calibrated trust:** ECE 0.080, Brier 0.185; significantly better than A_single, A_random, B_seed, B_mace_seeds, C_collective; tied with C_audit — the gain comes from the Skeptic's random audits of trusted answers.
-* **Negative result — error ranking:** TrustSwarm's AUROC (eval 0.730) is significantly worse than A_single, B_seed, B_mace_seeds, C_collective, C_audit. Best ranker: B_mace_seeds (0.867).
+* **Negative result — error ranking:** Fittest's AUROC (eval 0.730) is significantly worse than A_single, B_seed, B_mace_seeds, C_collective, C_audit. Best ranker: B_mace_seeds (0.867).
 * **Committee disagreement detects AIMNet2's failures best:** AUROC vs 'AIMNet2 wrong' 0.917 (C_collective).
 * **Seed ensembles rank but do not measure:** B′ AUROC 0.867 (best); B ties C at 0.802; on all 3,157 test frames at 0.4 eV/Å the AIMNet2 seed spread beats the committee (0.905 vs 0.866) — but seed spreads are 2.4–36× smaller than the errors on the 1,485 eval frames: not usable as an error bar.
-* **Silent failures:** TrustSwarm has 0/96 on eval (badly wrong, F-RMSE > 0.4) and 1/115 on pool; not significantly different from 5 of 5 non-random baselines, 4 of which trust nothing (zero by construction).
+* **Silent failures:** Fittest has 0/96 on eval (badly wrong, F-RMSE > 0.4) and 1/115 on pool; not significantly different from 5 of 5 non-random baselines, 4 of which trust nothing (zero by construction).
 * **Planted failures:** 0.45 caught vs 0.33–0.70; significantly better than C_collective, not significant vs 5 of 6.
 * **Self-repair:** the Curator chose and LoRA-fine-tuned `mace_mpa0`; not shipped — forces 1.355 → 0.692 eV/Å but relative-energy MAE 0.314 → 0.364 eV on 26 held-out labels.
 * **Leakage controlled:** split by reactant- and product-linked components; 0 shared endpoint geometries (a per-reaction split had 732 near-duplicate pool/eval endpoints).
@@ -66,9 +66,9 @@ the round driver advances the clock and makes no decisions.
 **1. `DisagreementHook`** — drop into any ALCHEMI Toolkit run with any set of models:
 
 ```python
-from trustswarm import paths
-from trustswarm.hook import DisagreementHook
-from trustswarm.model_server import spawn
+from fittest import paths
+from fittest.hook import DisagreementHook
+from fittest.model_server import spawn
 
 committee = {m: spawn(m, 6100 + k, python=paths.model_python(m)).connect()   # one process per model agent
              for k, m in enumerate(["mace_mpa0", "aimnet2", "orb"])}
@@ -84,23 +84,23 @@ Full working example (dataset protocol, neighbour hooks, NEB variant): `docs/REP
 **2. Trust service** — structures in, per-system trust and recommended model out:
 
 ```bash
-python -m trustswarm.service serve --snapshot results/trust_snapshot.json --port 8000
+python -m fittest.service serve --snapshot results/trust_snapshot.json --port 8000
 curl -X POST localhost:8000/trust -H 'content-type: application/json' \
      -d '{"systems":[{"Z":[8,1,1],"R":[[0,0,0],[0.96,0,0],[-0.24,0.93,0]]}]}'
-python -m trustswarm.service score my_molecules.xyz --snapshot results/trust_snapshot.json
+python -m fittest.service score my_molecules.xyz --snapshot results/trust_snapshot.json
 ```
 
 ## Try it on a laptop (CPU, 2 minutes)
 
 ```bash
-git clone https://github.com/Pavel-Tk/trustswarm && cd trustswarm
+git clone https://github.com/Pavel-Tk/fittest && cd fittest
 uv venv .venv --python 3.11 && source .venv/bin/activate      # Windows: .venv\Scriptsctivate
 uv pip install -e ".[dev,service]"
 pytest                                                          # 82 CPU tests
 python scripts/make_synthetic.py                                # synthetic molecules + models
 python scripts/run_ablation.py --frames data/synthetic/frames.pkl --preds data/synthetic/preds --out results/synthetic
 # trust service API with CPU stand-in models (verdicts meaningless; for integration only):
-python -m trustswarm.service serve --snapshot results/trust_snapshot.json --fake-models --port 8000
+python -m fittest.service serve --snapshot results/trust_snapshot.json --fake-models --port 8000
 ```
 
 ## Reproduce the real results (GPU)

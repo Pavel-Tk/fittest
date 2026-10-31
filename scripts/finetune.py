@@ -37,13 +37,13 @@ Pipeline
        with ``max_from_scratch_ratio = --max-ratio`` (1.0) -> ``report.accepted``. It reads
        energy-per-atom MAE (absolute energies, i.e. E0 transfer) and force MAE;
    (b) hold-out force RMSE (fine-tuned) <= base;
-   (c) hold-out reaction-centred relative-energy MAE (what TrustSwarm scores) <= base
+   (c) hold-out reaction-centred relative-energy MAE (what Fittest scores) <= base
        (fails if no hold-out reaction has >= 2 frames: not measurable is not a pass).
    Every check is recorded with pass/fail; ``verdict`` = "pass" iff all pass -> ``shipped``.
 6. Predict E/F for ``--predict-uids`` (default all frames) with the *reloaded* checkpoint and
-   write ``trustswarm.cache.save_predictions(--out, model=...)``.
+   write ``fittest.cache.save_predictions(--out, model=...)``.
 
-Loss (forces are what TrustSwarm scores; relative energies are scored too)::
+Loss (forces are what Fittest scores; relative energies are scored too)::
 
     L = w_E * EnergyHuber(per-atom, delta=0.01 eV/atom) + w_F * ForceHuber(per-component, delta=0.01 eV/Å)
 
@@ -53,18 +53,18 @@ Defaults (--energy-weight, --force-weight) are set from the dev sweep in docs/ST
 
 Checkpoint format (consumed by ``BatchedMACE(model_path=<ckpt dir>)``)
 --------------------------------------------------------------------
-See :mod:`trustswarm.mace_lora` (single source of truth)::
+See :mod:`fittest.mace_lora` (single source of truth)::
 
     <ckpt>/model.pt              merged plain mace-torch module (e3nn, float32, E0s baked in)
-    <ckpt>/trustswarm.json       format "trustswarm.mace_lora/1", E0s, training config
+    <ckpt>/fittest.json       format "fittest.mace_lora/1", E0s, training config
     <ckpt>/atomic_energies.json  refitted E0s {Z: eV}
     <ckpt>/manifest.json ...     the ALCHEMI PEFT checkpoint (trainable-only) at the same root
     <ckpt>/acceptance_report.json
 
     torch.load("<ckpt>/model.pt", weights_only=False)            # plain mace-torch
-    trustswarm.mace_lora.load_mace_lora("<ckpt>", enable_cueq=True)  # ALCHEMI MACEWrapper
+    fittest.mace_lora.load_mace_lora("<ckpt>", enable_cueq=True)  # ALCHEMI MACEWrapper
 
-Predictions meta (read by ``trustswarm.agents.curator.ReplayFinetune``): ``base_model``,
+Predictions meta (read by ``fittest.agents.curator.ReplayFinetune``): ``base_model``,
 ``train_uids``, ``holdout_uids``, ``acceptance_report`` (``verdict`` "pass"/"fail", each check
 with ``source`` and ``passed``), ``geometry_leak_check``,
 ``shipped``, ``epochs``, ``n_train``, ``wall_seconds``, ``atoms_per_second``, ``weights``.
@@ -89,10 +89,10 @@ import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from trustswarm import mace_lora  # noqa: E402
-from trustswarm.cache import load_frames, save_predictions  # noqa: E402
-from trustswarm.config import CURATED_BASE_MODEL, CURATED_MODEL, WRONG_F  # noqa: E402
-from trustswarm.data import (ENDPOINT_ROLES, EVAL, PLANTED, POOL, SKEPTIC_REF, Frame,  # noqa: E402
+from fittest import mace_lora  # noqa: E402
+from fittest.cache import load_frames, save_predictions  # noqa: E402
+from fittest.config import CURATED_BASE_MODEL, CURATED_MODEL, WRONG_F  # noqa: E402
+from fittest.data import (ENDPOINT_ROLES, EVAL, PLANTED, POOL, SKEPTIC_REF, Frame,  # noqa: E402
                              assign_leakfree_splits, geometry_hash, reaction_components)
 
 BASE_CHECKPOINTS = {"mace_mpa0": "medium-mpa-0"}
@@ -183,7 +183,7 @@ def exclude_eval_geometry(labelled: Sequence[Frame], frames: Sequence[Frame]
     via_endpoint = [f.uid for f in labelled if endpoints_of[f.reaction] & eval_endpoints]
     drop = set(own) | set(via_endpoint)
     return [f for f in labelled if f.uid not in drop], {
-        "hash": "sorted Z + sorted pair distances rounded to 0.01 A (trustswarm.data.geometry_hash)",
+        "hash": "sorted Z + sorted pair distances rounded to 0.01 A (fittest.data.geometry_hash)",
         "n_labelled": len(labelled), "n_eval_frames_hashed": len(eval_all),
         "n_eval_endpoint_hashes": len(eval_endpoints), "n_own_geometry_matches": len(own),
         "n_reaction_endpoint_matches": len(via_endpoint), "n_excluded": len(drop),
@@ -193,14 +193,14 @@ def exclude_eval_geometry(labelled: Sequence[Frame], frames: Sequence[Frame]
                    f"{len(drop)} labelled frame(s) matched an eval geometry and were excluded")}
 
 
-def trustswarm_checks(before: dict, after: dict) -> list[dict]:
+def fittest_checks(before: dict, after: dict) -> list[dict]:
     """Gates (b), (c): hold-out force RMSE and reaction-centred rel-E MAE must not regress."""
     checks = []
     for name, key, unit in (("holdout_force_rmse_not_worse", "force_rmse", "eV/A"),
                             ("holdout_rel_energy_mae_not_worse", "rel_energy_mae", "eV")):
         b, a = before[key], after[key]
         ok = math.isfinite(a) and math.isfinite(b)
-        checks.append({"name": name, "source": "trustswarm", "value": a if ok else None,
+        checks.append({"name": name, "source": "fittest", "value": a if ok else None,
                        "limit": b if ok else None, "comparison": "<=", "passed": bool(ok and a <= b),
                        "detail": (f"fine-tuned {a:.4f} vs base {b:.4f} {unit}, held-out labelled slice"
                                   if ok else "not measurable (needs a hold-out reaction with >= 2 frames)")})
@@ -263,7 +263,7 @@ def holdout_by_component(labelled: Sequence[Frame], frames: Sequence[Frame], fra
         raise AssertionError(f"hold-out shares {len(shared)} geometries with training")
     return train, hold, {
         "method": "whole components of labelled reactions linked by shared endpoint geometry "
-                  "(trustswarm.data.reaction_components / geometry_hash)",
+                  "(fittest.data.reaction_components / geometry_hash)",
         "n_components": len(comps), "n_holdout_components": len(held),
         "largest_component_frames": max(sizes.values()),
         "target_fraction": fraction, "holdout_fraction": len(hold) / n,
@@ -546,7 +546,7 @@ def acceptance(base_acc, tuned_acc, name: str, max_ratio: float) -> tuple[bool, 
     repair must not trade energies for forces or vice versa. No absolute bar: the Curator
     replaces the worst model, so "better than what it replaces" is the shipping criterion.
     Energy-per-atom MAE measures absolute energies (E0 transfer), not the relative energies
-    TrustSwarm scores, hence the extra gates of :func:`trustswarm_checks`."""
+    Fittest scores, hence the extra gates of :func:`fittest_checks`."""
     from nvalchemi.training.distillation.evaluation import (AcceptanceThresholds, StudentEvaluation,
                                                             build_acceptance_report)
 
@@ -617,7 +617,7 @@ def run_one(*, name: str, seed: int, frames: list[Frame], train: list[Frame], ho
     E_t, F_t, _ = predict(shipped_model, train, device)
     after = {"holdout": error_metrics(hold, E_h, F_h), "train": error_metrics(train, E_t, F_t),
              "alchemi": tuned_acc.to_dict()}
-    report["checks"] += trustswarm_checks(base_eval["holdout"], after["holdout"])
+    report["checks"] += fittest_checks(base_eval["holdout"], after["holdout"])
     accepted = toolkit_accepted and all(c["passed"] for c in report["checks"])
     report.update({"verdict": "pass" if accepted else "fail", "accepted": accepted,
                    "geometry_leak_check": leak_check, "holdout_leak_check": holdout_check,

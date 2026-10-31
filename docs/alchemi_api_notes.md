@@ -1,4 +1,4 @@
-# ALCHEMI Toolkit 0.3.0 (rc) API notes for TrustSwarm
+# ALCHEMI Toolkit 0.3.0 (rc) API notes for Fittest
 
 Source: `ref/nvalchemi-toolkit` (package `nvalchemi`, `__version__ = "0.3.0"`, `nvalchemi/__init__.py:18`).
 All paths below are relative to that repo. `file:line` points at the definition or the example line.
@@ -9,7 +9,7 @@ stress eV/Å^3, FIRE/MD `dt` in fs, masses amu. (`.claude/skills/nvalchemi-data-
 
 ---
 
-## 0. TL;DR design for TrustSwarm (what the source supports)
+## 0. TL;DR design for Fittest (what the source supports)
 
 * In-flight batching exists only through `FusedStage.run(batch=None)` (Mode 2) with a `SizeAwareSampler` (`nvalchemi/dynamics/base.py:4982-5085`). A plain `FIRE2(...).run(batch)` never refills (`base.py:3243`).
 * A system leaves the live batch when `batch.status >= exit_status`. Any hook can set that, and the next `refill_check` evicts it and pulls a replacement (`base.py:3305-3445`). This is how DisagreementHook "graduates" a system. No special API is needed.

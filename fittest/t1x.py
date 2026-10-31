@@ -21,7 +21,7 @@ from pathlib import Path
 
 import numpy as np
 
-from trustswarm.data import Frame
+from fittest.data import Frame
 
 ENERGY_KEY = "wB97x_6-31G(d).energy"
 FORCES_KEY = "wB97x_6-31G(d).forces"

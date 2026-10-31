@@ -5,7 +5,7 @@ import json
 import numpy as np
 import pytest
 
-from trustswarm.service import TrustSnapshot, read_xyz, score
+from fittest.service import TrustSnapshot, read_xyz, score
 
 WATER = {"Z": [8, 1, 1], "R": [[0.0, 0.0, 0.0], [0.96, 0.0, 0.0], [-0.24, 0.93, 0.0]]}
 METHANE = {"Z": [6, 1, 1, 1, 1],
@@ -106,7 +106,7 @@ def test_bad_input_rejected(snapshot):
 def test_fake_models_cli(tmp_path, capsys):
     import json as _json
 
-    from trustswarm.service import main
+    from fittest.service import main
 
     snap = tmp_path / "s.json"
     snap.write_text(_json.dumps({"models": ["a", "b", "c"], "tau": 0.3, "sigma_edges": [0.05, 0.15, 0.3],
@@ -139,7 +139,7 @@ def test_http_endpoint(snapshot):
     pytest.importorskip("httpx")
     from fastapi.testclient import TestClient
 
-    from trustswarm.service import create_app
+    from fittest.service import create_app
 
     client = TestClient(create_app(snapshot, {m: fake(1.0) for m in "abc"}))
     assert client.get("/health").json()["ok"] is True

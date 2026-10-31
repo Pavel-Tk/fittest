@@ -122,9 +122,9 @@ def versions_table(root: Path) -> list[str]:
            "|---|---|" + "---|" * len(VER_COLS)]
     for label, sub in VERSIONS:
         rr = load(root / sub / "ablation.json")
-        if rr is None or "D_trustswarm" not in rr.get("arms", {}):
+        if rr is None or "D_fittest" not in rr.get("arms", {}):
             continue
-        d = rr["arms"]["D_trustswarm"]["metrics"]
+        d = rr["arms"]["D_fittest"]["metrics"]
         out.append(f"| {label} | {SPLIT_OF_VERSION[label]} | " +
                    " | ".join(fmt(d.get(k)) for k, _ in VER_COLS) + " |")
     return out
@@ -206,8 +206,8 @@ def collective(path: Path) -> tuple[list[str], dict[str, Any]]:
 
 
 def eval_frames(frames_path: Path, seed: int) -> tuple[list[Any], list[Any]]:
-    from trustswarm.cache import load_frames
-    from trustswarm.data import EVAL, assign_leakfree_splits
+    from fittest.cache import load_frames
+    from fittest.data import EVAL, assign_leakfree_splits
     raw = load_frames(frames_path)
     frames, _ = assign_leakfree_splits(raw, seed)
     return raw, [f for f in frames if f.split == EVAL]
@@ -215,8 +215,8 @@ def eval_frames(frames_path: Path, seed: int) -> tuple[list[Any], list[Any]]:
 
 def hindsight_pair(ev: list[Any], preds_dir: Path) -> float:
     """Mean force RMSE on eval of a fixed mean(aimnet2+orb) — chosen with hindsight."""
-    from trustswarm.cache import load_models
-    from trustswarm.signals import force_rmse
+    from fittest.cache import load_models
+    from fittest.signals import force_rmse
     p = load_models(preds_dir, PAIR)
     return float(np.mean([force_rmse(np.mean([p[m].forces[f.uid] for m in PAIR], axis=0), f.F)
                           for f in ev]))
@@ -224,8 +224,8 @@ def hindsight_pair(ev: list[Any], preds_dir: Path) -> float:
 
 def dispersion(ev: list[Any], preds_dir: Path) -> dict[str, dict[str, float]]:
     """Median seed spread vs median error of the ensemble mean on eval frames."""
-    from trustswarm.cache import load_models
-    from trustswarm.signals import force_rmse, force_spread
+    from fittest.cache import load_models
+    from fittest.signals import force_rmse, force_spread
     out = {}
     for label, models in (("MACE LoRA seeds (B′)", [f"mace_seed{k}" for k in range(4)]),
                           ("AIMNet2 ensemble members (B)", [f"aimnet2_m{k}" for k in range(4)])):
@@ -237,8 +237,8 @@ def dispersion(ev: list[Any], preds_dir: Path) -> dict[str, dict[str, float]]:
 
 
 def repair(r: dict[str, Any], preds_dir: Path) -> tuple[list[str], str]:
-    from trustswarm.cache import load_predictions
-    ft = r["arms"]["D_trustswarm"].get("finetune") or {}
+    from fittest.cache import load_predictions
+    ft = r["arms"]["D_fittest"].get("finetune") or {}
     meta = load_predictions(preds_dir / "mace_lora_curated.npz").meta
     acc = meta.get("acceptance_report", {})
     hm = acc.get("holdout_metrics", {})
@@ -303,9 +303,9 @@ def main(argv: list[str] | None = None) -> None:
         sys.exit(f"{root / 'ablation.json'} not found")
     sweep, split, signal = (load(root / n) for n in ("ablation_budget.json", "split_report.json", "signal.json"))
     arms, cfg = r["arms"], r["config"]
-    D = arms["D_trustswarm"]
+    D = arms["D_fittest"]
     ok = {n: a for n, a in arms.items() if a.get("status") == "ok"}
-    baselines = [n for n in ok if n not in ("D_trustswarm", "A_random")]
+    baselines = [n for n in ok if n not in ("D_fittest", "A_random")]
     served = {n: val(a, "eval_force_rmse_post") for n, a in ok.items()}
     wrong = {n: val(a, "eval_wrong_rate_pre") for n, a in ok.items()}
     best_auc = max(ok, key=lambda n: val(ok[n], "auroc_eval") or 0)
@@ -319,7 +319,7 @@ def main(argv: list[str] | None = None) -> None:
     disp = dispersion(ev, preds_dir) if need_data else {}
     naive = None
     if raw is not None:
-        from trustswarm.data import EVAL, POOL, near_duplicate_endpoints
+        from fittest.data import EVAL, POOL, near_duplicate_endpoints
         naive = near_duplicate_endpoints(raw, POOL, EVAL)
     coll_lines, cs = collective(root / "blackboard_armD.jsonl") if have(root / "blackboard_armD.jsonl") else ([], {})
     rep_lines, rep_short = repair(r, preds_dir) if have(preds_dir / "mace_lora_curated.npz") else ([], "")
@@ -331,7 +331,7 @@ def main(argv: list[str] | None = None) -> None:
     nonrandom = [n for n in baselines]
     planted = {n: val(a, "planted_caught") for n, a in ok.items()}
     pl_ns, pl_better = who(r, "planted_caught", "ns"), who(r, "planted_caught", "better")
-    others_pl = [planted[n] for n in ok if n != "D_trustswarm" and planted[n] is not None]
+    others_pl = [planted[n] for n in ok if n != "D_fittest" and planted[n] is not None]
     auc_worse = who(r, "auroc_eval", "worse")
     cal_better, cal_tied = who(r, "ece_eval", "better"), who(r, "ece_eval", "ns")
     n_pair = cs.get("served_eval", {}).get(PAIR_NAME, 0) if cs else 0
@@ -346,13 +346,13 @@ def main(argv: list[str] | None = None) -> None:
                    if bprime else "")
 
     summary = ["<!-- SUMMARY:START -->",
-               f"**TrustSwarm on Transition1x** — leak-free split, {budget_label}{bprime_note}; 95% "
+               f"**Fittest on Transition1x** — leak-free split, {budget_label}{bprime_note}; 95% "
                "reaction-bootstrap CIs.", ""]
     if pair_rmse is not None:
         summary.append(
-            f"* **Better served answers, by discovery:** TrustSwarm's served force RMSE on held-out eval is "
-            f"**{served['D_trustswarm']:.3f} eV/Å** vs {min(others_served):.3f}–{max(others_served):.3f} for the "
-            f"baselines (wrong on {wrong['D_trustswarm']:.0%} of eval frames vs {min(others_wrong):.0%}–"
+            f"* **Better served answers, by discovery:** Fittest's served force RMSE on held-out eval is "
+            f"**{served['D_fittest']:.3f} eV/Å** vs {min(others_served):.3f}–{max(others_served):.3f} for the "
+            f"baselines (wrong on {wrong['D_fittest']:.0%} of eval frames vs {min(others_wrong):.0%}–"
             f"{max(others_wrong):.0%}). It served `{PAIR_NAME}` on {n_pair}/{cs.get('n_eval', 0)} eval frames: the "
             f"gain comes from discovering that combination from {cfg['total_budget']} oracle labels; no baseline "
             f"had subset candidates. A fixed AIMNet2+Orb average chosen in hindsight (using eval labels) scores "
@@ -362,7 +362,7 @@ def main(argv: list[str] | None = None) -> None:
         f"better than {', '.join(cal_better) or 'no baseline'}"
         + (f"; tied with {', '.join(cal_tied)}" if cal_tied else "") +
         " — the gain comes from the Skeptic's random audits of trusted answers.",
-        f"* **Negative result — error ranking:** TrustSwarm's AUROC (eval {val(D, 'auroc_eval'):.3f}) is "
+        f"* **Negative result — error ranking:** Fittest's AUROC (eval {val(D, 'auroc_eval'):.3f}) is "
         f"significantly worse than {', '.join(auc_worse) or 'no baseline'}. Best ranker: {best_auc} "
         f"({val(ok[best_auc], 'auroc_eval'):.3f}).",
         f"* **Committee disagreement detects AIMNet2's failures best:** AUROC vs 'AIMNet2 wrong' "
@@ -379,10 +379,10 @@ def main(argv: list[str] | None = None) -> None:
             f"{min(spreads):.1f}–{max(spreads):.0f}× smaller than the errors on the "
             f"{len(ev):,} eval frames: not usable as an error bar.")
     summary += [
-        f"* **Silent failures:** TrustSwarm has {n_sf_e}/{sf_e['n']} on eval (badly wrong, F-RMSE > 0.4) and "
+        f"* **Silent failures:** Fittest has {n_sf_e}/{sf_e['n']} on eval (badly wrong, F-RMSE > 0.4) and "
         f"{n_sf_p}/{sf_p['n']} on pool; not significantly different from {len(sf_ns)} of "
         f"{len(nonrandom)} non-random baselines, {len(trust_none)} of which trust nothing (zero by construction).",
-        f"* **Planted failures:** {planted['D_trustswarm']:.2f} caught vs {min(others_pl):.2f}–"
+        f"* **Planted failures:** {planted['D_fittest']:.2f} caught vs {min(others_pl):.2f}–"
         f"{max(others_pl):.2f}; significantly better than {', '.join(pl_better) or 'none'}, not significant vs "
         f"{len(pl_ns)} of {len(r['comparisons'])}.",
     ]
@@ -396,7 +396,7 @@ def main(argv: list[str] | None = None) -> None:
     if len(summary) > 27:
         raise SystemExit(f"summary block too long ({len(summary)} lines)")
 
-    doc: list[str] = ["# TrustSwarm — results", "", *summary, "",
+    doc: list[str] = ["# Fittest — results", "", *summary, "",
                       "Generated by `scripts/write_results.py`. Primary wrongness: force RMSE > "
                       f"{cfg['wrong_f']} eV/Å or |ΔE_rel| > {cfg['wrong_e']} eV (fixed before running; 0.15 and "
                       f"0.4 in `by_threshold`). Brackets: 95% bootstrap CIs over reactions ({cfg['n_bootstrap']} "
@@ -410,20 +410,20 @@ def main(argv: list[str] | None = None) -> None:
                       f"Planted = planted-split frames where AIMNet2's force RMSE > {cfg.get('planted_force_rmse')} "
                       "eV/Å (AIMNet2 is in every arm). Silent failures = badly wrong (F-RMSE > 0.4), unflagged, "
                       "unchecked and trusted; read with the trusted share. An arm that trusts nothing has none "
-                      "by construction. TrustSwarm's zero is partly due to the Skeptic's advisory vetoes and the "
+                      "by construction. Fittest's zero is partly due to the Skeptic's advisory vetoes and the "
                       "hook's flags, which keep would-be silent failures out of the trusted set.", "",
-                      "### TrustSwarm (D) vs each baseline (paired 95% CI)", "",
+                      "### Fittest (D) vs each baseline (paired 95% CI)", "",
                       "`better` / `**worse**`: the CI of the difference excludes 0; `n.s.`: not significant.", "",
                       *comparison_table(r), "", "### Served answer: discovery vs hindsight", ""]
     if pair_rmse is not None:
-        doc += [f"* TrustSwarm served `{PAIR_NAME}` on {n_pair}/{cs.get('n_eval', 0)} eval frames: served force "
-                f"RMSE {served['D_trustswarm']:.3f} eV/Å.",
+        doc += [f"* Fittest served `{PAIR_NAME}` on {n_pair}/{cs.get('n_eval', 0)} eval frames: served force "
+                f"RMSE {served['D_fittest']:.3f} eV/Å.",
                 f"* A fixed `{PAIR_NAME}` on every eval frame, chosen in hindsight with eval labels: "
-                f"{pair_rmse:.3f} eV/Å. TrustSwarm's gain is the discovery of this combination from "
+                f"{pair_rmse:.3f} eV/Å. Fittest's gain is the discovery of this combination from "
                 f"{cfg['total_budget']} oracle labels; no baseline arm had subset candidates.",
-                "* Budget sweep: TrustSwarm's served eval force RMSE at k = " +
+                "* Budget sweep: Fittest's served eval force RMSE at k = " +
                 ", ".join(f"{k}: {x['value']:.3f}" for k, x in
-                          zip(sweep["budgets"], sweep["arms"]["D_trustswarm"]["eval_force_rmse_post"]))
+                          zip(sweep["budgets"], sweep["arms"]["D_fittest"]["eval_force_rmse_post"]))
                 + " eV/Å. The recommended-candidate distribution per budget is **not recorded** in "
                 "`ablation_budget.json`, so whether it finds the pair with fewer labels is inferred only "
                 "from the served error.", ""]
@@ -443,7 +443,7 @@ def main(argv: list[str] | None = None) -> None:
                 "calibration are different properties.", ""]
     doc += ["## What the collective decided (arm D)", "", *coll_lines, "",
             "## Repair (Curator)", "", *rep_lines, "",
-            "## TrustSwarm across versions", "", *versions_table(root), "",
+            "## Fittest across versions", "", *versions_table(root), "",
             "\\* v1 defined planted cases as 'MACE-MPA-0 wrong' (favoured arms containing MACE); later "
             "versions use 'AIMNet2 badly wrong'. v1→v2 and v3→v4 share a split; v2→v3 changes it.", "",
             "| version | change | reason |", "|---|---|---|",
@@ -477,15 +477,15 @@ def main(argv: list[str] | None = None) -> None:
                 "held-out frames.", ""]
     doc += ["## Failures and caveats (reported, not hidden)", ""]
     doc += [f"* {f}" for f in r["failures"] if not f.startswith("D vs ")]
-    doc += [f"* TrustSwarm's error ranking (AUROC eval) is significantly worse than: {', '.join(auc_worse)}."
-            if auc_worse else "* TrustSwarm's error ranking is not significantly worse than any baseline."]
+    doc += [f"* Fittest's error ranking (AUROC eval) is significantly worse than: {', '.join(auc_worse)}."
+            if auc_worse else "* Fittest's error ranking is not significantly worse than any baseline."]
     if cs.get("tau_constant"):
         doc.append(f"* The Calibrator's threshold τ never left its floor ({cs['tau']:.3f}): flags were set by "
                    "the round-0 70th-percentile rule, not by learning.")
     if cs.get("rep_range") and cs["rep_range"][1] - cs["rep_range"][0] < 0.1:
         doc.append(f"* Reputations ended nearly equal ({cs['rep_range'][0]:.2f}–{cs['rep_range'][1]:.2f}): "
                    "reputation-weighted bidding behaved like plain summed bids.")
-    doc += [f"* TrustSwarm's served-answer gain equals a fixed AIMNet2+Orb average chosen in hindsight "
+    doc += [f"* Fittest's served-answer gain equals a fixed AIMNet2+Orb average chosen in hindsight "
             f"({pair_rmse:.3f} eV/Å)." if pair_rmse is not None else "",
             "* The Calibrator's labels are mostly bid-won (high σ); audits reduce but do not remove this "
             "selection bias.",
@@ -499,7 +499,7 @@ def main(argv: list[str] | None = None) -> None:
 
 
 def load_predictions_meta(preds_dir: Path, model: str) -> dict[str, Any] | None:
-    from trustswarm.cache import load_predictions
+    from fittest.cache import load_predictions
     p = preds_dir / f"{model}.npz"
     return load_predictions(p).meta if p.exists() else None
 

@@ -1,9 +1,9 @@
-"""On-disk format of a TrustSwarm MACE LoRA fine-tune, and its loader (DESIGN.md §4 Curator).
+"""On-disk format of a Fittest MACE LoRA fine-tune, and its loader (DESIGN.md §4 Curator).
 
-Written by ``scripts/finetune.py``; read by ``trustswarm.models.mace_batched.BatchedMACE``
+Written by ``scripts/finetune.py``; read by ``fittest.models.mace_batched.BatchedMACE``
 (``model_path=<checkpoint dir>``) and by anything else that speaks plain mace-torch.
 
-Layout of one checkpoint directory (format ``trustswarm.mace_lora/1``)::
+Layout of one checkpoint directory (format ``fittest.mace_lora/1``)::
 
     <ckpt>/
       model.pt                 merged model: a plain mace-torch ``ScaleShiftMACE`` nn.Module in
@@ -13,7 +13,7 @@ Layout of one checkpoint directory (format ``trustswarm.mace_lora/1``)::
                                reference energies (E0) are baked into
                                ``atomic_energies_fn``. Outputs are total energies on the
                                ωB97x/6-31G(d) scale [eV] and forces [eV/Å].
-      trustswarm.json          {"format", "base_checkpoint", "model_file", "layout": "e3nn",
+      fittest.json          {"format", "base_checkpoint", "model_file", "layout": "e3nn",
                                 "dtype", "atomic_energies" {Z: E0 eV}, training config, ...}
       atomic_energies.json     {"Z": E0 eV} (the ``atomic_energies_path`` format of
                                ``MACEWrapper.from_checkpoint``)
@@ -26,7 +26,7 @@ Layout of one checkpoint directory (format ``trustswarm.mace_lora/1``)::
                                atomic_energies_path="<ckpt>/atomic_energies.json"), "<ckpt>")``.
                                The adapters are e3nn-layout: rebuild the base with
                                ``enable_cueq=False``.
-      acceptance_report.json   ALCHEMI acceptance report + TrustSwarm hold-out metrics.
+      acceptance_report.json   ALCHEMI acceptance report + Fittest hold-out metrics.
 
 Loading ``model.pt`` needs only torch + mace-torch::
 
@@ -34,7 +34,7 @@ Loading ``model.pt`` needs only torch + mace-torch::
 
 or, as an ALCHEMI model (frozen, eval mode, optional cuEquivariance conversion)::
 
-    from trustswarm.mace_lora import load_mace_lora
+    from fittest.mace_lora import load_mace_lora
     wrapper = load_mace_lora("<ckpt>", device="cuda", enable_cueq=True)
 
 Do **not** pass ``model.pt`` to ``MACEWrapper.from_checkpoint``: in nvalchemi 0.3.0-rc that
@@ -50,9 +50,9 @@ import json
 from pathlib import Path
 from typing import Any
 
-FORMAT = "trustswarm.mace_lora/1"
+FORMAT = "fittest.mace_lora/1"
 MODEL_FILE = "model.pt"
-MANIFEST_FILE = "trustswarm.json"  # manifest.json belongs to the PEFT checkpoint
+MANIFEST_FILE = "fittest.json"  # manifest.json belongs to the PEFT checkpoint
 E0_FILE = "atomic_energies.json"
 REPORT_FILE = "acceptance_report.json"
 

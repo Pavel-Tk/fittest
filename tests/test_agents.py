@@ -3,17 +3,17 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from trustswarm import config
-from trustswarm.agents import (Calibrator, DisagreementMonitor, ModelAgent, Oracle, PoolStream,
+from fittest import config
+from fittest.agents import (Calibrator, DisagreementMonitor, ModelAgent, Oracle, PoolStream,
                                Skeptic)
-from trustswarm.agents.base import Agent, batch_payload, iter_rows
-from trustswarm.agents.calibrator import bucket_of, isotonic_threshold
-from trustswarm.blackboard import (BID, FLAG, ORACLE_RESULT, PASS, PREDICTION, REPUTATION,
+from fittest.agents.base import Agent, batch_payload, iter_rows
+from fittest.agents.calibrator import bucket_of, isotonic_threshold
+from fittest.blackboard import (BID, FLAG, ORACLE_RESULT, PASS, PREDICTION, REPUTATION,
                                    THRESHOLD, VERDICT, Blackboard, Event)
-from trustswarm.cache import Predictions
-from trustswarm.candidates import candidate_members
-from trustswarm.data import Frame
-from trustswarm.round_driver import QuiescenceError, RoundDriver
+from fittest.cache import Predictions
+from fittest.candidates import candidate_members
+from fittest.data import Frame
+from fittest.round_driver import QuiescenceError, RoundDriver
 
 
 def labelled(uid: str, reaction: str = "r1", role: str = "path", n: int = 3) -> Frame:

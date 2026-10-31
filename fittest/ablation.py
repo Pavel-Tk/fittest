@@ -1,0 +1,1137 @@
+"""Ablation: arms A-D at the same oracle budget K = rounds × k (DESIGN.md §5, §10).
+
+=================  ===========================  ====================  ================================
+Arm                Models                       Triage score          Served answer
+=================  ===========================  ====================  ================================
+A_single           aimnet2                      max |F|               that model
+A_random           aimnet2                      uniform random        that model
+B_seed             aimnet2_m0..3                seed σ_F              ensemble mean
+B_mace_seeds       mace_seed0..3 (optional)     seed σ_F              ensemble mean
+C_collective       mace_mpa0, aimnet2, orb      σ_F                   ensemble mean
+D_fittest       mace_mpa0, aimnet2, orb      σ_F + reputation bids Calibrator's recommended model
+=================  ===========================  ====================  ================================
+
+All arms see the same stream: pool reactions arrive in ``rounds`` chunks, the planted
+cases (and their reactants) are injected at round 0, and each round at most ``k`` systems
+are sent to the oracle. Arms A-C pick top-k by score among arrived, unchecked systems;
+arm D runs the agent collective on a Blackboard and the Oracle pays the top-k summed bids.
+
+Metrics (pool = triage, eval = held-out generalisation), each with a 95% bootstrap CI over
+reactions (paired across arms: the same resampled reactions are used for every arm):
+
+1. ``auroc_pool``: AUROC(triage score → served answer wrong) on pool; ``auroc_common``: same
+   score vs a common, arm-independent target (MACE-MPA-0 wrong); ``auroc_eval``: AUROC on
+   eval (arm D uses the Calibrator's P(served wrong) there); ``spearman_*``: threshold-free
+   Spearman(score, served force RMSE).
+2. ``recall_at_k``: fraction of wrong served pool answers that received an oracle call.
+3. ``planted_caught``: fraction of planted cases flagged, vetoed or oracle-checked.
+4. ``eval_force_rmse_{pre,post}``, ``eval_rel_e_mae_{pre,post}``: served-answer error on eval,
+   before/after the Curator's fine-tune (A-C: no fine-tune, pre = post).
+5. ``finetune``: fine-tuned model vs base model error on eval (if a fine-tune shipped).
+
+Failures — skipped arms, undefined metrics, unshipped fine-tunes, unspent budget, and
+comparisons where Fittest does *not* beat a baseline — are collected in
+``results["failures"]``; nothing is dropped silently.
+"""
+
+from __future__ import annotations
+
+import dataclasses
+import json
+import zlib
+from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
+
+import numpy as np
+from scipy.stats import rankdata, spearmanr
+from sklearn.metrics import roc_auc_score
+
+from fittest import blackboard as bbk
+from fittest import config
+from fittest.agents import (Calibrator, Curator, DisagreementMonitor, FinetuneFn, ModelAgent,
+                               NullFinetune, Oracle, PoolStream, ReplayFinetune, Skeptic)
+from fittest.agents.base import iter_rows
+from fittest.agents.calibrator import isotonic_probability
+from fittest.agents.stream import TRIAGE
+from fittest.blackboard import Blackboard
+from fittest.cache import Predictions, load_models, load_predictions, prediction_path
+from fittest.data import (EVAL, PLANTED, POOL, SEED_TRAIN, SKEPTIC_REF, Frame, arrival_rounds, by_split,
+                             assign_leakfree_splits, geometry_hash, reactant_index, strip_all)
+from fittest.round_driver import RoundDriver
+from fittest.signals import force_rmse, force_spread, max_abs_force
+
+Served = dict[str, tuple[np.ndarray, float | None]]  # uid -> (forces, relative energy)
+
+
+@dataclass(frozen=True)
+class AblationConfig:
+    budget_per_round: int = config.BUDGET_PER_ROUND
+    rounds: int = config.N_ROUNDS
+    seed: int = 0
+    n_bootstrap: int = config.N_BOOTSTRAP
+    single_model: str = config.SINGLE_MODEL
+    seed_models: tuple[str, ...] = config.SEED_MODELS
+    mace_seed_models: tuple[str, ...] | None = config.MACE_SEED_MODELS
+    hetero_models: tuple[str, ...] = config.HETERO_MODELS
+    common_target: str = config.COMMON_TARGET_MODEL
+    curated_model: str = config.CURATED_MODEL
+    curated_base_model: str = config.CURATED_BASE_MODEL
+    wrong_f: float = config.WRONG_F
+    wrong_e: float = config.WRONG_E
+    wrong_thresholds: tuple[tuple[float, float], ...] = config.WRONG_THRESHOLDS
+    flag_quantile: float = config.TAU_FLOOR_QUANTILE
+    max_planted: int | None = 40
+    audit_fraction: float = config.AUDIT_FRACTION
+    planted_model: str = config.PLANTED_MODEL
+    planted_force_rmse: float = config.PLANTED_FORCE_RMSE
+    """Arm D: share of each round's budget spent on Skeptic audits of trusted systems."""
+    """Cap on planted cases (seeded subsample of the filtered set); None = all."""
+
+    @property
+    def total_budget(self) -> int:
+        return self.budget_per_round * self.rounds
+
+    @property
+    def audit_quota(self) -> int:
+        return int(round(self.audit_fraction * self.budget_per_round))
+
+
+# --- data ---------------------------------------------------------------------------------------
+
+@dataclass
+class AblationData:
+    split_report: dict[str, Any]
+    pool: list[Frame]
+    eval: list[Frame]
+    refs: list[Frame]
+    planted_cases: list[Frame]
+    planted_context: list[Frame]
+    by_uid: dict[str, Frame]
+    rel_true: dict[str, float | None]
+    reactant_uid: dict[str, str]
+
+    @property
+    def injected(self) -> list[Frame]:
+        return [*self.planted_cases, *self.planted_context]
+
+    @property
+    def candidates(self) -> list[Frame]:
+        """Everything the oracle may be asked about: pool + injected planted structures."""
+        return [*self.pool, *self.injected]
+
+
+def _model_rel(p: Predictions, uid: str, reactant_uid: str | None) -> float | None:
+    if reactant_uid is None or reactant_uid not in p or uid not in p:
+        return None
+    return p.energy[uid] - p.energy[reactant_uid]
+
+
+def select_planted(planted_split: Sequence[Frame], model: Predictions, cfg: AblationConfig
+                   ) -> tuple[list[Frame], list[Frame]]:
+    """Planted cases = planted-split frames on which ``cfg.planted_model`` — a model present in
+    every arm (A serves it, B's members are it, C and D include it) — is *badly* wrong
+    (force RMSE > ``cfg.planted_force_rmse``): the "confidently wrong" class. Arm-independent
+    by construction. Context = the reactant frames of those reactions."""
+    reactants = reactant_index(planted_split)
+    cases = sorted((f for f in planted_split
+                    if f.F is not None and f.uid in model and f.role != "reactant"
+                    and force_rmse(model.forces[f.uid], f.F) > cfg.planted_force_rmse),
+                   key=lambda f: f.uid)
+    if cfg.max_planted is not None and len(cases) > cfg.max_planted:
+        rng = np.random.default_rng([cfg.seed, 17])
+        keep = np.sort(rng.choice(len(cases), size=cfg.max_planted, replace=False))
+        cases = [cases[i] for i in keep]
+    context = sorted({reactants[f.reaction].uid: reactants[f.reaction] for f in cases
+                      if f.reaction in reactants}.values(), key=lambda f: f.uid)
+    return cases, context
+
+
+def prepare_data(frames: Sequence[Frame], planted_model: Predictions,
+                 cfg: AblationConfig) -> AblationData:
+    """Leak-free splits (re-derived from the official split prefix: pool/eval by component of
+    shared endpoint geometry, skeptic_ref/planted by formula), planted cases, relative energies."""
+    frames, split_report = assign_leakfree_splits(frames, cfg.seed)
+    splits = by_split(frames)
+    pool, eval_, refs = (sorted(splits.get(s, []), key=lambda f: f.uid) for s in (POOL, EVAL, SKEPTIC_REF))
+    if not pool or not eval_:
+        raise ValueError(f"need non-empty pool and eval splits, got {sorted(splits)}")
+    cases, context = select_planted(splits.get(PLANTED, []), planted_model, cfg)
+    reactants = reactant_index(frames)
+    rel_true: dict[str, float | None] = {}
+    for f in frames:
+        r = reactants.get(f.reaction)
+        rel_true[f.uid] = None if r is None or r.E is None or f.E is None else f.E - r.E
+    return AblationData(split_report=split_report, pool=pool, eval=eval_, refs=refs, planted_cases=cases,
+                        planted_context=context, by_uid={f.uid: f for f in frames},
+                        rel_true=rel_true, reactant_uid={k: v.uid for k, v in reactants.items()})
+
+
+# --- statistics -------------------------------------------------------------------------------
+
+class Bootstrap:
+    """Reaction-level bootstrap. Resamples depend only on (seed, set of reactions), so every
+    metric on the same split — in every arm, before and after fine-tuning — sees the same
+    resampled reactions, and all differences are paired."""
+
+    def __init__(self, n: int, seed: int) -> None:
+        self.n, self.seed = n, seed
+
+    def samples(self, stat: Callable[[np.ndarray], float | None],
+                groups: Sequence[str]) -> np.ndarray:
+        uniq, inv = np.unique(np.asarray(groups), return_inverse=True)
+        members = [np.flatnonzero(inv == g) for g in range(len(uniq))]
+        rng = np.random.default_rng([self.seed, zlib.crc32("\n".join(uniq).encode())])
+        out = np.full(self.n, np.nan)
+        for b in range(self.n):
+            idx = np.concatenate([members[g] for g in rng.integers(len(uniq), size=len(uniq))])
+            v = stat(idx)
+            out[b] = np.nan if v is None else v
+        return out
+
+
+def _ci(samples: np.ndarray, level: float = config.CI_LEVEL) -> list[float] | None:
+    ok = samples[np.isfinite(samples)]
+    if ok.size < 0.5 * samples.size or ok.size == 0:
+        return None
+    lo, hi = np.percentile(ok, [50 * (1 - level), 50 * (1 + level)])
+    return [float(lo), float(hi)]
+
+
+def _auroc(y: np.ndarray, s: np.ndarray) -> float | None:
+    """Point estimate (scikit-learn)."""
+    return float(roc_auc_score(y, s)) if 0 < y.sum() < len(y) else None
+
+
+def auroc_mann_whitney(y: np.ndarray, s: np.ndarray) -> float | None:
+    """The same AUROC via the Mann-Whitney U statistic (average ranks for ties).
+
+    Numerically identical to ``roc_auc_score`` but ~100x cheaper, so it is used inside the
+    bootstrap loop; point estimates still come from scikit-learn (equality is unit-tested)."""
+    n_pos = int(y.sum())
+    n_neg = len(y) - n_pos
+    if n_pos == 0 or n_neg == 0:
+        return None
+    ranks = rankdata(s)
+    return float((ranks[y].sum() - n_pos * (n_pos + 1) / 2) / (n_pos * n_neg))
+
+
+def _spearman(a: np.ndarray, b: np.ndarray) -> float | None:
+    if len(a) < 3 or np.ptp(a) == 0 or np.ptp(b) == 0:
+        return None
+    return float(spearmanr(a, b).statistic)
+
+
+def expected_calibration_error(p: np.ndarray, y: np.ndarray, bins: int = config.ECE_BINS) -> float | None:
+    """ECE with equal-width bins on [0, 1]: Σ_b (n_b / N) |mean(y_b) - mean(p_b)|."""
+    if len(p) == 0:
+        return None
+    idx = np.minimum((np.asarray(p) * bins).astype(int), bins - 1)
+    total = 0.0
+    for b in np.unique(idx):
+        sel = idx == b
+        total += sel.mean() * abs(float(y[sel].mean()) - float(p[sel].mean()))
+    return float(total)
+
+
+def brier(p: np.ndarray, y: np.ndarray) -> float | None:
+    return float(np.mean((np.asarray(p, float) - np.asarray(y, float)) ** 2)) if len(p) else None
+
+
+def _mean(x: np.ndarray) -> float | None:
+    x = x[np.isfinite(x)]
+    return float(x.mean()) if x.size else None
+
+
+# --- arm outcomes --------------------------------------------------------------------------------
+
+@dataclass
+class ArmOutcome:
+    name: str
+    models: list[str]
+    score: str
+    served: str
+    pool_score: dict[str, float]
+    eval_score: dict[str, float]
+    served_pool: Served
+    served_eval_pre: Served
+    served_eval_post: Served
+    checked: dict[str, int]
+    flagged: set[str]
+    eval_flagged: set[str] = field(default_factory=set)
+    vetoed: set[str] = field(default_factory=set)
+    audited: set[str] = field(default_factory=set)
+    """Oracle labels spent on exploration audits (the rest were won by bids)."""
+    p_wrong_pool: dict[str, float] | None = None
+    """The arm's own P(served answer wrong) on pool; None → isotonic map of its score."""
+    p_wrong_eval: dict[str, float] | None = None
+    oracle_calls_per_round: dict[int, int] = field(default_factory=dict)
+    extra: dict[str, Any] = field(default_factory=dict)
+    finetune: dict[str, Any] | None = None
+    notes: list[str] = field(default_factory=list)
+
+
+def topk_stream(scores: Mapping[str, float], arrival: Mapping[str, int], k: int,
+                rounds: int, audit_quota: int = 0, trusted_below: float = np.inf,
+                rng: np.random.Generator | None = None) -> tuple[dict[str, int], set[str]]:
+    """Each round, check the k highest-scoring arrived, unchecked systems (ties by uid).
+
+    With ``audit_quota > 0``, that many of the k calls first go to a uniform random sample
+    of arrived, unchecked *trusted* systems (score < ``trusted_below``) — the same
+    exploration rule as arm D's Skeptic. Returns (uid -> round checked, audited uids)."""
+    checked: dict[str, int] = {}
+    audited: set[str] = set()
+    for r in range(rounds):
+        cand = sorted(u for u in scores if arrival[u] <= r and u not in checked)
+        if audit_quota > 0:
+            assert rng is not None, "audits need a seeded rng"
+            trusted = [u for u in cand if scores[u] < trusted_below]
+            for i in sorted(rng.choice(len(trusted), size=min(audit_quota, len(trusted)),
+                                       replace=False)):
+                checked[trusted[i]] = r
+                audited.add(trusted[i])
+            cand = [u for u in cand if u not in checked]
+        n_audit = sum(1 for u in audited if checked[u] == r)
+        for u in sorted(cand, key=lambda u: (-scores[u], u))[: k - n_audit]:
+            checked[u] = r
+    return checked, audited
+
+
+def _round0_tau(scores: Mapping[str, float], arrival: Mapping[str, int], q: float) -> float:
+    """Baseline "flag" threshold: q-quantile of round-0 scores (mirror of the hook's τ floor)."""
+    r0 = [s for u, s in scores.items() if arrival[u] == 0]
+    return float(np.quantile(r0, q)) if r0 else np.inf
+
+
+def _ensemble_served(preds: Mapping[str, Predictions], uids: Sequence[str],
+                     data: AblationData) -> Served:
+    out: Served = {}
+    for u in uids:
+        r_uid = data.reactant_uid.get(data.by_uid[u].reaction)
+        forces = np.mean([p.forces[u] for p in preds.values()], axis=0)
+        rels = [_model_rel(p, u, r_uid) for p in preds.values()]
+        out[u] = (forces, float(np.mean(rels)) if all(x is not None for x in rels) else None)
+    return out
+
+
+def _check_coverage(preds: Mapping[str, Predictions], uids: Sequence[str]) -> str | None:
+    for m, p in preds.items():
+        missing = [u for u in uids if u not in p]
+        if missing:
+            return f"{m} has no prediction for {len(missing)} required frames (e.g. {missing[0]})"
+    return None
+
+
+def run_baseline_arm(name: str, preds: Mapping[str, Predictions], score_name: str,
+                     data: AblationData, arrival: Mapping[str, int], cfg: AblationConfig
+                     ) -> ArmOutcome:
+    models = list(preds)
+    cand = [f.uid for f in data.candidates]
+    eval_uids = [f.uid for f in data.eval]
+    if score_name == "max|F|":
+        (p,) = preds.values()
+        score = {u: max_abs_force(p.forces[u]) for u in [*cand, *eval_uids]}
+    elif score_name == "random":
+        rng = np.random.default_rng([cfg.seed, zlib.crc32(name.encode())])
+        allu = [*cand, *eval_uids]
+        score = dict(zip(allu, rng.random(len(allu)).tolist()))
+    elif score_name in ("sigma_F", "sigma_F+audit"):
+        score = {u: force_spread(np.stack([p.forces[u] for p in preds.values()]))[0]
+                 for u in [*cand, *eval_uids]}
+    else:
+        raise ValueError(score_name)
+    cand_scores = {u: score[u] for u in cand}
+    tau = _round0_tau(cand_scores, arrival, cfg.flag_quantile)
+    audit = score_name.endswith("+audit")
+    checked, audited = topk_stream(
+        cand_scores, arrival, cfg.budget_per_round, cfg.rounds,
+        audit_quota=cfg.audit_quota if audit else 0, trusted_below=tau,
+        rng=np.random.default_rng([cfg.seed, zlib.crc32(name.encode())]))
+    served_eval = _ensemble_served(preds, eval_uids, data)
+    per_round = {r: sum(1 for v in checked.values() if v == r) for r in range(cfg.rounds)}
+    return ArmOutcome(
+        name=name, models=models, score=score_name,
+        served=models[0] if len(models) == 1 else "ensemble mean",
+        pool_score=cand_scores, eval_score={u: score[u] for u in eval_uids},
+        served_pool=_ensemble_served(preds, cand, data), served_eval_pre=served_eval,
+        served_eval_post=served_eval, checked=checked,
+        flagged={u for u, s in cand_scores.items() if s >= tau},
+        eval_flagged={u for u in eval_uids if score[u] >= tau}, audited=audited,
+        oracle_calls_per_round=per_round)
+
+
+def build_fittest(data: AblationData, preds: Mapping[str, Predictions],
+                     arrival: Mapping[str, int], cfg: AblationConfig, finetune_fn: FinetuneFn,
+                     bb: Blackboard) -> tuple[RoundDriver, dict[str, Any]]:
+    """Wire arm D's agents. Each gets only its private data; everything else is on ``bb``."""
+    models = list(cfg.hetero_models)
+    streamed = [f.uid for f in [*data.candidates, *data.eval]]
+    agents: dict[str, Any] = {
+        "oracle": Oracle(data.candidates, cfg.budget_per_round, cfg.rounds, models=models,
+                         audit_quota=cfg.audit_quota),
+        "stream": PoolStream(strip_all(data.pool), arrival, strip_all(data.eval),
+                             serve_round=cfg.rounds),
+        "skeptic": Skeptic(data.refs, {m: preds[m].subset(f.uid for f in data.refs) for m in models},
+                           data.planted_cases, data.planted_context,
+                           audit_per_round=cfg.audit_quota, audit_rounds=cfg.rounds, seed=cfg.seed),
+        **{m: ModelAgent(preds[m].subset(streamed)) for m in models},
+        "calibrator": Calibrator(models),
+        "hook": DisagreementMonitor(models),
+        "curator": Curator(models, finetune_fn, repair_round=cfg.rounds + 1),
+    }
+    return RoundDriver(bb, list(agents.values())), agents
+
+
+def run_fittest_arm(data: AblationData, preds: Mapping[str, Predictions],
+                       arrival: Mapping[str, int], cfg: AblationConfig, finetune_fn: FinetuneFn,
+                       blackboard_path: str | Path | None = None
+                       ) -> tuple[ArmOutcome, Blackboard, dict[str, Any]]:
+    with Blackboard(blackboard_path) as bb:
+        driver, agents = build_fittest(data, preds, arrival, cfg, finetune_fn, bb)
+        driver.run(cfg.rounds + 2)  # triage rounds, settle + serve eval, repair + re-predict
+    events = bb.read()
+    update_ids = [e.id for e in events if e.kind == bbk.MODEL_UPDATE]
+    cutoff = update_ids[0] if update_ids else len(events)
+    # prediction rows addressed as (event id, row index) — what verdicts reference
+    pred_rows = {(e.id, i): row for e in events if e.kind == bbk.PREDICTION
+                 for i, row in iter_rows(e.payload, ("uid", "rel_energy", "forces"))}
+    verdict_keys = ("uid", "phase", "trust", "recommended_model", "prediction_events",
+                    "sigma_served")
+
+    def last_verdicts(pre_update: bool, triage: bool) -> dict[str, dict[str, Any]]:
+        out: dict[str, dict[str, Any]] = {}
+        for e in events:
+            if e.kind != bbk.VERDICT or (pre_update and e.id >= cutoff):
+                continue
+            for _, row in iter_rows(e.payload, verdict_keys):
+                if (row["phase"] == TRIAGE) == triage:
+                    out[row["uid"]] = row
+        return out
+
+    def served_from(verdicts: Mapping[str, dict[str, Any]]) -> Served:
+        """Served answer = recommended candidate's prediction (consensus: mean of models)."""
+        out: Served = {}
+        for u, v in verdicts.items():
+            used = [pred_rows[(ref[0], ref[1])] for ref in v["prediction_events"].values()]
+            forces = np.mean([np.asarray(p["forces"], dtype=float) for p in used], axis=0)
+            rels = [p["rel_energy"] for p in used]
+            out[u] = (forces, float(np.mean(rels)) if all(r is not None for r in rels) else None)
+        return out
+
+    pre_pool = last_verdicts(pre_update=True, triage=True)
+    pre_eval = last_verdicts(pre_update=True, triage=False)
+    served_pool = served_from(pre_pool)
+    sigma: dict[str, float] = {}
+    flagged: set[str] = set()
+    eval_flagged: set[str] = set()
+    for e in events:
+        if e.id >= cutoff:
+            break
+        if e.kind == bbk.PASS:
+            for _, row in iter_rows(e.payload, ("uid", "sigma_F")):
+                sigma.setdefault(row["uid"], float(row["sigma_F"]))
+        elif e.kind == bbk.FLAG:
+            sigma.setdefault(e.payload["uid"], float(e.payload["sigma_F"]))
+            (flagged if e.payload["phase"] == TRIAGE else eval_flagged).add(e.payload["uid"])
+    p_skeptic = {e.payload["uid"]: float(e.payload["p_S"]) for e in events
+                 if e.kind == bbk.VETO and e.id < cutoff}
+    oracle: Oracle = agents["oracle"]
+    curator: Curator = agents["curator"]
+    notes = []
+    missing = sorted({u for m in cfg.hetero_models for u in agents[m].missing})
+    if missing:
+        notes.append(f"{len(missing)} streamed systems lacked a prediction from some model")
+    if oracle.rejected_bids:
+        notes.append(f"oracle rejected {oracle.rejected_bids} bids on systems it cannot label")
+    served_v = {**pre_pool, **pre_eval}
+    sigma_served = {u: float(v["sigma_served"]) for u, v in served_v.items()}
+    served_by = {u: v["recommended_model"] for u, v in served_v.items()}
+    cand = [f.uid for f in data.candidates if f.uid in sigma_served]
+    eval_uids = [f.uid for f in data.eval if f.uid in sigma_served]
+    calibrator: Calibrator = agents["calibrator"]
+    if any(calibrator.served_risk(c, 0.0) is None for c in set(served_by.values())):
+        notes.append(f"fewer than {config.RISK_MIN_LABELLED} oracle labels for a served "
+                     "candidate: D's score fell back to the σ_served rank")
+
+    def d_score(uids: list[str]) -> dict[str, float]:
+        """D's ranking score on the feature its Calibrator selected (v4)."""
+        if calibrator.risk_feature == "sigma_served":
+            return fittest_score(uids, sigma_served, p_skeptic, calibrator.served_risk, served_by)
+        return fittest_score(uids, sigma, p_skeptic, lambda c, s: calibrator.risk(s), served_by)
+    outcome = ArmOutcome(
+        name="D_fittest", models=list(cfg.hetero_models),
+        score="max(isotonic P(served wrong | selected feature), Skeptic p_S); ties by feature",
+        served="Calibrator recommendation (a model or the consensus)",
+        pool_score=d_score(cand), eval_score=d_score(eval_uids),
+        extra={"risk_feature": calibrator.risk_feature,
+               "risk_feature_cv_auroc": calibrator.risk_feature_cv_auroc},
+        served_pool=served_pool, served_eval_pre=served_from(pre_eval),
+        served_eval_post=served_from(last_verdicts(pre_update=False, triage=False)),
+        checked={e.payload["uid"]: int(e.payload["bid_round"]) for e in events
+                 if e.kind == bbk.ORACLE_RESULT},
+        audited={e.payload["uid"] for e in events
+                 if e.kind == bbk.ORACLE_RESULT and e.payload.get("audit")},
+        flagged=flagged, eval_flagged=eval_flagged, vetoed=set(p_skeptic),
+        p_wrong_pool={u: 1.0 - float(v["trust"]) for u, v in pre_pool.items()},
+        p_wrong_eval={u: 1.0 - float(v["trust"]) for u, v in pre_eval.items()},
+        oracle_calls_per_round=dict(oracle.spent_per_round),
+        finetune=_finetune_summary(curator, events), notes=notes)
+    return outcome, bb, agents
+
+
+def fittest_score(uids: Sequence[str], sigma: Mapping[str, float],
+                     p_skeptic: Mapping[str, float], risk: Callable[[str, float], float | None],
+                     candidate: Mapping[str, str] | None = None) -> dict[str, float]:
+    """Arm D's continuous ranking score, returned as a rank in (0, 1].
+
+    value(x) = max(risk(c_x, σ_x), p_S(x) if the Skeptic vetoed x else 0), where c_x is the
+    candidate served for x, σ_x its σ_served and ``risk`` the Calibrator's isotonic
+    P(c wrong | σ_served); with too few labels ``risk`` is replaced by the σ percentile rank.
+    Ties (isotonic plateaus) are broken by σ, so without vetoes and with a single candidate
+    the ranking is exactly the σ ranking and the Skeptic can only add information.
+    """
+    if not uids:
+        return {}
+    sig = np.array([sigma[u] for u in uids])
+    cand = candidate or {}
+    base = [risk(cand.get(u, ""), s) for u, s in zip(uids, sig)]
+    if any(b is None for b in base):
+        base = list(rankdata(sig) / len(sig))
+    value = np.array([max(float(b), p_skeptic.get(u, 0.0)) for u, b in zip(uids, base)])
+    order = np.lexsort((sig, value))  # primary: value, secondary: σ
+    ranks = np.empty(len(uids))
+    ranks[order] = np.arange(1, len(uids) + 1) / len(uids)
+    return dict(zip(uids, ranks.tolist()))
+
+
+def _finetune_summary(curator: Curator, events: list[bbk.Event]) -> dict[str, Any]:
+    reports = [e.payload for e in events if e.kind == bbk.FINETUNE_REPORT]
+    if not reports:
+        return {"shipped": False, "reason": "Curator never ran"}
+    p = reports[-1]
+    return {"model": p["model"], "shipped": p["shipped"], "n_labels": p.get("n_labels"),
+            "ledger_force_rmse": p["ledger_force_rmse"], "report": p["report"],
+            "new_predictions_path": p.get("new_predictions_path")}
+
+
+# --- metrics ------------------------------------------------------------------------------------
+
+@dataclass
+class ErrorTable:
+    uids: list[str]
+    groups: np.ndarray
+    force_rmse: np.ndarray
+    rel_err: np.ndarray  # NaN where the relative energy is undefined
+
+    def wrong(self, wf: float, we: float) -> np.ndarray:
+        return (self.force_rmse > wf) | (np.nan_to_num(self.rel_err, nan=-np.inf) > we)
+
+
+def error_table(served: Served, uids: Sequence[str], data: AblationData) -> ErrorTable:
+    fr, re = [], []
+    for u in uids:
+        f = data.by_uid[u]
+        assert f.F is not None
+        F_hat, rel_hat = served[u]
+        fr.append(force_rmse(F_hat, f.F))
+        rt = data.rel_true[u]
+        re.append(np.nan if rel_hat is None or rt is None else abs(rel_hat - rt))
+    return ErrorTable(list(uids), np.array([data.by_uid[u].reaction for u in uids]),
+                      np.array(fr), np.array(re))
+
+
+def _metric(value: float | None, samples: np.ndarray | None, n: int) -> dict[str, Any]:
+    return {"value": value, "ci": None if samples is None else _ci(samples), "n": n}
+
+
+class ArmScorer:
+    """Computes every metric for one arm; keeps bootstrap samples for paired comparisons."""
+
+    def __init__(self, data: AblationData, cfg: AblationConfig, common: Predictions) -> None:
+        self.data, self.cfg = data, cfg
+        self.boot = Bootstrap(cfg.n_bootstrap, cfg.seed)
+        self.pool_uids = [f.uid for f in data.pool]
+        self.eval_uids = [f.uid for f in data.eval]
+        common_served = {u: (common.forces[u], _model_rel(common, u, data.reactant_uid.get(
+            data.by_uid[u].reaction))) for u in self.pool_uids}
+        self.common = error_table(common_served, self.pool_uids, data)
+        self.samples: dict[tuple[str, str], np.ndarray] = {}
+
+    def _boot(self, arm: str, key: str, stat: Callable[[np.ndarray], float | None],
+              groups: Sequence[str]) -> np.ndarray:
+        s = self.boot.samples(stat, groups)
+        self.samples[(arm, key)] = s
+        return s
+
+    def score(self, o: ArmOutcome) -> dict[str, Any]:
+        cfg, d = self.cfg, self.data
+        missing = [u for u in self.pool_uids if u not in o.served_pool or u not in o.pool_score]
+        if missing:
+            raise RuntimeError(f"{o.name}: no served answer/score for {len(missing)} pool frames")
+        pool = error_table(o.served_pool, self.pool_uids, d)
+        s_pool = np.array([o.pool_score[u] for u in self.pool_uids])
+        y = pool.wrong(cfg.wrong_f, cfg.wrong_e)
+        y_common = self.common.wrong(cfg.wrong_f, cfg.wrong_e)
+        checked = np.array([u in o.checked for u in self.pool_uids])
+        g = pool.groups
+        m: dict[str, Any] = {}
+
+        def add(key: str, stat: Callable[[np.ndarray], float | None], groups: np.ndarray,
+                n: int, point: Callable[[], float | None] | None = None) -> None:
+            value = point() if point is not None else stat(np.arange(len(groups)))
+            m[key] = _metric(value, self._boot(o.name, key, stat, groups), n)
+
+        add("auroc_pool", lambda i: auroc_mann_whitney(y[i], s_pool[i]), g, len(y),
+            point=lambda: _auroc(y, s_pool))
+        add("auroc_common", lambda i: auroc_mann_whitney(y_common[i], s_pool[i]), g, len(y),
+            point=lambda: _auroc(y_common, s_pool))
+        add("spearman_pool", lambda i: _spearman(s_pool[i], pool.force_rmse[i]), g, len(y))
+        add("recall_at_k", lambda i: float(checked[i][y[i]].mean()) if y[i].any() else None, g,
+            int(y.sum()))
+        add("served_wrong_rate_pool", lambda i: float(y[i].mean()), g, len(y))
+        if o.audited:
+            audited = np.array([u in o.audited for u in self.pool_uids])
+            add("audit_hit_rate",
+                lambda i: float(y[i][audited[i]].mean()) if audited[i].any() else None, g,
+                int(audited.sum()))
+
+        # The arm's P(served wrong): its own (D) or an isotonic map of its score fitted on the
+        # arm's own oracle labels (A-C) — the same fit for everyone, no eval labels involved.
+        if o.p_wrong_pool is None or o.p_wrong_eval is None:
+            fit = isotonic_probability(s_pool[checked], y[checked]) if checked.sum() >= 2 else None
+
+            def to_p(scores: Mapping[str, float]) -> dict[str, float]:
+                uids = list(scores)
+                vals = (fit.predict([scores[u] for u in uids]) if fit is not None
+                        else np.full(len(uids), float(y[checked].mean()) if checked.any() else 0.5))
+                return dict(zip(uids, np.asarray(vals, float).tolist()))
+
+            o.p_wrong_pool, o.p_wrong_eval = to_p(o.pool_score), to_p(o.eval_score)
+        p_pool = np.array([o.p_wrong_pool.get(u, 0.5) for u in self.pool_uids])
+        caught_pool = np.array([u in o.checked or u in o.flagged or u in o.vetoed
+                                for u in self.pool_uids])
+        bad = pool.force_rmse > config.SILENT_F
+        silent = bad & ~caught_pool & (p_pool <= 0.5)
+        add("silent_failures_pool",
+            lambda i: float(silent[i][bad[i]].mean()) if bad[i].any() else None, g, int(bad.sum()))
+
+        # held-out eval
+        eval_uids = [u for u in self.eval_uids if u in o.served_eval_pre]
+        if len(eval_uids) < len(self.eval_uids):
+            o.notes.append(f"{len(self.eval_uids) - len(eval_uids)} eval frames had no served answer")
+        pre = error_table(o.served_eval_pre, eval_uids, d)
+        post = error_table(o.served_eval_post, eval_uids, d)
+        s_eval = np.array([o.eval_score.get(u, np.nan) for u in eval_uids])
+        y_eval = pre.wrong(cfg.wrong_f, cfg.wrong_e)
+        ge = pre.groups
+        add("auroc_eval", lambda i: auroc_mann_whitney(y_eval[i], s_eval[i]), ge, len(eval_uids),
+            point=lambda: _auroc(y_eval, s_eval))
+        add("spearman_eval", lambda i: _spearman(s_eval[i], pre.force_rmse[i]), ge, len(eval_uids))
+        p_eval = np.array([o.p_wrong_eval.get(u, 0.5) for u in eval_uids])
+        add("ece_eval", lambda i: expected_calibration_error(p_eval[i], y_eval[i]), ge, len(eval_uids))
+        # context for the silent-failure rate: an arm that trusts nothing has none, trivially
+        add("trusted_fraction_eval", lambda i: float((p_eval[i] <= 0.5).mean()), ge, len(eval_uids))
+        add("brier_eval", lambda i: brier(p_eval[i], y_eval[i]), ge, len(eval_uids))
+        caught_eval = np.array([u in o.eval_flagged or u in o.vetoed for u in eval_uids])
+        bad_e = pre.force_rmse > config.SILENT_F
+        silent_e = bad_e & ~caught_eval & (p_eval <= 0.5)
+        add("silent_failures_eval",
+            lambda i: float(silent_e[i][bad_e[i]].mean()) if bad_e[i].any() else None, ge,
+            int(bad_e.sum()))
+        for tag, t in (("pre", pre), ("post", post)):
+            add(f"eval_force_rmse_{tag}", lambda i, t=t: _mean(t.force_rmse[i]), ge, len(eval_uids))
+            add(f"eval_rel_e_mae_{tag}", lambda i, t=t: _mean(t.rel_err[i]), ge, len(eval_uids))
+            add(f"eval_wrong_rate_{tag}",
+                lambda i, t=t: float(t.wrong(cfg.wrong_f, cfg.wrong_e)[i].mean()), ge, len(eval_uids))
+
+        # planted
+        planted = d.planted_cases
+        caught = np.array([f.uid in o.checked or f.uid in o.flagged or f.uid in o.vetoed
+                           for f in planted])
+        gp = np.array([f.reaction for f in planted])
+        if len(planted):
+            add("planted_caught", lambda i: float(caught[i].mean()), gp, len(planted))
+        else:
+            m["planted_caught"] = _metric(None, None, 0)
+        m["planted_breakdown"] = {
+            "oracle_checked": int(sum(f.uid in o.checked for f in planted)),
+            "flagged": int(sum(f.uid in o.flagged for f in planted)),
+            "vetoed": int(sum(f.uid in o.vetoed for f in planted)), "n": len(planted)}
+
+        by_threshold = {}
+        for wf, we in cfg.wrong_thresholds:
+            yt, yc, ye = pool.wrong(wf, we), self.common.wrong(wf, we), pre.wrong(wf, we)
+            by_threshold[f"F{wf:g}_E{we:g}"] = {
+                "wrong_f": wf, "wrong_e": we, "auroc_pool": _auroc(yt, s_pool),
+                "auroc_common": _auroc(yc, s_pool), "auroc_eval": _auroc(ye, s_eval),
+                "recall_at_k": float(checked[yt].mean()) if yt.any() else None,
+                "served_wrong_rate_pool": float(yt.mean())}
+        return {"metrics": m, "by_threshold": by_threshold}
+
+    def finetune_eval(self, base: Predictions, tuned: Predictions) -> dict[str, Any]:
+        """Model-level error on eval: fine-tuned vs base (metric 5)."""
+        d = self.data
+        uids = [u for u in self.eval_uids if u in base and u in tuned]
+        tabs = {}
+        for tag, p in (("base", base), ("finetuned", tuned)):
+            served = {u: (p.forces[u], _model_rel(p, u, d.reactant_uid.get(d.by_uid[u].reaction)))
+                      for u in uids}
+            tabs[tag] = error_table(served, uids, d)
+        g = tabs["base"].groups
+        out: dict[str, Any] = {"base_model": base.model, "finetuned_model": tuned.model}
+        for tag, t in tabs.items():
+            for key, stat in (("force_rmse", lambda i, t=t: _mean(t.force_rmse[i])),
+                              ("rel_e_mae", lambda i, t=t: _mean(t.rel_err[i]))):
+                s = self.boot.samples(stat, g)
+                self.samples[("finetune", f"{tag}_{key}")] = s
+                out[f"{tag}_{key}"] = _metric(stat(np.arange(len(uids))), s, len(uids))
+        for key in ("force_rmse", "rel_e_mae"):
+            diff = self.samples[("finetune", f"finetuned_{key}")] - self.samples[("finetune", f"base_{key}")]
+            out[f"delta_{key}_ci"] = _ci(diff)
+        return out
+
+    def paired_difference(self, arm_a: str, arm_b: str, key: str) -> list[float] | None:
+        a, b = self.samples.get((arm_a, key)), self.samples.get((arm_b, key))
+        return None if a is None or b is None else _ci(a - b)
+
+
+# --- top level ---------------------------------------------------------------------------------
+
+HEADLINE: tuple[tuple[str, bool], ...] = (
+    ("auroc_pool", True), ("auroc_eval", True), ("recall_at_k", True),
+    ("planted_caught", True), ("eval_force_rmse_post", False), ("ece_eval", False),
+    ("brier_eval", False), ("silent_failures_pool", False), ("silent_failures_eval", False))
+"""(metric, higher_is_better) pairs compared between D and every other arm."""
+
+
+def arm_specs(cfg: AblationConfig) -> list[tuple[str, tuple[str, ...], str]]:
+    specs = [("A_single", (cfg.single_model,), "max|F|"),
+             ("A_random", (cfg.single_model,), "random"),
+             ("B_seed", cfg.seed_models, "sigma_F")]
+    if cfg.mace_seed_models:
+        specs.append(("B_mace_seeds", cfg.mace_seed_models, "sigma_F"))
+    specs += [("C_collective", cfg.hetero_models, "sigma_F"),
+              ("C_audit", cfg.hetero_models, "sigma_F+audit"),
+              ("D_fittest", cfg.hetero_models, "fittest")]
+    return specs
+
+
+def default_finetune(preds_dir: str | Path, cfg: AblationConfig) -> ReplayFinetune:
+    """Replay ``{curated_model}.npz`` for its base model, plus any ``{model}_lora_curated.npz``."""
+    replay = {m: prediction_path(preds_dir, f"{m}_lora_curated") for m in cfg.hetero_models}
+    replay[cfg.curated_base_model] = prediction_path(preds_dir, cfg.curated_model)
+    return ReplayFinetune({m: p for m, p in replay.items() if p.exists()})
+
+
+def run_ablation(frames: Sequence[Frame], preds_dir: str | Path, cfg: AblationConfig = AblationConfig(),
+                 finetune_fn: FinetuneFn | None = None,
+                 blackboard_path: str | Path | None = None,
+                 snapshot_path: str | Path | None = None,
+                 model_cache: dict[str, Predictions] | None = None) -> dict[str, Any]:
+    """Run every arm; return a JSON-serialisable results dict.
+
+    Never raises for a missing model or a failing arm: the arm is reported as ``skipped`` /
+    ``failed`` with the reason. ``blackboard_path`` receives arm D's JSONL event log and
+    ``snapshot_path`` the final Calibrator state (:meth:`Calibrator.export_snapshot`)."""
+    cache = model_cache if model_cache is not None else {}
+
+    def load(models: Sequence[str]) -> dict[str, Predictions]:
+        missing = [m for m in models if m not in cache]
+        cache.update(load_models(preds_dir, missing))
+        return {m: cache[m] for m in models}
+
+    failures: list[str] = []
+    results: dict[str, Any] = {
+        "schema": "fittest.ablation/v2",
+        "config": {**dataclasses.asdict(cfg), "total_budget": cfg.total_budget},
+        "arms": {}, "failures": failures, "comparisons": {}}
+    try:
+        loaded = load(sorted({cfg.common_target, cfg.planted_model}))
+        common, planted_model = loaded[cfg.common_target], loaded[cfg.planted_model]
+    except FileNotFoundError as exc:
+        results["status"] = "failed"
+        failures.append(f"cannot run ablation: common-target/planted model unavailable ({exc})")
+        return results
+    data = prepare_data(frames, planted_model, cfg)
+    arrival = arrival_rounds(data.pool, cfg.rounds, cfg.seed)
+    arrival.update({f.uid: 0 for f in data.injected})
+    results["data"] = {
+        "n_pool": len(data.pool), "n_eval": len(data.eval), "n_skeptic_ref": len(data.refs),
+        "n_planted": len(data.planted_cases), "n_planted_context": len(data.planted_context),
+        "n_pool_reactions": len({f.reaction for f in data.pool}),
+        "n_eval_reactions": len({f.reaction for f in data.eval}),
+        "pool_eval_shared_formulas": len({f.formula for f in data.pool} & {f.formula for f in data.eval}),
+        "planted_filter": f"{cfg.planted_model} force RMSE > {cfg.planted_force_rmse} eV/Å",
+        "split_report": data.split_report,
+        "skeptic_ref_formulas": sorted({f.formula for f in data.refs}),
+        "planted_formulas": sorted({f.formula for f in data.injected}),
+    }
+    for pair, n in data.split_report["shared_endpoint_geometries"].items():
+        if n:
+            failures.append(f"split leak: {n} endpoint geometries shared across {pair}")
+    if not data.planted_cases:
+        failures.append(f"no planted cases: {cfg.planted_model} is never badly wrong on the planted split")
+    scorer = ArmScorer(data, cfg, common)
+    needed = [f.uid for f in [*data.candidates, *data.eval]]
+    finetune_fn = finetune_fn or default_finetune(preds_dir, cfg)
+    bind = getattr(finetune_fn, "bind_held_out", None)
+    if bind is not None:  # replayed fine-tunes must never have trained on held-out frames
+        held_out = [f for f in [*data.eval, *data.refs, *data.injected]]
+        bind({f.uid for f in held_out}, {geometry_hash(f.Z, f.R) for f in held_out})
+
+    for name, models, score in arm_specs(cfg):
+        entry: dict[str, Any] = {"models": list(models), "score": score}
+        results["arms"][name] = entry
+        try:
+            preds = load(models)
+        except FileNotFoundError as exc:
+            entry.update(status="skipped", reason=str(exc))
+            failures.append(f"{name} skipped: {exc}")
+            continue
+        gap = _check_coverage(preds, needed)
+        if gap:
+            entry.update(status="skipped", reason=gap)
+            failures.append(f"{name} skipped: {gap}")
+            continue
+        try:
+            _run_arm(name, score, preds, data, arrival, cfg, scorer, finetune_fn, entry,
+                     failures, blackboard_path, snapshot_path)
+        except Exception as exc:  # noqa: BLE001 — an arm failure is a result, not a crash
+            entry.update(status="failed", reason=f"{type(exc).__name__}: {exc}")
+            failures.append(f"{name} failed: {type(exc).__name__}: {exc}")
+
+    _compare(results, scorer, failures)
+    return results
+
+
+def _run_arm(name: str, score: str, preds: Mapping[str, Predictions], data: AblationData,
+             arrival: Mapping[str, int], cfg: AblationConfig, scorer: ArmScorer,
+             finetune_fn: FinetuneFn, entry: dict[str, Any], failures: list[str],
+             blackboard_path: str | Path | None, snapshot_path: str | Path | None) -> None:
+    if score == "fittest":
+        outcome, bb, agents = run_fittest_arm(data, preds, arrival, cfg, finetune_fn,
+                                                 blackboard_path)
+        entry["blackboard"] = {"n_events": len(bb),
+                               "path": None if blackboard_path is None else str(blackboard_path)}
+        if snapshot_path is not None:
+            snap = agents["calibrator"].export_snapshot((cfg.wrong_f, cfg.wrong_e),
+                                                        (cfg.budget_per_round, cfg.rounds))
+            Path(snapshot_path).parent.mkdir(parents=True, exist_ok=True)
+            Path(snapshot_path).write_text(json.dumps(snap, indent=2), encoding="utf-8")
+    else:
+        outcome = run_baseline_arm(name, preds, score, data, arrival, cfg)
+    entry.update(status="ok", served=outcome.served, score=outcome.score,
+                 oracle_calls=len(outcome.checked), **outcome.extra,
+                 oracle_labels_by_source={
+                     "audit": sorted(outcome.audited),
+                     "bid": sorted(set(outcome.checked) - outcome.audited)},
+                 oracle_calls_per_round={str(k): v for k, v in sorted(outcome.oracle_calls_per_round.items())},
+                 **scorer.score(outcome))
+    if outcome.finetune is not None:
+        entry["finetune"] = outcome.finetune
+        if outcome.finetune["shipped"]:
+            tuned = load_predictions(outcome.finetune["new_predictions_path"])
+            entry["finetune"]["eval"] = scorer.finetune_eval(preds[outcome.finetune["model"]], tuned)
+        else:
+            failures.append(f"{name}: fine-tune not shipped "
+                            f"({outcome.finetune['report'].get('reason', 'no reason given')})")
+    if len(outcome.checked) < cfg.total_budget:
+        failures.append(f"{name}: used {len(outcome.checked)}/{cfg.total_budget} oracle calls")
+    entry["notes"] = outcome.notes
+    failures.extend(f"{name}: {n}" for n in outcome.notes)
+    for key, val in entry["metrics"].items():
+        if isinstance(val, dict) and "value" in val and val["value"] is None:
+            failures.append(f"{name}: {key} undefined (single-class target or empty set)")
+
+
+def _compare(results: dict[str, Any], scorer: ArmScorer, failures: list[str]) -> None:
+    arms = results["arms"]
+    if arms.get("D_fittest", {}).get("status") != "ok":
+        failures.append("D_fittest did not run: no comparisons possible")
+        return
+    d = arms["D_fittest"]["metrics"]
+    for name, entry in arms.items():
+        if name == "D_fittest" or entry.get("status") != "ok":
+            continue
+        comp = {}
+        for key, higher in HEADLINE:
+            ci = scorer.paired_difference("D_fittest", name, key)
+            dv, bv = d[key]["value"], entry["metrics"][key]["value"]
+            diff = None if dv is None or bv is None else dv - bv
+            better = None if ci is None else (ci[0] > 0 if higher else ci[1] < 0)
+            worse = None if ci is None else (ci[1] < 0 if higher else ci[0] > 0)
+            comp[key] = {"diff": diff, "ci": ci, "higher_is_better": higher,
+                         "d_significantly_better": better, "d_significantly_worse": worse}
+            if better is not True:  # False, or None = not established (CI undefined)
+                shown = "n/a" if diff is None else f"{diff:+.3f}"
+                if ci is None:
+                    failures.append(f"D vs {name}: {key} improvement not established "
+                                    f"(diff {shown}, no CI: metric undefined in resamples)")
+                else:
+                    verdict = "significantly WORSE" if worse else "not significantly better"
+                    failures.append(f"D vs {name}: {key} {verdict} "
+                                    f"(diff {shown}, paired 95% CI [{ci[0]:+.3f}, {ci[1]:+.3f}])")
+        results["comparisons"][f"D_vs_{name}"] = comp
+
+
+# --- budget sensitivity --------------------------------------------------------------------------
+
+BUDGET_METRICS: tuple[str, ...] = ("auroc_pool", "recall_at_k", "planted_caught",
+                                   "eval_force_rmse_post", "silent_failures_eval")
+
+
+def run_budget_sensitivity(frames: Sequence[Frame], preds_dir: str | Path,
+                           budgets: Sequence[int], cfg: AblationConfig = AblationConfig(),
+                           finetune_fn: FinetuneFn | None = None) -> dict[str, Any]:
+    """Rerun every arm at several per-round budgets (same rounds, seed, data, loaded models)."""
+    cache: dict[str, Predictions] = {}
+    out: dict[str, Any] = {"schema": "fittest.ablation_budget/v1", "budgets": list(budgets),
+                           "rounds": cfg.rounds, "seed": cfg.seed,
+                           "n_bootstrap": cfg.n_bootstrap, "arms": {}, "failures": {}}
+    for k in budgets:
+        res = run_ablation(frames, preds_dir, dataclasses.replace(cfg, budget_per_round=int(k)),
+                           finetune_fn=finetune_fn, model_cache=cache)
+        out["failures"][str(k)] = res["failures"]
+        for name, arm in res["arms"].items():
+            row = out["arms"].setdefault(name, {m: [] for m in BUDGET_METRICS})
+            for m in BUDGET_METRICS:
+                metric = arm.get("metrics", {}).get(m) if arm.get("status") == "ok" else None
+                row[m].append(metric or {"value": None, "ci": None, "status": arm.get("status")})
+    return out
+
+
+def plot_budget(results: Mapping[str, Any], path: str | Path) -> None:
+    """Small multiples: each headline metric vs oracle budget per round, one line per arm."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    budgets = results["budgets"]
+    titles = {"auroc_pool": "AUROC (pool)", "recall_at_k": "Recall@K",
+              "planted_caught": "Planted caught", "eval_force_rmse_post": "Served F-RMSE, eval (eV/Å)",
+              "silent_failures_eval": "Silent failures, eval"}
+    fig, axes = plt.subplots(1, len(BUDGET_METRICS), figsize=(3.2 * len(BUDGET_METRICS), 3.6),
+                             constrained_layout=True)
+    markers = "osD^vP"
+    for ax, metric in zip(axes, BUDGET_METRICS):
+        for i, (name, row) in enumerate(results["arms"].items()):
+            vals = np.array([np.nan if r["value"] is None else r["value"] for r in row[metric]])
+            if not np.isfinite(vals).any():
+                continue
+            d = name.startswith("D_")
+            color = ACCENT if d else ARM_GREYS[i % len(ARM_GREYS)]
+            ax.plot(budgets, vals, marker=markers[i % len(markers)], markersize=6 if d else 5,
+                    linewidth=2.2 if d else 1.3, color=color, label=ARM_LABELS.get(name, name).replace("\n", " "),
+                    zorder=3 if d else 2)
+            lo = [r["ci"][0] if r.get("ci") else np.nan for r in row[metric]]
+            hi = [r["ci"][1] if r.get("ci") else np.nan for r in row[metric]]
+            if d:
+                ax.fill_between(budgets, lo, hi, color=ACCENT_LIGHT, alpha=0.35, linewidth=0, zorder=1)
+        ax.set_title(titles[metric], loc="left", fontsize=9.5, color=INK, fontweight="bold")
+        ax.set_xticks(budgets)
+        ax.set_xlabel("oracle calls per round")
+        ax.grid(color="#e6e5e0", linewidth=0.8)
+        ax.spines[["top", "right"]].set_visible(False)
+    handles, labels = axes[0].get_legend_handles_labels()
+    fig.legend(handles, labels, loc="outside lower center", ncol=len(labels), frameon=False,
+               fontsize=8)
+    fig.suptitle(f"Budget sensitivity ({results['rounds']} rounds; shaded = 95% CI for D)",
+                 x=0.01, ha="left", fontsize=10.5, color=INK)
+    out = Path(path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out, dpi=150, facecolor="white")
+    plt.close(fig)
+
+
+# --- figure ---------------------------------------------------------------------------------------
+
+ARM_LABELS = {"A_single": "A\nsingle", "A_random": "A\nrandom", "B_seed": "B\nseeds",
+              "B_mace_seeds": "B′\nMACE", "C_collective": "C\nhetero", "C_audit": "C+\naudit",
+              "D_fittest": "D\nswarm"}
+ACCENT, ACCENT_LIGHT = "#2a78d6", "#86b6ef"
+NEUTRAL, NEUTRAL_LIGHT = "#6e6d68", "#c3c2b7"
+ARM_GREYS = ("#3d3c39", "#8a8984", "#6e6d68", "#b0afa8", "#52514e")
+INK, INK_MUTED = "#0b0b0b", "#52514e"
+
+
+METRIC_SHORT = {"auroc_pool": "AUC-pool", "auroc_eval": "AUC-eval", "recall_at_k": "recall",
+                "planted_caught": "planted", "eval_force_rmse_post": "F-RMSE", "ece_eval": "ECE",
+                "brier_eval": "Brier", "silent_failures_pool": "silent-pool",
+                "silent_failures_eval": "silent-eval"}
+
+
+def _failure_lines(results: Mapping[str, Any], max_lines: int = 8) -> tuple[list[str], list[str]]:
+    """(run failures, D-vs-baseline shortfalls) as short lines for the figure."""
+    run = [f for f in results.get("failures", []) if not f.startswith("D vs ")]
+    left = [f"• {f[:78]}" for f in run[:max_lines]] or ["• no run failures (all arms ran, full budget used)"]
+    if len(run) > max_lines:
+        left[-1] = f"• … and {len(run) - max_lines + 1} more"
+    right = ["• D NOT significantly better (paired 95% CI) than:  (* = worse, ? = no CI)"]
+    for name, comp in results.get("comparisons", {}).items():
+        worse = [METRIC_SHORT.get(k, k) + ("*" if c["d_significantly_worse"]
+                                           else "?" if c["d_significantly_better"] is None else "")
+                 for k, c in comp.items() if c["d_significantly_better"] is not True]
+        if worse:
+            right.append(f"    {name[5:]:<13} {', '.join(worse)}")
+    if len(right) == 1:
+        right = ["• D significantly better than every baseline on every headline metric"]
+    return left, right[: max_lines + 1]
+
+
+def plot_ablation(results: Mapping[str, Any], path: str | Path) -> None:
+    """One multi-panel figure: AUROC, recall@K, planted caught, served eval error (pre/post),
+    each with 95% bootstrap CIs, plus an explicit failures panel."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from matplotlib.lines import Line2D
+    from matplotlib.patches import Patch
+
+    arms = list(results["arms"])
+    entries = [results["arms"][a] for a in arms]
+    labels = [ARM_LABELS.get(a, a) for a in arms]
+    x = np.arange(len(arms))
+    plt.rcParams.update({"font.size": 9, "axes.edgecolor": INK_MUTED, "axes.labelcolor": INK,
+                         "xtick.color": INK_MUTED, "ytick.color": INK_MUTED})
+    fig = plt.figure(figsize=(14, 12))
+    gs = fig.add_gridspec(3, 3, height_ratios=[3.0, 3.0, 1.15], hspace=0.42, wspace=0.26)
+    axes = [fig.add_subplot(gs[r, c]) for r in range(2) for c in range(3)]
+
+    def val(e: Mapping[str, Any], key: str) -> tuple[float, list[float] | None]:
+        if e.get("status") != "ok":
+            return np.nan, None
+        m = e["metrics"].get(key, {})
+        v = m.get("value")
+        return (np.nan if v is None else v), m.get("ci")
+
+    def bars(ax: Any, key: str, offset: float, width: float, light: bool) -> None:
+        for i, (name, e) in enumerate(zip(arms, entries)):
+            v, ci = val(e, key)
+            d = name.startswith("D_")
+            color = (ACCENT_LIGHT if light else ACCENT) if d else (NEUTRAL_LIGHT if light else NEUTRAL)
+            if e.get("status") != "ok":
+                if offset <= 0:
+                    ax.text(i, 0.02, "skipped", rotation=90, ha="center", va="bottom",
+                            color=INK_MUTED, fontsize=8, transform=ax.get_xaxis_transform())
+                continue
+            if not np.isfinite(v):
+                ax.text(i + offset, 0.02, "n/a", ha="center", va="bottom", color=INK_MUTED,
+                        fontsize=7, transform=ax.get_xaxis_transform())
+                continue
+            ax.bar(i + offset, v, width=width, color=color, edgecolor="white", linewidth=1.0, zorder=2)
+            if ci:
+                ax.errorbar(i + offset, v, yerr=[[v - ci[0]], [ci[1] - v]], fmt="none",
+                            ecolor=INK, elinewidth=1.0, capsize=2.5, zorder=3)
+
+    def style(ax: Any, title: str, ylabel: str, ylim: tuple[float, float] | None = None) -> None:
+        ax.set_title(title, loc="left", fontsize=10, color=INK, fontweight="bold")
+        ax.set_ylabel(ylabel)
+        ax.set_xticks(x, labels, fontsize=7)
+        ax.grid(axis="y", color="#e6e5e0", linewidth=0.8, zorder=0)
+        ax.spines[["top", "right"]].set_visible(False)
+        if ylim:
+            ax.set_ylim(*ylim)
+
+    legend_kw = {"frameon": False, "fontsize": 7.5, "loc": "upper left"}
+    cfg_r = results["config"]
+    alt = [(wf, we) for wf, we in cfg_r.get("wrong_thresholds", [])
+           if (wf, we) != (cfg_r["wrong_f"], cfg_r["wrong_e"])]
+    alt_pair = max(alt) if alt else None  # the looser threshold, e.g. 0.4 eV/Å
+
+    def alt_markers(ax: Any, key: str, offset: float) -> Line2D | None:
+        """Point estimates at the alternative wrongness threshold (no CI), as open diamonds."""
+        if alt_pair is None:
+            return None
+        tag = f"F{alt_pair[0]:g}_E{alt_pair[1]:g}"
+        handle = None
+        for i, e in enumerate(entries):
+            v = e.get("by_threshold", {}).get(tag, {}).get(key) if e.get("status") == "ok" else None
+            if v is not None:
+                (handle,) = ax.plot(i + offset, v, marker="D", markersize=5, markerfacecolor="white",
+                                    markeredgecolor=INK, linestyle="none", zorder=4)
+        return handle
+    bars(axes[0], "auroc_pool", -0.2, 0.38, light=False)
+    bars(axes[0], "auroc_eval", 0.2, 0.38, light=True)
+    axes[0].axhline(0.5, color=INK_MUTED, linestyle=(0, (3, 3)), linewidth=0.9, zorder=1)
+    style(axes[0], "1  AUROC (score → served wrong)", "AUROC", (0.0, 1.22))
+    alt_label = f"at wrong ⇔ F > {alt_pair[0]:g} eV/Å (no CI)" if alt_pair else ""
+    h_alt = alt_markers(axes[0], "auroc_pool", -0.2)
+    alt_markers(axes[0], "auroc_eval", 0.2)
+    handles = [Patch(color=NEUTRAL, label="pool (triage score)"),
+               Patch(color=NEUTRAL_LIGHT, label="eval (held-out)"),
+               Line2D([], [], color=INK_MUTED, linestyle=(0, (3, 3)), label="chance")]
+    if h_alt is not None:
+        handles.append(Line2D([], [], marker="D", markersize=5, markerfacecolor="white",
+                              markeredgecolor=INK, linestyle="none", label=alt_label))
+    axes[0].legend(handles=handles, **legend_kw)
+
+    bars(axes[1], "recall_at_k", 0.0, 0.6, light=False)
+    if alt_markers(axes[1], "recall_at_k", 0.0) is not None:
+        axes[1].legend(handles=[Line2D([], [], marker="D", markersize=5, markerfacecolor="white",
+                                       markeredgecolor=INK, linestyle="none", label=alt_label)],
+                       **legend_kw)
+    k = results["config"]
+    style(axes[1], f"2  Recall@K (K = {k['total_budget']})", "fraction of wrong served answers checked", (0, 1.08))
+
+    bars(axes[2], "planted_caught", 0.0, 0.6, light=False)
+    n_pl = results.get("data", {}).get("n_planted", 0)
+    style(axes[2], f"3  Planted caught (n = {n_pl})", "fraction flagged, vetoed or checked", (0, 1.08))
+
+    bars(axes[3], "eval_force_rmse_pre", -0.2, 0.38, light=True)
+    bars(axes[3], "eval_force_rmse_post", 0.2, 0.38, light=False)
+    style(axes[3], "4  Served force RMSE, eval", "eV/Å (lower is better)")
+    tops = [hi for e in entries for key in ("eval_force_rmse_pre", "eval_force_rmse_post")
+            for hi in (val(e, key)[1] or [0.0])]
+    axes[3].set_ylim(0, 1.65 * max(tops + [0.1]))
+    ft = results["arms"].get("D_fittest", {}).get("finetune")
+    if ft is not None:
+        if ft.get("shipped") and "eval" in ft:
+            b, t = ft["eval"]["base_force_rmse"]["value"], ft["eval"]["finetuned_force_rmse"]["value"]
+            note = f"fine-tuned {ft['model']} alone on eval:\n{b:.3f} → {t:.3f} eV/Å"
+        else:
+            note = f"fine-tune not shipped ({ft.get('model')})"
+        axes[3].text(0.98, 0.80, note, transform=axes[3].transAxes, ha="right", va="top",
+                     fontsize=7.5, color=INK_MUTED)
+    axes[3].legend(handles=[Patch(color=NEUTRAL_LIGHT, label="before fine-tune"),
+                            Patch(color=NEUTRAL, label="after fine-tune (D only)")], **legend_kw)
+
+    bars(axes[4], "ece_eval", -0.2, 0.38, light=False)
+    bars(axes[4], "brier_eval", 0.2, 0.38, light=True)
+    style(axes[4], "5  Calibration of P(served wrong), eval", "lower is better")
+    tops = [hi for e in entries for key in ("ece_eval", "brier_eval") for hi in (val(e, key)[1] or [0.0])]
+    axes[4].set_ylim(0, 1.45 * max(tops + [0.1]))
+    axes[4].legend(handles=[Patch(color=NEUTRAL, label="ECE (10 bins)"),
+                            Patch(color=NEUTRAL_LIGHT, label="Brier score")], **legend_kw)
+
+    bars(axes[5], "silent_failures_pool", -0.2, 0.38, light=False)
+    bars(axes[5], "silent_failures_eval", 0.2, 0.38, light=True)
+    style(axes[5], f"6  Silent failures (F-RMSE > {config.SILENT_F})",
+          "badly wrong, unflagged and trusted (lower is better)", (0, 1.22))
+    axes[5].legend(handles=[Patch(color=NEUTRAL, label="pool"),
+                            Patch(color=NEUTRAL_LIGHT, label="eval"),
+                            Patch(color="none", label="T = share of eval answers trusted")],
+                   **legend_kw)
+    for i, e in enumerate(entries):  # 0 silent failures means little if nothing is trusted
+        v, _ = val(e, "trusted_fraction_eval")
+        if np.isfinite(v):
+            axes[5].text(i, 0.70, f"T={v:.0%}", ha="center", va="bottom", fontsize=7.5,
+                         color=INK_MUTED, transform=axes[5].get_xaxis_transform())
+
+    ax_f = fig.add_subplot(gs[2, :])
+    ax_f.axis("off")
+    ax_f.text(0.0, 1.0, "Failures and caveats (reported, not hidden; full list in ablation.json)",
+              fontsize=10, fontweight="bold", color=INK, va="top", transform=ax_f.transAxes)
+    left, right = _failure_lines(results)
+    for col, lines in ((0.0, left), (0.53, right)):
+        ax_f.text(col, 0.8, "\n".join(lines), fontsize=7.6, color=INK_MUTED, va="top",
+                  transform=ax_f.transAxes, family="monospace")
+    cfg = results["config"]
+    fig.suptitle(f"Fittest ablation — same oracle budget K = {cfg['budget_per_round']} × "
+                 f"{cfg['rounds']} rounds; wrong ⇔ F-RMSE > {cfg['wrong_f']} eV/Å or "
+                 f"|ΔE_rel| > {cfg['wrong_e']} eV; bars = point estimate, whiskers = 95% "
+                 f"reaction-bootstrap CI", x=0.01, ha="left", fontsize=10.5, color=INK)
+    out = Path(path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out, dpi=150, bbox_inches="tight", facecolor="white")
+    plt.close(fig)

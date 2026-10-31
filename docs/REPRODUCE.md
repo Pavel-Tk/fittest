@@ -1,4 +1,4 @@
-# Reproducing TrustSwarm
+# Reproducing Fittest
 
 Everything we report was produced on a single **NVIDIA L4 (24 GB), CUDA 13 driver** (Google Colab),
 with the commands below. Runtimes are wall-clock numbers from our job logs. The CPU parts
@@ -7,7 +7,7 @@ with the commands below. Runtimes are wall-clock numbers from our job logs. The 
 ## 0. Environment
 
 ```bash
-git clone <this repo> trustswarm && cd trustswarm
+git clone <this repo> fittest && cd fittest
 bash scripts/setup_gpu.sh ..          # toolkit 0.3.0-rc + core env, Orb env, Transition1x (6.6 GB, md5-checked)
 ```
 
@@ -24,18 +24,18 @@ bash scripts/setup_gpu.sh ..          # toolkit 0.3.0-rc + core env, Orb env, Tr
 * **Transition1x**: `curl -L -A 'Mozilla/5.0' https://ndownloader.figshare.com/files/36035789`.
   figshare rejects requests that have no browser user agent. md5 `faab0413cf6b042b6d50e6272dea9a8c`.
 
-Then export the locations. Every script reads them as CLI defaults (`trustswarm/paths.py`):
+Then export the locations. Every script reads them as CLI defaults (`fittest/paths.py`):
 
 | variable | meaning | default |
 |---|---|---|
-| `TRUSTSWARM_T1X` | Transition1x HDF5 | `data/Transition1x.h5` |
-| `TRUSTSWARM_CORE_PYTHON` | interpreter with torch + nvalchemi + mace + aimnet | the running interpreter |
-| `TRUSTSWARM_ORB_PYTHON` | interpreter of the Orb env | core python |
-| `TRUSTSWARM_NEB_DIR` | toolkit `examples/advanced/batched_neb_endpoints` | found next to an editable `nvalchemi` install |
-| `TRUSTSWARM_LOG_DIR` | model-server logs | `logs` |
+| `FITTEST_T1X` | Transition1x HDF5 | `data/Transition1x.h5` |
+| `FITTEST_CORE_PYTHON` | interpreter with torch + nvalchemi + mace + aimnet | the running interpreter |
+| `FITTEST_ORB_PYTHON` | interpreter of the Orb env | core python |
+| `FITTEST_NEB_DIR` | toolkit `examples/advanced/batched_neb_endpoints` | found next to an editable `nvalchemi` install |
+| `FITTEST_LOG_DIR` | model-server logs | `logs` |
 
 Our Colab values are in `colab/env.sh`. Each GPU script starts one model server per model
-(`trustswarm/model_server.py`) on `--base-port + k`. Pick distinct base ports if several runs
+(`fittest/model_server.py`) on `--base-port + k`. Pick distinct base ports if several runs
 share a machine. `spawn` refuses a port that is already in use.
 
 **Model aliases.** `aimnet2` is the `aimnet` registry alias for ensemble member 0
@@ -70,10 +70,10 @@ Checks we ran: `python -m pytest -q` (CPU, 82 tests); on the GPU, `python -m pyt
 
 ## 2. Use the DisagreementHook in your own Toolkit run
 
-`trustswarm.hook.DisagreementHook` is a plain Toolkit hook (`stage`, `frequency`, `__call__(ctx, stage)`,
+`fittest.hook.DisagreementHook` is a plain Toolkit hook (`stage`, `frequency`, `__call__(ctx, stage)`,
 `_runs_on_stage`). Committee members can be any mix of:
 
-* `ModelClient`s from `trustswarm.model_server.spawn`: one process per model, can use another Python env;
+* `ModelClient`s from `fittest.model_server.spawn`: one process per model, can use another Python env;
 * objects with `.predict(Z, R, batch[, charge])` that return `{"energy", "forces"}` or `(E, F)`;
 * plain callables with the same contract.
 
@@ -84,11 +84,11 @@ import torch
 from nvalchemi.dynamics import FIRE2, ConvergenceHook, FusedStage, SizeAwareSampler
 from nvalchemi.dynamics.base import DynamicsStage
 
-from trustswarm.hook import DisagreementHook
-from trustswarm.model_server import spawn
-from trustswarm.models.mace_batched import BatchedMACE
-from trustswarm.models.toolkit_io import atomic_data
-from trustswarm import paths
+from fittest.hook import DisagreementHook
+from fittest.model_server import spawn
+from fittest.models.mace_batched import BatchedMACE
+from fittest.models.toolkit_io import atomic_data
+from fittest import paths
 
 class MyDataset:                                    # Toolkit sampler protocol
     def __init__(self, mols): self.mols, self.load_order = mols, []     # mols: list of (Z, R) numpy
@@ -127,15 +127,15 @@ hook.close()
 
 * NEB, or any run where systems must not leave: `NEB(..., extra_hooks=[DisagreementHook(..., graduate=False)])`.
   Without a sampler the ledger key is the graph index. See `scripts/run_neb.py`.
-* No dynamics at all: `trustswarm.hook.DisagreementMonitor(committee, tau).check(keys, Z, R, batch, step=0, phase="x")`.
+* No dynamics at all: `fittest.hook.DisagreementMonitor(committee, tau).check(keys, Z, R, batch, step=0, phase="x")`.
 * Sigma is defined as `sigma_F = mean_i sqrt(mean_m ||F_m,i - mean_m F_m,i||^2)`, identical to
-  `trustswarm.signals.force_spread` (tested in `tests/test_hook.py`).
+  `fittest.signals.force_spread` (tested in `tests/test_hook.py`).
 * Robustness: a member that raises or times out is logged in `hook.failures` and retired after
   `max_failures` consecutive failures. Checks continue while at least 2 members answer.
 
 ## 3. Add your own model agent
 
-A model agent is a `Backend` in `trustswarm/model_server.py` that runs in its own process:
+A model agent is a `Backend` in `fittest/model_server.py` that runs in its own process:
 
 ```python
 class MyBackend(Backend):
@@ -154,5 +154,5 @@ Register it in `make_backend` (`if model == "mymodel": return MyBackend(device)`
 `spawn("mymodel", port, python=<its env's interpreter>)` serves it, and it can be passed to
 `DisagreementHook`, `predict_pool.py --models ...,mymodel` and the ablation like any other member.
 If the model needs its own environment, point `python=` at that interpreter, as we do for Orb
-via `TRUSTSWARM_ORB_PYTHON`. The repo must be importable there (`spawn` sets `PYTHONPATH`), and it
+via `FITTEST_ORB_PYTHON`. The repo must be importable there (`spawn` sets `PYTHONPATH`), and it
 needs `numpy`.

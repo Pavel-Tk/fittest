@@ -10,7 +10,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from trustswarm.data import Frame
+from fittest.data import Frame
 
 _SPEC = importlib.util.spec_from_file_location(
     "finetune_script", Path(__file__).resolve().parents[1] / "scripts" / "finetune.py")
@@ -115,11 +115,11 @@ def test_geometry_leak_check_drops_frames_sharing_eval_geometry() -> None:
     assert check["n_excluded"] == len(pool) - len(kept) and check["passed"]
 
 
-def test_trustswarm_gates_require_both_metrics_not_worse() -> None:
+def test_fittest_gates_require_both_metrics_not_worse() -> None:
     before = {"force_rmse": 0.6, "rel_energy_mae": 0.18}
-    ok = ft.trustswarm_checks(before, {"force_rmse": 0.3, "rel_energy_mae": 0.15})
+    ok = ft.fittest_checks(before, {"force_rmse": 0.3, "rel_energy_mae": 0.15})
     assert all(c["passed"] for c in ok)
-    bad = ft.trustswarm_checks(before, {"force_rmse": 0.3, "rel_energy_mae": 0.31})
+    bad = ft.fittest_checks(before, {"force_rmse": 0.3, "rel_energy_mae": 0.31})
     assert [c["passed"] for c in bad] == [True, False]
-    nan = ft.trustswarm_checks(before, {"force_rmse": 0.3, "rel_energy_mae": float("nan")})
+    nan = ft.fittest_checks(before, {"force_rmse": 0.3, "rel_energy_mae": float("nan")})
     assert nan[1]["passed"] is False and nan[1]["value"] is None

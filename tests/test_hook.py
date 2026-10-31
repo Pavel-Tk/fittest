@@ -11,8 +11,8 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from trustswarm.hook import DisagreementMonitor, per_system_force_spread
-from trustswarm.signals import force_spread
+from fittest.hook import DisagreementMonitor, per_system_force_spread
+from fittest.signals import force_spread
 
 
 def _ragged(rng, sizes, M=3):
@@ -41,7 +41,7 @@ def test_sigma_zero_for_identical_models():
 
 def test_torch_twin_matches_numpy():
     torch = pytest.importorskip("torch")
-    from trustswarm.hook import per_system_force_spread_torch
+    from fittest.hook import per_system_force_spread_torch
 
     rng = np.random.default_rng(2)
     sizes = [3, 9, 1, 12]
@@ -155,8 +155,8 @@ def test_hook_graduates_flagged_systems_and_sampler_refills():
     from nvalchemi.dynamics.base import DynamicsStage
     from nvalchemi.models.lj import LennardJonesModelWrapper
 
-    from trustswarm.hook import DisagreementHook
-    from trustswarm.models.toolkit_io import atomic_data
+    from fittest.hook import DisagreementHook
+    from fittest.models.toolkit_io import atomic_data
 
     dev = "cuda" if torch.cuda.is_available() else "cpu"
     rng = np.random.default_rng(6)
@@ -212,7 +212,7 @@ def test_hook_graduates_flagged_systems_and_sampler_refills():
 
 
 def test_duplicate_member_names_rejected():
-    from trustswarm.hook import DisagreementMonitor
+    from fittest.hook import DisagreementMonitor
 
     def predict(Z, R, batch):  # two different callables that share a __name__
         return np.zeros(int(np.max(batch)) + 1), np.zeros((len(Z), 3))

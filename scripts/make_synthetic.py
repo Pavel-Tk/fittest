@@ -12,8 +12,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # run from a clone without pip install
 
-from trustswarm.cache import load_frames
-from trustswarm.synthetic import SyntheticSpec, write_synthetic
+from fittest.cache import load_frames
+from fittest.synthetic import SyntheticSpec, write_synthetic
 
 
 def main(argv: list[str] | None = None) -> None:

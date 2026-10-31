@@ -20,21 +20,21 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from trustswarm import paths, t1x  # noqa: E402
-from trustswarm.model_server import spawn  # noqa: E402
+from fittest import paths, t1x  # noqa: E402
+from fittest.model_server import spawn  # noqa: E402
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--h5", default=paths.t1x_path(), help="Transition1x HDF5 [$TRUSTSWARM_T1X]")
+    ap.add_argument("--h5", default=paths.t1x_path(), help="Transition1x HDF5 [$FITTEST_T1X]")
     ap.add_argument("--base-port", "--port", dest="port", type=int, default=6100)
     ap.add_argument("--model", default="mace_mpa0")
     ap.add_argument("--model-path", default=None)
     ap.add_argument("--n-reactions", type=int, default=5)
     ap.add_argument("--n-path", type=int, default=2)
-    ap.add_argument("--log-dir", default=paths.log_dir(), help="server logs [$TRUSTSWARM_LOG_DIR]")
+    ap.add_argument("--log-dir", default=paths.log_dir(), help="server logs [$FITTEST_LOG_DIR]")
     ap.add_argument("--python", default=paths.core_python(),
-                    help="server interpreter [$TRUSTSWARM_CORE_PYTHON]")
+                    help="server interpreter [$FITTEST_CORE_PYTHON]")
     ap.add_argument("--out", default=str(ROOT / "results" / "check_mace_server.json"))
     a = ap.parse_args()
 

@@ -1,11 +1,11 @@
 """Batched MACE inference through the ALCHEMI Toolkit ``MACEWrapper``.
 
-One code path for the foundation model and for TrustSwarm's LoRA-repaired model:
+One code path for the foundation model and for Fittest's LoRA-repaired model:
 
 * ``BatchedMACE()``                      -> ``MACEWrapper.from_checkpoint("medium-mpa-0")``
-* ``BatchedMACE(model_path=<dir with trustswarm.json>)`` -> TrustSwarm fine-tune checkpoint
-  (``trustswarm.mace_lora`` format written by ``scripts/finetune.py``: merged LoRA weights +
-  refitted E0 in ``model.pt``), loaded with ``trustswarm.mace_lora.load_mace_lora`` into a
+* ``BatchedMACE(model_path=<dir with fittest.json>)`` -> Fittest fine-tune checkpoint
+  (``fittest.mace_lora`` format written by ``scripts/finetune.py``: merged LoRA weights +
+  refitted E0 in ``model.pt``), loaded with ``fittest.mace_lora.load_mace_lora`` into a
   ``MACEWrapper`` (cuEq conversion optional). This is the primary fine-tune path.
 * ``BatchedMACE(model_path=<dir>)``      -> bare ALCHEMI PEFT checkpoint written by
   ``FineTuningStrategy.save_checkpoint(dir, save_trainable_state_only=True)``
@@ -33,7 +33,7 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from trustswarm.models.toolkit_io import batch_from_arrays, split_index
+from fittest.models.toolkit_io import batch_from_arrays, split_index
 
 DEFAULT_CHECKPOINT = "medium-mpa-0"
 
@@ -71,13 +71,13 @@ def load_mace_wrapper(checkpoint: str = DEFAULT_CHECKPOINT, model_path: str | No
         return _freeze(w), info
 
     p = Path(model_path)
-    if p.is_dir() and (p / "trustswarm.json").exists():
-        # TrustSwarm fine-tune checkpoint (trustswarm.mace_lora format, scripts/finetune.py):
+    if p.is_dir() and (p / "fittest.json").exists():
+        # Fittest fine-tune checkpoint (fittest.mace_lora format, scripts/finetune.py):
         # merged LoRA + refitted E0 in <dir>/model.pt; optional cuEq conversion on load.
-        from trustswarm.mace_lora import load_mace_lora, read_manifest
+        from fittest.mace_lora import load_mace_lora, read_manifest
 
         w = load_mace_lora(p, device=device, dtype=dtype, enable_cueq=enable_cueq)
-        info.update(format="trustswarm.mace_lora", manifest_base=read_manifest(p).get("base_checkpoint"))
+        info.update(format="fittest.mace_lora", manifest_base=read_manifest(p).get("base_checkpoint"))
         return _freeze(w.to(device)), info
     if p.is_dir():
         # Bare ALCHEMI PEFT checkpoint directory (FineTuningStrategy.save_checkpoint).

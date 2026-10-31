@@ -8,7 +8,7 @@ from typing import Any, ClassVar
 
 import numpy as np
 
-from trustswarm.blackboard import Blackboard, Event
+from fittest.blackboard import Blackboard, Event
 
 
 class Agent(ABC):

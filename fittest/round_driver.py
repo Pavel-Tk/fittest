@@ -10,8 +10,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from trustswarm.agents.base import Agent
-from trustswarm.blackboard import Blackboard
+from fittest.agents.base import Agent
+from fittest.blackboard import Blackboard
 
 
 class QuiescenceError(RuntimeError):

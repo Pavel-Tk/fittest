@@ -1,8 +1,8 @@
 import numpy as np
 import pytest
 
-from trustswarm.config import WRONG_E, WRONG_F
-from trustswarm.signals import (energy_spread, force_rmse, force_spread, frame_error, is_wrong,
+from fittest.config import WRONG_E, WRONG_F
+from fittest.signals import (energy_spread, force_rmse, force_spread, frame_error, is_wrong,
                                 max_abs_force, model_deviations, rel_e_err)
 
 

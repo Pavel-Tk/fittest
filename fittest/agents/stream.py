@@ -12,9 +12,9 @@ from collections import defaultdict
 from collections.abc import Mapping, Sequence
 from typing import Any, ClassVar
 
-from trustswarm.agents.base import Agent, to_list
-from trustswarm.blackboard import SYSTEM, Blackboard, Event
-from trustswarm.data import Frame
+from fittest.agents.base import Agent, to_list
+from fittest.blackboard import SYSTEM, Blackboard, Event
+from fittest.data import Frame
 
 TRIAGE = "triage"
 SERVE = "serve"

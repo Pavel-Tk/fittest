@@ -16,7 +16,7 @@ from typing import Any
 
 import numpy as np
 
-from trustswarm.data import Frame
+from fittest.data import Frame
 
 
 def save_frames(path: str | Path, frames: list[Frame]) -> None:

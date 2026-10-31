@@ -1,4 +1,4 @@
-# TrustSwarm — design contract (v1, frozen for overnight build)
+# Fittest — design contract (v1, frozen for overnight build)
 
 > A collective that decides which MLIP to trust, where, and repairs it where none can be.
 
@@ -34,7 +34,7 @@ Per reaction we sample frames from the NEB path (reactant, product, TS and inter
 images) — role ∈ {reactant, product, ts, path}. The reactant frame of every pool/eval reaction
 is always included so relative energies can be formed.
 
-`trustswarm.data.Frame` (dataclass): `uid:str, reaction:str, formula:str, split:str,
+`fittest.data.Frame` (dataclass): `uid:str, reaction:str, formula:str, split:str,
 role:str, Z:np.ndarray[int] (n,), R:np.ndarray[float] (n,3), E:float|None, F:np.ndarray|None (n,3)`.
 Labels `E,F` are stripped (None) before frames leave the Oracle for pool/eval splits.
 
@@ -54,7 +54,7 @@ For models m=1..M on one structure with per-atom forces F_m (n,3):
 `F_bar = mean_m F_m`; per-atom spread `s_i = sqrt(mean_m ||F_m,i - F_bar,i||^2)`;
 `sigma_F = mean_i s_i` (headline) and `sigma_F_max = max_i s_i`. Energy spread on relative
 energies `sigma_E = std_m (E_m - E_m,reactant)` when the reactant is known.
-Implemented once in `trustswarm.signals.force_spread(forces: np.ndarray (M,n,3)) -> (mean,max)`
+Implemented once in `fittest.signals.force_spread(forces: np.ndarray (M,n,3)) -> (mean,max)`
 and a torch twin inside the hook.
 
 ## 4. Agents (each holds private info; they talk only through the Blackboard)
@@ -72,7 +72,7 @@ No central planner: each agent has `step(bb: Blackboard) -> None` that reads new
 posts new events. The round driver only advances the clock (`bb.tick()`), it makes no decisions.
 
 ### Blackboard
-`trustswarm.blackboard.Blackboard`: append-only event log (in-memory list + optional JSONL
+`fittest.blackboard.Blackboard`: append-only event log (in-memory list + optional JSONL
 file). `post(kind, author, payload:dict) -> int`, `read(kind=None, since=0, round=None) -> list[Event]`,
 `tick()`. `Event(id, round, kind, author, payload, t)`. JSONL log is a deliverable (shown in demo).
 
@@ -127,7 +127,7 @@ slice of oracle labels (NOT `eval`). Ship ⇔ report verdict passes; then re-pre
 * JSONL audit log: arrays (`forces`, `F`, `R`) are replaced by `{"omitted","shape"}` and floats
   rounded; in-memory events keep the arrays. `bid` is batched too.
 * v2 (after the first real-data run; v1 kept in `results/v1_flag_only_bidding/`):
-  - Candidates = every non-empty subset mean of the models (`trustswarm.candidates`: singletons,
+  - Candidates = every non-empty subset mean of the models (`fittest.candidates`: singletons,
     `mean(a+b)`, `consensus`); `oracle_result.candidate_errors` gives each one's error.
   - Exploration audits: each triage round the Skeptic bids `{"audit": true}` on a seeded uniform
     sample of trusted systems (σ < τ, unflagged), `audit_fraction` (0.25) of k; the Oracle pays
@@ -158,7 +158,7 @@ slice of oracle labels (NOT `eval`). Ship ⇔ report verdict passes; then re-pre
 | A single | AIMNet2 (strongest single model on organics) | max|F| heuristic (and random) | – | top-k score | – |
 | B seed ensemble | AIMNet2 × 4 shipped ensemble members (same data, different seeds) | seed sigma_F | – | top-k sigma | – |
 | C collective | MACE + AIMNet2 + Orb | sigma_F | – | top-k sigma | – |
-| D TrustSwarm | MACE + AIMNet2 + Orb | sigma_F + rep bids | on | sigma + rep | 1 round |
+| D Fittest | MACE + AIMNet2 + Orb | sigma_F + rep bids | on | sigma + rep | 1 round |
 
 Metrics (on `pool` for triage, `eval` for generalisation):
 1. AUROC(score → served answer wrong). Also AUROC vs a common target (MACE wrong).
@@ -178,14 +178,14 @@ Bootstrap 95% CI over reactions (1000 resamples). Seeds fixed. Failures reported
 * LoRA fine-tune from 0.3.0-rc (`nvalchemi.training`), acceptance report.
 
 ## 7. Reusable artefacts (collab bonus)
-* `trustswarm.hook.DisagreementHook` — drop-in for any Toolkit run, any set of models.
-* `trustswarm.service` — FastAPI: `POST /trust` with structures (xyz or JSON Z/R) →
+* `fittest.hook.DisagreementHook` — drop-in for any Toolkit run, any set of models.
+* `fittest.service` — FastAPI: `POST /trust` with structures (xyz or JSON Z/R) →
   per-system `{sigma_F, trust, recommended_model, flagged, per_model_energy}`; `GET /health`.
-  CLI: `trustswarm score file.xyz`.
+  CLI: `fittest score file.xyz`.
 
 ## 8. Repo layout
 ```
-trustswarm/            package
+fittest/            package
   data.py              T1x reader, splits, Frame
   signals.py           force_spread, errors, wrong()
   blackboard.py        Blackboard, Event
@@ -202,7 +202,7 @@ docs/                  this file, API notes, results.md
 ```
 
 ## 9. Prediction cache (GPU stage → agent stage)
-GPU scripts write, agent/ablation code reads. `trustswarm.cache`:
+GPU scripts write, agent/ablation code reads. `fittest.cache`:
 * `save_frames(path, frames: list[Frame])` / `load_frames(path) -> list[Frame]` (pickle; this file
   holds labels and is read only by Oracle/Skeptic/final scoring).
 * `save_predictions(path, model: str, uids: list[str], energies: np.ndarray (N,), forces: list[np.ndarray (n_i,3)], meta: dict)`

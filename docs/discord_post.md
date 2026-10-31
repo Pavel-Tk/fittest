@@ -2,7 +2,7 @@
 
 Hey all,
 
-I've just hacked TrustSwarm overnight using NVIDIA ALCHEMI Toolkit 0.3.0-rc.
+I've just hacked Fittest overnight using NVIDIA ALCHEMI Toolkit 0.3.0-rc.
 There are 2 things you can use now:
 
 1) DisagreementHook
@@ -17,7 +17,7 @@ Some results on held-out Transition1x reactions:
 
 Seed ensembles are unfortunately overconfident, as their ensemble spread is ~0.4x the real error.
 
-The repo is here: https://github.com/Pavel-Tk/trustswarm
+The repo is here: https://github.com/Pavel-Tk/fittest
 It's under MIT license.
 To reproduce the results please see the instructions in the repo: docs/REPRODUCE.md
 

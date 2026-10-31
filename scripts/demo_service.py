@@ -1,7 +1,7 @@
 """End-to-end demo of the trust service against the real model agents.
 
 Writes a few held-out Transition1x frames to XYZ, scores them with
-``python -m trustswarm.service score`` (three model-agent processes), and prints the
+``python -m fittest.service score`` (three model-agent processes), and prints the
 verdicts next to the true DFT force error (which the service never sees).
 
     python3 scripts/demo_service.py --snapshot results/trust_snapshot.json
@@ -19,8 +19,8 @@ import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from trustswarm.cache import load_frames  # noqa: E402
-from trustswarm.data import ELEMENT_SYMBOLS, assign_leakfree_splits  # noqa: E402
+from fittest.cache import load_frames  # noqa: E402
+from fittest.data import ELEMENT_SYMBOLS, assign_leakfree_splits  # noqa: E402
 
 
 def main():
@@ -42,10 +42,10 @@ def main():
             fh.write(f"{len(f.Z)}\n{f.uid}\n")
             for z, r in zip(f.Z, f.R):
                 fh.write(f"{ELEMENT_SYMBOLS[int(z)]} {r[0]:.8f} {r[1]:.8f} {r[2]:.8f}\n")
-    cmd = [sys.executable, "-m", "trustswarm.service", "score", xyz, "--snapshot", a.snapshot,
+    cmd = [sys.executable, "-m", "fittest.service", "score", xyz, "--snapshot", a.snapshot,
            "--base-port", str(a.base_port)]
-    if os.environ.get("TRUSTSWARM_ORB_PYTHON"):
-        cmd += ["--orb-python", os.environ["TRUSTSWARM_ORB_PYTHON"]]
+    if os.environ.get("FITTEST_ORB_PYTHON"):
+        cmd += ["--orb-python", os.environ["FITTEST_ORB_PYTHON"]]
     out = subprocess.run(cmd, capture_output=True, text=True, timeout=1800)
     if out.returncode != 0:
         print(out.stderr[-3000:]); raise SystemExit(out.returncode)

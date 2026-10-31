@@ -1,4 +1,4 @@
-"""Run the TrustSwarm ablation (arms A-D, same oracle budget) on cached predictions.
+"""Run the Fittest ablation (arms A-D, same oracle budget) on cached predictions.
 
     python scripts/run_ablation.py --frames data/frames.pkl --preds data/preds --out results/ \
         --budget-per-round 40 --rounds 5 --seed 0 [--budgets 20,40,80]
@@ -24,10 +24,10 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # run from a clone without pip install
 
-from trustswarm.ablation import (AblationConfig, default_finetune, plot_ablation, plot_budget,  # noqa: E402
+from fittest.ablation import (AblationConfig, default_finetune, plot_ablation, plot_budget,  # noqa: E402
                                  run_ablation, run_budget_sensitivity)
-from trustswarm.agents import NullFinetune
-from trustswarm.cache import load_frames
+from fittest.agents import NullFinetune
+from fittest.cache import load_frames
 
 
 class RecordingFinetune:

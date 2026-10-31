@@ -1,4 +1,4 @@
-"""Slide-quality figures for the TrustSwarm pitch (16:9, 1600x900 px PNG + SVG).
+"""Slide-quality figures for the Fittest pitch (16:9, 1600x900 px PNG + SVG).
 
 Reads only repo data:
   data/frames.pkl, data/preds/{mace_mpa0,aimnet2,aimnet2_m0..m3,orb,mace_lora_curated}.npz,
@@ -33,10 +33,10 @@ import matplotlib.pyplot as plt  # noqa: E402
 from matplotlib.lines import Line2D  # noqa: E402
 from scipy.stats import spearmanr  # noqa: E402
 
-from trustswarm.cache import load_frames, load_predictions  # noqa: E402
-from trustswarm.data import assign_leakfree_splits  # noqa: E402
-from trustswarm.config import WRONG_F  # noqa: E402
-from trustswarm.signals import force_spread  # noqa: E402
+from fittest.cache import load_frames, load_predictions  # noqa: E402
+from fittest.data import assign_leakfree_splits  # noqa: E402
+from fittest.config import WRONG_F  # noqa: E402
+from fittest.signals import force_spread  # noqa: E402
 
 OUT = os.path.join(ROOT, "results", "fig")
 
@@ -435,13 +435,13 @@ def fig4(test, preds, nums):
 
 
 # ---- figure 5: ablation -----------------------------------------------------------------------
-ARMS = ["A_single", "A_random", "B_seed", "B_mace_seeds", "C_collective", "C_audit", "D_trustswarm"]
+ARMS = ["A_single", "A_random", "B_seed", "B_mace_seeds", "C_collective", "C_audit", "D_fittest"]
 ARM_LABEL = {"A_single": "A  AIMNet2 alone", "A_random": "A  random triage", "B_seed": "B  AIMNet2 seeds",
              "B_mace_seeds": "B′ MACE seeds ×4",
-             "C_collective": "C  collective", "C_audit": "C  collective + audit", "D_trustswarm": "D  TrustSwarm"}
+             "C_collective": "C  collective", "C_audit": "C  collective + audit", "D_fittest": "D  Fittest"}
 ARM_COLOR = {"A_single": "#A8A397", "A_random": "#DAD6CC", "B_seed": "#A8A397", "B_mace_seeds": "#A8A397",
              "C_collective": "#A8A397",
-             "C_audit": "#A8A397", "D_trustswarm": ORANGE}
+             "C_audit": "#A8A397", "D_fittest": ORANGE}
 
 
 def _verdict(cmp, metric, others):
@@ -466,12 +466,12 @@ def fig5(nums):
     with open(path, encoding="utf-8") as fh:
         ab = json.load(fh)
     arms = [a for a in ARMS if ab["arms"].get(a, {}).get("status") == "ok" and "metrics" in ab["arms"][a]]
-    if "D_trustswarm" not in arms:
-        print("  [fig5_ablation] skipped: D_trustswarm has no metrics")
+    if "D_fittest" not in arms:
+        print("  [fig5_ablation] skipped: D_fittest has no metrics")
         return
     M = {a: ab["arms"][a]["metrics"] for a in arms}
     cmp = ab.get("comparisons", {})
-    others = [a for a in arms if a != "D_trustswarm"]
+    others = [a for a in arms if a != "D_fittest"]
     panels = [("eval_force_rmse_post", "Served error ↓\n(eV/Å)", "{:.2f}", 0.0),
               ("auroc_eval", "AUROC ↑\n(from chance)", "{:.2f}", 0.5),
               ("ece_eval", "ECE ↓\n(calibration)", "{:.2f}", 0.0)]
@@ -494,7 +494,7 @@ def fig5(nums):
         top = base + (hi.max() - base) * 1.42
         for yy, a in enumerate(rows):
             ax.text(hi[yy] + (top - base) * 0.03, yy, fmt.format(v[yy]), va="center", ha="left", fontsize=12.5,
-                    color=INK, fontweight="bold" if a == "D_trustswarm" else "normal")
+                    color=INK, fontweight="bold" if a == "D_fittest" else "normal")
         ax.set_xlim(base, top)
         ax.set_ylim(-0.6, len(rows) - 0.4)
         ax.set_yticks(y)
@@ -506,8 +506,8 @@ def fig5(nums):
         if l == lefts[0]:
             ax.set_yticklabels([ARM_LABEL[a] for a in rows])
             for lbl, a in zip(ax.get_yticklabels(), rows):
-                lbl.set_color(INK if a == "D_trustswarm" else MUTED)
-                lbl.set_fontweight("bold" if a == "D_trustswarm" else "normal")
+                lbl.set_color(INK if a == "D_fittest" else MUTED)
+                lbl.set_fontweight("bold" if a == "D_fittest" else "normal")
                 lbl.set_fontsize(13)
         else:
             ax.set_yticklabels([])
@@ -521,16 +521,16 @@ def fig5(nums):
         ypix = ax0.transData.transform((0, yy))[1]
         yfig = fig.transFigure.inverted().transform((0, ypix))[1]
         fig.text(tx, yfig, "–" if tf is None else f"{tf:.0%}", fontsize=12.5, va="center", ha="left",
-                 color=INK, fontweight="bold" if a == "D_trustswarm" else "normal")
+                 color=INK, fontweight="bold" if a == "D_fittest" else "normal")
 
-    d = M["D_trustswarm"]
+    d = M["D_fittest"]
     vr, vc, va = (_verdict(cmp, k, others) for k in ("eval_force_rmse_post", "ece_eval", "auroc_eval"))
     p_err = {"better": "serves better answers", "tied": "serves answers on par", "worse": "serves worse answers"}.get(vr, "")
     p_cal = {"better": "calibrated trust", "tied": "calibrated trust", "worse": "poorer calibration"}.get(vc, "")
     p_auc = {"worse": "it ranks its own errors worse", "tied": "it ranks its own errors on par",
              "better": "and ranks its own errors best"}.get(va, "")
     best_other_auc = [M[a]["auroc_eval"]["value"] for a in others if a != "A_random"]
-    takeaway(fig, f"TrustSwarm {p_err} and {p_cal}",
+    takeaway(fig, f"Fittest {p_err} and {p_cal}",
              f"…but {p_auc}: AUROC {d['auroc_eval']['value']:.2f} vs "
              f"{min(best_other_auc):.2f}–{max(best_other_auc):.2f}"
              if va == "worse" else (p_auc[0].upper() + p_auc[1:] if p_auc else None))

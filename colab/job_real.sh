@@ -1,6 +1,6 @@
 set -e
-cd /content/trustswarm
-export PYTHONPATH=/content/trustswarm
+cd /content/fittest
+export PYTHONPATH=/content/fittest
 echo "== stage 1: ablation (records Curator request)"; date
 python3 scripts/run_ablation.py --frames data/frames.pkl --preds data/preds --out results/stage1 --n-bootstrap 200
 cat results/stage1/oracle_labels_armD.json | head -c 300; echo

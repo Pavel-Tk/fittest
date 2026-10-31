@@ -3,7 +3,7 @@
 Every threshold that decides what counts as "wrong", how the oracle budget is spent,
 or how agents update beliefs lives here, so the ablation cannot be tuned post hoc by
 editing code paths. Module-level constants are the contract values; ``AblationConfig``
-in :mod:`trustswarm.ablation` copies them as defaults so a run records what it used.
+in :mod:`fittest.ablation` copies them as defaults so a run records what it used.
 """
 
 from __future__ import annotations
