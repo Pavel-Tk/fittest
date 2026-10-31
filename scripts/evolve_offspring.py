@@ -77,6 +77,7 @@ def main(argv=None) -> None:
     ap.add_argument("--device", default="cpu")
     ap.add_argument("--threads", type=int, default=0)
     ap.add_argument("--data-seed", type=int, default=0)
+    ap.add_argument("--predict-limit", type=int, default=0, help="testing only: predict the first N frames")
     args = ap.parse_args(argv)
     spec = json.loads(Path(args.spec).read_text())
     t0 = time.perf_counter()
@@ -148,6 +149,8 @@ def main(argv=None) -> None:
     finetune_seconds = time.perf_counter() - t0
 
     targets = [f for f in frames if f.split in (POOL, EVAL)]
+    if args.predict_limit:
+        targets = targets[: args.predict_limit]
     t1 = time.perf_counter()
     E, F, model_seconds = ft.predict(child, targets, device, max_atoms=2048)
     predict_seconds = time.perf_counter() - t1
