@@ -334,7 +334,6 @@ def main(argv: list[str] | None = None) -> None:
     others_pl = [planted[n] for n in ok if n != "D_trustswarm" and planted[n] is not None]
     auc_worse = who(r, "auroc_eval", "worse")
     cal_better, cal_tied = who(r, "ece_eval", "better"), who(r, "ece_eval", "ns")
-    recall_better = who(r, "recall_at_k", "better")
     n_pair = cs.get("served_eval", {}).get(PAIR_NAME, 0) if cs else 0
     b_eval, c_eval = val(ok.get("B_seed", {}), "auroc_eval"), val(ok.get("C_collective", {}), "auroc_eval")
     sig04 = (signal or {}).get("auroc", {}).get("0.4", {})

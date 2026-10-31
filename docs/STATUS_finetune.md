@@ -16,7 +16,14 @@ Before using the labels, the script re-derives splits with `assign_leakfree_spli
 
 ## Real-label runs
 * **v1 (189 oracle labels, before the leak-free re-split): FAILED acceptance and was correctly not shipped.** The toolkit ratio was 1.37 because energy/atom MAE regressed. Hold-out rel-E MAE went 0.179 -> 0.307.
-* final run: pending (waiting for `LABELS_FINAL` in docs/STATUS_core.md).
+* Final run with the leaky by-reaction hold-out (05:00 UTC): superseded, not reported.
+* Final run with the component hold-out: pending (job `ftfinal2`).
+
+## Hold-out (fixed after claims audit)
+* The previous by-reaction hold-out was leaky. In the final run its 9 hold-out reactions each shared an endpoint geometry with training reactions (T1x reuses reactants).
+* It is now **whole connected components** of labelled reactions linked by shared endpoint geometry (`data.reaction_components` / `geometry_hash`, the helpers behind `assign_leakfree_splits`). Components are taken in seeded order up to 15 % of labelled frames. If that leaves less than 10 %, the smallest component that lifts it to at least 10 % is added, keeping at least 50 % for training.
+* Zero shared geometries between train and hold-out is **asserted**. The result is recorded as `holdout_leak_check` in meta and in acceptance_report.json.
+* Final labels (186) form 16 components. The hold-out is 3 components: 9 reactions, 26 frames (14.0 %), 0 shared geometries.
 
 ## Acceptance gates (all must pass; each recorded with `source`, value, limit, pass/fail)
 * (a) ALCHEMI `build_acceptance_report(max_from_scratch_ratio=1.0)` against base MACE-MPA-0 with the same refitted E0s. Note that this reads **energy-per-atom MAE, i.e. absolute energies (E0 transfer)**, plus force MAE. It does not read the relative energies we score.

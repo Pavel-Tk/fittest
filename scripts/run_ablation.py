@@ -17,13 +17,15 @@ from __future__ import annotations
 import argparse
 import dataclasses
 import json
+import sys
 import time
 from pathlib import Path
 from typing import Any
 
-from trustswarm.ablation import (AblationConfig, plot_ablation, plot_budget, run_ablation,
-                                 run_budget_sensitivity)
-from trustswarm.ablation import default_finetune
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # run from a clone without pip install
+
+from trustswarm.ablation import (AblationConfig, default_finetune, plot_ablation, plot_budget,  # noqa: E402
+                                 run_ablation, run_budget_sensitivity)
 from trustswarm.agents import NullFinetune
 from trustswarm.cache import load_frames
 
@@ -66,7 +68,9 @@ def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--frames", default="data/frames.pkl")
     ap.add_argument("--preds", default="data/preds")
-    ap.add_argument("--out", default="results")
+    ap.add_argument("--out", default=None,
+                    help="output dir (default: results/synthetic for frames under a 'synthetic' "
+                         "directory, else results)")
     ap.add_argument("--budget-per-round", type=int, default=40)
     ap.add_argument("--rounds", type=int, default=5)
     ap.add_argument("--seed", type=int, default=0)
@@ -81,6 +85,8 @@ def main(argv: list[str] | None = None) -> None:
                     help="bootstrap resamples per budget in the sweep")
     args = ap.parse_args(argv)
 
+    if args.out is None:  # never let a synthetic smoke run overwrite the real results
+        args.out = "results/synthetic" if "synthetic" in Path(args.frames).parts else "results"
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     cfg = AblationConfig(budget_per_round=args.budget_per_round, rounds=args.rounds,
