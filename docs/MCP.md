@@ -32,17 +32,24 @@ environment's `fittest-mcp`. This install is documented but has **not been teste
 ```bash
 uv venv fittest-env --python 3.12
 uv pip install --python fittest-env/bin/python "fittest[models] @ git+https://github.com/Pavel-Tk/fittest" \
+    --extra-index-url https://download.pytorch.org/whl/cpu --index-strategy unsafe-best-match   # CPU torch
+# optional: Orb-v3 in its own env (orb-models conflicts with the Toolkit), as in scripts/setup_cpu.sh
+uv venv orb-env --python 3.12
+uv pip install --python orb-env/bin/python torch --index-url https://download.pytorch.org/whl/cpu
+uv pip install --python orb-env/bin/python "dm-tree>=0.1.9" orb-models ase numpy \
     --extra-index-url https://download.pytorch.org/whl/cpu --index-strategy unsafe-best-match
-claude mcp add fittest-local -- $PWD/fittest-env/bin/fittest-mcp          # MACE + AIMNet2
-claude mcp add fittest-local -e FITTEST_ORB_PYTHON=/path/to/orb-env/bin/python -- $PWD/fittest-env/bin/fittest-mcp
+# then register ONE of these two (same name, alternatives):
+claude mcp add fittest-local -- $PWD/fittest-env/bin/fittest-mcp          # (a) MACE + AIMNet2 only
+claude mcp add fittest-local -e FITTEST_ORB_PYTHON=$PWD/orb-env/bin/python -- $PWD/fittest-env/bin/fittest-mcp   # (b) full committee
 ```
 
 The `[models]` extra installs MACE-MPA-0 and AIMNet2 through the ALCHEMI Toolkit. Orb-v3 needs its
 own environment because orb-models pins conflicting dependencies; set `FITTEST_ORB_PYTHON` to that
 environment's Python. With only MACE + AIMNet2 the server says so and serves a **partial
 committee**: every response warns that the Calibrator's buckets and ledger were built on the full
-three-model committee, so verdicts are approximate. Local mode runs over stdio on CPU (pass
-`--device cuda` if you have a GPU), spawns one model process per installed model, each with its own
+three-model committee, so verdicts are approximate. Local mode runs over stdio on CPU: the
+commands above install CPU-only torch. `--device cuda` needs CUDA builds of torch in both
+environments instead (install without the CPU index, as `scripts/setup_gpu.sh` does). It spawns one model process per installed model, each with its own
 random socket key, and logs only to `~/.fittest-mcp/usage.sqlite`. It never reports anywhere.
 
 ## How a verdict is made (one rule)
@@ -72,7 +79,12 @@ candidate in the structure's bucket. It comes from DFT oracle labels on Transiti
 Beta(2, 1). It is never exactly 1. It is reported with `trust_score_90ci` (the 90% credible
 interval) and `labels_behind_score` (DFT labels in that bucket). A bucket with 2 labels gives a wide
 interval; read the score with it. "Correct" means force RMSE ≤ 0.25 eV/Å and relative energy
-error ≤ 0.25.
+error ≤ 0.25 eV (relative to the reaction's reactant).
+
+**Calibration of trust_score: not measured.** The ECE 0.080 in the README's ablation is for arm D's
+risk score (max of the isotonic P(served wrong) and the Skeptic's p_S), not for this per-bucket
+posterior. Its calibration has not been measured beyond the 12-frame spot check in the verification
+log (7/12 trusted, 0 of them DFT-wrong).
 
 **Energies.** `served_energy_eV` is the served model's (or blend's) total energy on its own
 reference. Values from different models are not comparable, so when the served model differs within

@@ -93,7 +93,8 @@ TAU_MEANING = ("tau is a fixed escalation threshold: the 70th percentile of sigm
                "The Calibrator's threshold rule never moved it during the run (see results/RESULTS.md).")
 SCORE_MEANING = ("trust_score = the Calibrator's Beta posterior mean of P(served answer correct) for the served "
                  "candidate in this (sigma_F, |F|) bucket, from DFT oracle labels on Transition1x; prior Beta(2, 1), "
-                 "so it is never exactly 1. 'Correct' = force RMSE <= 0.25 eV/A and relative energy error <= 0.25. "
+                 "so it is never exactly 1. 'Correct' = force RMSE <= 0.25 eV/A and relative energy error <= 0.25 eV. "
+                 "Its calibration has only been spot-checked (12 held-out frames), not measured. "
                  "labels_behind_score is the number of DFT labels in that bucket; few labels = wide interval.")
 VERDICT_RULE = ("trust only if: every model agent supports all elements, the forces do not all vanish, "
                 "sigma_F < tau, and trust_score >= 0.5. Otherwise send_to_dft, with verdict_reasons.")
@@ -1125,9 +1126,11 @@ client.</p>
 <p>Cursor (<code>~/.cursor/mcp.json</code>)</p><pre>{{"mcpServers": {{"fittest": {{"url": "{url}"}}}}}}</pre>
 <p>Local demo (stdio, stand-in models: verdicts are meaningless, for trying the tools offline)</p>
 <pre>claude mcp add fittest-demo -- uvx --from git+{REPO_URL} fittest-mcp --fake-models</pre>
-<p>Local with real models: install into an environment that has the models (<code>pip install
-"fittest[models] @ git+{REPO_URL}"</code>, plus <code>FITTEST_ORB_PYTHON</code> for Orb) and point your client at
-that environment's <code>fittest-mcp</code>. A plain <code>uvx</code> install has no models.</p>
+<p>Local with real models: install <code>"fittest[models] @ git+{REPO_URL}"</code> (CPU torch) into a fresh
+environment, optionally Orb-v3 in a second environment named by <code>FITTEST_ORB_PYTHON</code>, and point your
+client at that environment's <code>fittest-mcp</code>; exact commands in
+<a href="{REPO_URL}#12-local-mcp-server">README &sect;1.2</a>. This install is documented but not tested end to
+end; the hosted server is the tested path. A plain <code>uvx</code> install has no models.</p>
 <p>Then ask: <i>"{_html.escape(EXAMPLE_PROMPT)}."</i></p>
 <h2>What is logged</h2>
 <p>{LOGGING_NOTICE.replace("Logging: ", "")} Live counts: <a href="/stats">/stats</a>.</p>

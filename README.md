@@ -26,7 +26,8 @@ Formerly **TrustSwarm**; the old GitHub URL redirects here.
   error without labels (Spearman **0.73**, 3,157 frames). Seed ensembles of one model do not measure
   error: their spread is **2.4–36×** smaller than the error of their mean.
 * **Result (leak-free split, 200 DFT label lookups per arm).** The swarm serves better answers:
-  force RMSE **0.206 eV/Å** vs 0.286–0.317 for every baseline, with calibrated trust (ECE **0.080**).
+  force RMSE **0.206 eV/Å** vs 0.286–0.317 for every baseline, with a calibrated risk score (ECE **0.080**
+  for arm D's P(served wrong); the hosted server's `trust_score` is a different quantity, see §1.1).
   The gain comes from *discovering* that averaging AIMNet2 and Orb is the best answer; a fixed
   AIMNet2+Orb average chosen in hindsight is as good (0.202).
 * **Negative result.** The swarm ranks its own errors **worse** than the simple baselines:
@@ -98,7 +99,9 @@ correct) for the served candidate in the structure's (σ_F, mean |F|) bucket, bu
 on Transition1x with prior Beta(2, 1), so it is never exactly 1. It comes with `trust_score_90ci` (the
 90% credible interval) and `labels_behind_score` (the DFT labels in that bucket); a bucket with few labels
 gives a wide interval, so read the score with it. "Correct" means force RMSE ≤ 0.25 eV/Å and relative
-energy error ≤ 0.25.
+energy error ≤ 0.25 eV (relative to the reaction's reactant). The ECE 0.080 in §3.3 is for arm D's risk score
+(max of the isotonic P(served wrong) and the Skeptic's p_S); the calibration of this per-bucket `trust_score`
+has not been measured beyond the 12-frame spot check below.
 
 **Claude Code**
 
@@ -143,9 +146,15 @@ claude mcp add fittest-demo -- uvx --from git+https://github.com/Pavel-Tk/fittes
 # real models: install into an environment that has them (documented, not yet tested end to end)
 uv venv fittest-env --python 3.12
 uv pip install --python fittest-env/bin/python "fittest[models] @ git+https://github.com/Pavel-Tk/fittest" \
+    --extra-index-url https://download.pytorch.org/whl/cpu --index-strategy unsafe-best-match   # CPU torch
+# optional: Orb-v3 in its own env (orb-models conflicts with the Toolkit), as in scripts/setup_cpu.sh
+uv venv orb-env --python 3.12
+uv pip install --python orb-env/bin/python torch --index-url https://download.pytorch.org/whl/cpu
+uv pip install --python orb-env/bin/python "dm-tree>=0.1.9" orb-models ase numpy \
     --extra-index-url https://download.pytorch.org/whl/cpu --index-strategy unsafe-best-match
-claude mcp add fittest-local -- $PWD/fittest-env/bin/fittest-mcp          # MACE + AIMNet2
-claude mcp add fittest-local -e FITTEST_ORB_PYTHON=/path/to/orb-env/bin/python -- $PWD/fittest-env/bin/fittest-mcp   # + Orb
+# then register ONE of these two (same name, alternatives):
+claude mcp add fittest-local -- $PWD/fittest-env/bin/fittest-mcp          # (a) MACE + AIMNet2 only
+claude mcp add fittest-local -e FITTEST_ORB_PYTHON=$PWD/orb-env/bin/python -- $PWD/fittest-env/bin/fittest-mcp   # (b) full committee
 ```
 
 A plain `uvx --from git+…` install has **no model agents**. It serves only `--fake-models`, CPU stand-ins
@@ -159,8 +168,9 @@ The `[models]` extra installs MACE-MPA-0 and AIMNet2 through the ALCHEMI Toolkit
 Python environment because orb-models pins dependencies that conflict with the Toolkit; set
 `FITTEST_ORB_PYTHON` to that environment's Python. With only MACE and AIMNet2 the server serves a
 **partial committee** and every response carries a warning: τ and the Calibrator's buckets and ledger were
-built on the full three-model committee, so verdicts are approximate. Local mode runs over stdio on CPU
-(`--device cuda` with a GPU), spawns one process per installed model agent, each with its own random
+built on the full three-model committee, so verdicts are approximate. Local mode runs over stdio on CPU:
+the commands above install CPU-only torch. `--device cuda` needs CUDA builds of torch in both
+environments instead (install without the CPU index, as `scripts/setup_gpu.sh` does). It spawns one process per installed model agent, each with its own random
 socket key, logs only to `~/.fittest-mcp/usage.sqlite` and never reports anywhere.
 
 ### 1.3 Python API: the trust service
@@ -540,6 +550,8 @@ Full table with every CI and the pool metrics: [`results/RESULTS.md`](results/RE
   baseline had subset candidates. A fixed AIMNet2+Orb average chosen in hindsight with eval labels scores
   0.202 eV/Å, i.e. as good. Budget sweep: 0.202 / 0.206 / 0.204 eV/Å at k = 20 / 40 / 80 labels per round.
 * Calibration: ECE 0.080 and Brier 0.185, better than A_single, A_random, B, B′ and C; tied with C_audit.
+  This is for arm D's risk score; the hosted MCP server's `trust_score` (per-bucket Beta posterior) is a
+  different quantity, whose calibration has not been measured beyond a 12-frame spot check (§1.1).
   The calibration gain comes from the Skeptic's random audits of trusted answers.
 
 **What is not**
@@ -698,7 +710,7 @@ deploy/             hosted MCP: Caddy (TLS) + systemd units for fittest-mcp and 
 
 ### Privacy: what the hosted MCP server logs
 
-Every tool description, the server instructions and every `check_structures` response state this policy
+Every tool description, the server instructions and every `check_structures` response summarise this policy
 (`fittest/usage_log.py`, [`docs/MCP.md`](docs/MCP.md)):
 
 * **Logged per call** (one SQLite row): UTC time, tool (or `unknown`), transport, an anonymous client id,
