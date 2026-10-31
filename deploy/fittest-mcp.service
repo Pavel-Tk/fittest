@@ -1,0 +1,22 @@
+[Unit]
+Description=Fittest MCP server (streamable HTTP on 127.0.0.1:8765, behind Caddy)
+After=network.target
+Wants=fittest-model@mace_mpa0.service fittest-model@aimnet2.service fittest-model@orb.service
+PartOf=fittest-mcp.target
+
+[Service]
+Type=simple
+User=azureuser
+WorkingDirectory=/home/azureuser/fittest-mcp-src
+EnvironmentFile=/etc/fittest-mcp/common.env
+Environment=PYTHONUNBUFFERED=1 OMP_NUM_THREADS=1
+ExecStart=/home/azureuser/envs/mcp/bin/fittest-mcp --transport http --host 127.0.0.1 --port 8765 \
+    --public-host fittest-mcp.westus2.cloudapp.azure.com \
+    --connect mace_mpa0=7300,aimnet2=7301,orb=7302 \
+    --data-dir /home/azureuser/fittest-mcp-data --log-level WARNING
+Restart=always
+RestartSec=3
+MemoryMax=2G
+
+[Install]
+WantedBy=fittest-mcp.target

@@ -1,0 +1,24 @@
+# One warm model agent per instance: fittest-model@mace_mpa0, @aimnet2, @orb.
+# Port and interpreter come from /etc/fittest-mcp/model-%i.env (written by deploy.sh).
+[Unit]
+Description=Fittest model agent %i (CPU, warm)
+After=network.target
+PartOf=fittest-mcp.target
+
+[Service]
+Type=simple
+User=azureuser
+WorkingDirectory=/home/azureuser/fittest-mcp-src
+EnvironmentFile=/etc/fittest-mcp/common.env
+EnvironmentFile=/etc/fittest-mcp/model-%i.env
+# few threads: the VM also runs the evolution experiment
+Environment=OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 PYTHONUNBUFFERED=1
+Environment=PYTHONPATH=/home/azureuser/fittest-mcp-src
+ExecStart=/bin/sh -c 'exec "$MODEL_PYTHON" -m fittest.model_server --model %i --port "$MODEL_PORT" --device cpu'
+Restart=always
+RestartSec=5
+MemoryMax=6G
+Nice=2
+
+[Install]
+WantedBy=fittest-mcp.target

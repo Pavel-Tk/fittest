@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+# Runs ON the VM (called by deploy.sh). Idempotent.
+set -euo pipefail
+export PATH="$HOME/.local/bin:$PATH"
+BRANCH=${BRANCH:-master}
+SRC=$HOME/fittest-mcp-src          # server's own checkout; never touches ~/fittest (experiments)
+DATA=$HOME/fittest-mcp-data        # usage.sqlite + secret salt (never in git)
+DEP=$HOME/fittest-mcp-deploy
+CORE_PY=${CORE_PY:-$HOME/envs/core/bin/python}
+ORB_PY=${ORB_PY:-$HOME/envs/orb/bin/python}
+
+echo "== source ($BRANCH)"
+if [ ! -d "$SRC/.git" ]; then git clone -q -b "$BRANCH" https://github.com/Pavel-Tk/fittest.git "$SRC"; fi
+git -C "$SRC" fetch -q origin "$BRANCH" && git -C "$SRC" reset -q --hard "origin/$BRANCH"
+git -C "$SRC" log --oneline -1
+
+echo "== MCP env (no torch: the server only talks to the model agents)"
+[ -x "$HOME/envs/mcp/bin/python" ] || uv venv -q "$HOME/envs/mcp" --python 3.12
+uv pip install -q --python "$HOME/envs/mcp/bin/python" -e "$SRC"
+"$HOME/envs/mcp/bin/python" -c "import importlib.metadata as m; print('mcp', m.version('mcp'))"
+
+echo "== data dir + secrets"
+mkdir -p "$DATA" && chmod 700 "$DATA"
+[ -s "$DATA/salt" ] || { head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n' > "$DATA/salt"; chmod 600 "$DATA/salt"; }
+sudo mkdir -p /etc/fittest-mcp
+if ! sudo test -s /etc/fittest-mcp/common.env; then
+  AK=$(head -c 24 /dev/urandom | od -An -tx1 | tr -d ' \n')
+  printf 'FITTEST_AUTHKEY=%s\nFITTEST_SNAPSHOT=%s\nFITTEST_FAMILY_TREE=%s\n' "$AK" \
+    "$SRC/results/trust_snapshot.json" "$HOME/fittest/results/evolution/family_tree.json" \
+    | sudo tee /etc/fittest-mcp/common.env >/dev/null
+  sudo chmod 640 /etc/fittest-mcp/common.env; sudo chown root:azureuser /etc/fittest-mcp/common.env
+fi
+port=7300
+for m in mace_mpa0 aimnet2 orb; do
+  py=$CORE_PY; [ "$m" = orb ] && py=$ORB_PY
+  printf 'MODEL_PYTHON=%s\nMODEL_PORT=%s\n' "$py" "$port" | sudo tee /etc/fittest-mcp/model-$m.env >/dev/null
+  port=$((port+1))
+done
+
+echo "== systemd"
+sudo cp "$DEP/fittest-mcp.service" "$DEP/fittest-model@.service" "$DEP/fittest-mcp.target" /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable -q fittest-mcp.target fittest-mcp.service \
+  fittest-model@mace_mpa0.service fittest-model@aimnet2.service fittest-model@orb.service
+if [ "${RESTART_MODELS:-0}" = 1 ]; then
+  sudo systemctl restart fittest-model@mace_mpa0 fittest-model@aimnet2 fittest-model@orb
+else
+  sudo systemctl start fittest-model@mace_mpa0 fittest-model@aimnet2 fittest-model@orb
+fi
+sudo systemctl restart fittest-mcp
+
+echo "== caddy"
+if ! command -v caddy >/dev/null; then
+  sudo apt-get install -y -q debian-keyring debian-archive-keyring apt-transport-https curl gnupg >/dev/null
+  curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor --yes -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+  curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list >/dev/null
+  sudo apt-get update -q >/dev/null && sudo apt-get install -y -q caddy >/dev/null
+fi
+caddy version
+sudo mkdir -p /var/log/caddy && sudo chown caddy:caddy /var/log/caddy || true
+caddy validate --adapter caddyfile --config "$DEP/Caddyfile" >/dev/null
+sudo cp "$DEP/Caddyfile" /etc/caddy/Caddyfile
+sudo systemctl enable -q caddy && sudo systemctl reload-or-restart caddy
+
+echo "== health"
+for i in $(seq 1 60); do
+  if out=$(curl -fsS http://127.0.0.1:8765/health 2>/dev/null); then echo "$out"; break; fi; sleep 2
+done
+systemctl --no-pager --plain list-units 'fittest-*' | head -8

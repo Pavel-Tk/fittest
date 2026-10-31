@@ -1,0 +1,33 @@
+# Fittest MCP: TLS (Let's Encrypt via the Azure FQDN) in front of the MCP server on 127.0.0.1:8765.
+fittest-mcp.westus2.cloudapp.azure.com {
+	encode gzip
+	request_body {
+		max_size 2MB
+	}
+	header {
+		-Server
+		X-Content-Type-Options nosniff
+	}
+	reverse_proxy 127.0.0.1:8765 {
+		flush_interval -1
+		transport http {
+			dial_timeout 5s
+			response_header_timeout 180s
+		}
+	}
+	log {
+		output file /var/log/caddy/fittest-mcp.log {
+			roll_size 20MiB
+			roll_keep 5
+		}
+		# no request bodies are ever logged by Caddy; drop client IPs from the access log too
+		format filter {
+			wrap json
+			fields {
+				request>remote_ip delete
+				request>client_ip delete
+				request>headers>X-Forwarded-For delete
+			}
+		}
+	}
+}
