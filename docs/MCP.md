@@ -121,6 +121,11 @@ Resilience, live:
 - 25 rapid `swarm_status` calls: 2 rate-limited (`retry in 1 s`).
 - 6 concurrent clients × 12 Transition1x frames: all succeeded (serialized, 14.4 s wall time).
 
+Privacy check: the first deploy left uvicorn's access log on, and it wrote client IPs into the
+systemd journal. I found this during verification, turned the access log off (`access_log=False`),
+redeployed and vacuumed the journal. Re-checked after another full verify run: the laptop's IP
+appears 0 times in the `fittest-mcp` and `caddy` journals and 0 times in the Caddy access log.
+
 **(b) Claude Code.** From a scratch directory I ran
 `claude mcp add --transport http --scope local fittest https://fittest-mcp.westus2.cloudapp.azure.com/mcp --header "X-Fittest-Internal: 1"`.
 `claude mcp list` showed it ✔ Connected. Then:
