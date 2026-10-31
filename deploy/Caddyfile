@@ -1,4 +1,48 @@
 # Fittest MCP: TLS (Let's Encrypt via the Azure FQDN) in front of the MCP server on 127.0.0.1:8765.
+#
+# Privacy: no Caddy log anywhere may contain a client IP or a forwarding header.
+# - The global default logger (journal: error logs such as 502s during restarts, startup messages)
+#   deletes them with a filter encoder.
+# - Requests for any other Host (bare IP on :80/:443, unknown Host headers, scanners) hit the
+#   catch-all blocks below: 404 + connection close, never logged.
+# - The site's own access log (file) has the same filter.
+{
+	log default {
+		output stderr
+		format filter {
+			wrap json
+			fields {
+				remote_ip delete
+				remote_addr delete
+				client_ip delete
+				request>remote_ip delete
+				request>remote_port delete
+				request>client_ip delete
+				request>headers>X-Forwarded-For delete
+				request>headers>X-Real-Ip delete
+				request>headers>Forwarded delete
+				request>headers>Cf-Connecting-Ip delete
+				request>headers>True-Client-Ip delete
+			}
+		}
+	}
+}
+
+# unmapped hosts (bare IP, unknown Host header): refuse without logging
+http:// {
+	log_skip
+	respond 404 {
+		close
+	}
+}
+
+https:// {
+	log_skip
+	respond 404 {
+		close
+	}
+}
+
 fittest-mcp.westus2.cloudapp.azure.com {
 	encode gzip
 	request_body {
@@ -25,9 +69,10 @@ fittest-mcp.westus2.cloudapp.azure.com {
 			wrap json
 			fields {
 				request>remote_ip delete
+				request>remote_port delete
 				request>client_ip delete
 				request>headers>X-Forwarded-For delete
-				request>headers>X-Real-IP delete
+				request>headers>X-Real-Ip delete
 				request>headers>Forwarded delete
 				request>headers>Cf-Connecting-Ip delete
 				request>headers>True-Client-Ip delete
