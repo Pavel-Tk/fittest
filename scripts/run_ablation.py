@@ -46,6 +46,11 @@ class RecordingFinetune:
             self.recorded = True
         return self.inner(model_name, labelled_frames)
 
+    def bind_held_out(self, uids) -> None:
+        bind = getattr(self.inner, "bind_held_out", None)
+        if bind is not None:
+            bind(uids)
+
 SUMMARY_KEYS = ("auroc_pool", "auroc_eval", "recall_at_k", "planted_caught", "audit_hit_rate",
                 "eval_force_rmse_post", "ece_eval", "silent_failures_eval")
 

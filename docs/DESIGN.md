@@ -125,7 +125,17 @@ slice of oracle labels (NOT `eval`). Ship ⇔ report verdict passes; then re-pre
 * Auction: bids sealed per round; Oracle pays top-k when the clock leaves the round; unused
   allowance carries over (reported); `oracle_result` is the only label channel.
 * JSONL audit log: arrays (`forces`, `F`, `R`) are replaced by `{"omitted","shape"}` and floats
-  rounded; in-memory events keep the arrays.
+  rounded; in-memory events keep the arrays. `bid` is batched too.
+* v2 (after the first real-data run; v1 kept in `results/v1_flag_only_bidding/`):
+  - Candidates = every non-empty subset mean of the models (`trustswarm.candidates`: singletons,
+    `mean(a+b)`, `consensus`); `oracle_result.candidate_errors` gives each one's error.
+  - Exploration audits: each triage round the Skeptic bids `{"audit": true}` on a seeded uniform
+    sample of trusted systems (σ < τ, unflagged), `audit_fraction` (0.25) of k; the Oracle pays
+    them first out of the same k. Audits feed the ledger but not reputations. Baseline
+    `C_audit` = C + the same audits (isolates their effect).
+  - skeptic_ref / planted are split by formula; planted = AIMNet2 force RMSE > 0.4 eV/Å
+    (arm-independent); replayed fine-tunes ship only if `train_uids` ⊆ this run's labels and
+    disjoint from held-out frames.
 
 ## 5. Ablation (same oracle budget K = rounds × k)
 

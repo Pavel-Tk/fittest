@@ -9,9 +9,11 @@ which returns frames tagged with the *official* T1x split (``train``/``val``/``t
 from __future__ import annotations
 
 import dataclasses
+import hashlib
 from collections import Counter, defaultdict
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 
@@ -112,8 +114,9 @@ def assign_splits(frames: Sequence[Frame], seed: int = 0,
                   n_seed_train_reactions: int | None = None) -> list[Frame]:
     """Map official T1x splits onto TrustSwarm splits, by reaction (DESIGN.md §1).
 
-    test → pool / eval (50/50 by reaction); val → skeptic_ref / planted (50/50 **by formula**,
-    see :func:`split_val_by_formula`); train → seed_train (optionally subsampled to
+    test → pool / eval (50/50 by connected component of shared endpoint geometry); val →
+    skeptic_ref / planted (by formula, components kept whole; see
+    :func:`assign_leakfree_splits`); train → seed_train (optionally subsampled to
     ``n_seed_train_reactions``). Frames already carrying a TrustSwarm split are returned
     unchanged.
     """
@@ -123,22 +126,20 @@ def assign_splits(frames: Sequence[Frame], seed: int = 0,
     def reactions_of(split: str) -> list[str]:
         return sorted({f.reaction for f in official.get(split, [])})
 
-    pool, eval_ = split_reactions(reactions_of("test"), 0.5, rng)
     train = reactions_of("train")
     if n_seed_train_reactions is not None and n_seed_train_reactions < len(train):
         train, _ = split_reactions(train, n_seed_train_reactions / len(train), rng)
 
     mapping: dict[tuple[str, str], str] = {}
-    for source, names, target in (("test", pool, POOL), ("test", eval_, EVAL),
-                                  ("train", train, SEED_TRAIN)):
+    for source, names, target in (("train", train, SEED_TRAIN),):
         mapping.update({(source, r): target for r in names})
     out: list[Frame] = []
     for f in frames:
-        if f.split in TRUSTSWARM_SPLITS or f.split == "val":
+        if f.split in TRUSTSWARM_SPLITS or f.split in ("val", "test"):
             out.append(f)
         elif (f.split, f.reaction) in mapping:
             out.append(dataclasses.replace(f, split=mapping[(f.split, f.reaction)]))
-    return split_val_by_formula(out, seed)
+    return assign_leakfree_splits(out, seed)[0]
 
 
 def official_split(frame: Frame) -> str:
@@ -153,20 +154,128 @@ def official_split(frame: Frame) -> str:
     return frame.split
 
 
-def split_val_by_formula(frames: Sequence[Frame], seed: int = 0) -> list[Frame]:
-    """(Re-)derive skeptic_ref / planted from the official ``val`` frames, 50/50 **by formula**.
+def geometry_hash(Z: np.ndarray, R: np.ndarray, decimals: int = 2) -> str:
+    """Permutation- and rigid-motion-invariant fingerprint of a structure.
 
-    T1x val holds a handful of formulas with many reactions each, so a reaction-level split
-    would leave near-duplicate geometries (same formula) on both sides and the Skeptic's kNN
-    would find the planted cases' twins among its references. Deterministic in ``seed``;
-    every other frame is returned unchanged. Predictions are per uid, so they stay valid.
+    Sorted atomic numbers + the sorted multiset of interatomic distances rounded to
+    ``decimals`` Å. Identical geometries always collide; T1x reuses one reactant geometry
+    across several reactions, which is exactly what this detects."""
+    z = np.sort(np.asarray(Z, dtype=np.int64))
+    d = pairwise_distances(np.asarray(R, dtype=float))[np.triu_indices(len(Z), k=1)]
+    key = z.tobytes() + np.round(np.sort(d), decimals).astype(np.float32).tobytes()
+    return hashlib.sha1(key).hexdigest()[:16]
+
+
+ENDPOINT_ROLES: tuple[str, ...] = ("reactant", "product")
+
+
+def reaction_components(frames: Sequence[Frame]) -> dict[str, int]:
+    """reaction -> connected-component id; reactions are linked when they share any endpoint
+    (reactant or product) geometry (:func:`geometry_hash`). Component ids are deterministic."""
+    parent: dict[str, str] = {}
+
+    def find(x: str) -> str:
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    owner: dict[str, str] = {}
+    for f in sorted(frames, key=lambda f: f.uid):
+        parent.setdefault(f.reaction, f.reaction)
+        if f.role not in ENDPOINT_ROLES:
+            continue
+        h = geometry_hash(f.Z, f.R)
+        if h in owner:
+            a, b = find(owner[h]), find(f.reaction)
+            if a != b:
+                parent[max(a, b)] = min(a, b)
+        else:
+            owner[h] = f.reaction
+    roots = sorted({find(r) for r in parent})
+    index = {r: i for i, r in enumerate(roots)}
+    return {r: index[find(r)] for r in parent}
+
+
+def _split_components(frames: Sequence[Frame], component: Mapping[str, int], first: str,
+                      second: str, rng: np.random.Generator,
+                      preassigned: Mapping[str, str] | None = None) -> dict[str, str]:
+    """reaction -> split. Whole components go to one side; ~50/50 by frame count. With
+    ``preassigned`` (reaction -> split), a component takes its majority preassigned side."""
+    sizes: dict[int, int] = defaultdict(int)
+    for f in frames:
+        sizes[component[f.reaction]] += 1
+    comps = sorted(sizes)
+    side: dict[int, str] = {}
+    if preassigned is not None:
+        votes: dict[int, Counter[str]] = defaultdict(Counter)
+        for f in frames:
+            votes[component[f.reaction]][preassigned[f.reaction]] += 1
+        side = {c: max(sorted(votes[c]), key=lambda k: votes[c][k]) for c in comps}
+    else:
+        total, filled = sum(sizes.values()), 0
+        for i in rng.permutation(len(comps)):
+            c = comps[i]
+            side[c] = first if filled < total / 2 else second
+            filled += sizes[c] if side[c] == first else 0
+    return {r: side[c] for r, c in component.items() if c in side}
+
+
+def assign_leakfree_splits(frames: Sequence[Frame], seed: int = 0
+                           ) -> tuple[list[Frame], dict[str, Any]]:
+    """(Re-)derive pool/eval and skeptic_ref/planted so that no endpoint geometry is shared.
+
+    * official test → pool / eval: by connected component of shared endpoint geometry
+      (:func:`reaction_components`), ~50/50 by frame count, seeded.
+    * official val → skeptic_ref / planted: by formula (as before), then any component that
+      crosses the formula split is moved wholly to its majority side.
+    Other frames are unchanged. Returns the new frames and a JSON-serialisable report.
+    Deterministic in ``seed``; uids (hence cached predictions) are untouched.
     """
+    test = [f for f in frames if official_split(f) == "test"]
     val = [f for f in frames if official_split(f) == "val"]
-    ref_formulas, _ = split_reactions({f.formula for f in val}, 0.5,
-                                      np.random.default_rng([seed, 0xF0]))
-    ref = set(ref_formulas)
-    return [dataclasses.replace(f, split=SKEPTIC_REF if f.formula in ref else PLANTED)
-            if official_split(f) == "val" else f for f in frames]
+    split_of: dict[str, str] = {}
+    report: dict[str, Any] = {"seed": seed, "hash": "sorted Z + sorted pair distances (0.01 Å)",
+                              "linked_by_roles": list(ENDPOINT_ROLES)}
+    if test:
+        comp = reaction_components(test)
+        split_of.update(_split_components(test, comp, POOL, EVAL, np.random.default_rng([seed, 0x7E])))
+        report["test_components"] = len(set(comp.values()))
+        report["test_reactions"] = len(comp)
+    if val:
+        comp = reaction_components(val)
+        ref_formulas, _ = split_reactions({f.formula for f in val}, 0.5,
+                                          np.random.default_rng([seed, 0xF0]))
+        by_formula = {f.reaction: (SKEPTIC_REF if f.formula in set(ref_formulas) else PLANTED)
+                      for f in val}
+        merged = _split_components(val, comp, SKEPTIC_REF, PLANTED, np.random.default_rng(seed),
+                                   preassigned=by_formula)
+        report["val_components"] = len(set(comp.values()))
+        report["val_reactions_moved_to_keep_components_whole"] = sum(
+            merged[r] != by_formula[r] for r in by_formula)
+        split_of.update(merged)
+    out = [dataclasses.replace(f, split=split_of[f.reaction]) if f.reaction in split_of
+           and official_split(f) in ("test", "val") else f for f in frames]
+    report["frames_per_split"] = dict(sorted(Counter(f.split for f in out).items()))
+    report["reactions_per_split"] = {k: len({f.reaction for f in out if f.split == k})
+                                     for k in report["frames_per_split"]}
+    report["shared_endpoint_geometries"] = {
+        "pool|eval": len(shared_endpoint_hashes(out, POOL, EVAL)),
+        "skeptic_ref|planted": len(shared_endpoint_hashes(out, SKEPTIC_REF, PLANTED))}
+    return out, report
+
+
+def shared_endpoint_hashes(frames: Sequence[Frame], a: str, b: str) -> set[str]:
+    """Endpoint geometry hashes present in both splits ``a`` and ``b`` (should be empty)."""
+    def hashes(split: str) -> set[str]:
+        return {geometry_hash(f.Z, f.R) for f in frames
+                if f.split == split and f.role in ENDPOINT_ROLES}
+    return hashes(a) & hashes(b)
+
+
+def split_val_by_formula(frames: Sequence[Frame], seed: int = 0) -> list[Frame]:
+    """Back-compat wrapper: the full leak-free re-split (see :func:`assign_leakfree_splits`)."""
+    return assign_leakfree_splits(frames, seed)[0]
 
 
 def arrival_rounds(frames: Sequence[Frame], n_rounds: int, seed: int = 0) -> dict[str, int]:

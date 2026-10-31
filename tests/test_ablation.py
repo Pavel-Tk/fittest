@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import shutil
 from pathlib import Path
@@ -9,19 +10,20 @@ from typing import Any
 
 import numpy as np
 import pytest
-from conftest import SMALL_CFG
+from conftest import SMALL_CFG, SMALL_SPEC
 
-from trustswarm.ablation import (AblationConfig, arm_specs, auroc_mann_whitney, brier, build_trustswarm,
+from trustswarm.ablation import (AblationConfig, arm_specs, auroc_mann_whitney, brier, build_trustswarm, topk_stream,
                                  expected_calibration_error, plot_ablation, prepare_data,
                                  run_ablation, trustswarm_score)
-from trustswarm.agents import Calibrator, ModelAgent, NullFinetune, ReplayFinetune
+from trustswarm.agents import (Calibrator, FinetuneReport, ModelAgent, NullFinetune,
+                               ReplayFinetune)
 from trustswarm.agents.base import iter_rows
 from trustswarm.blackboard import ORACLE_RESULT, Blackboard, Event, load_jsonl
 from trustswarm.cache import load_models, load_predictions
 from trustswarm.candidates import candidate_members
 from trustswarm.data import Frame, arrival_rounds
 from trustswarm.round_driver import RoundDriver
-from trustswarm.signals import frame_error
+from trustswarm.synthetic import write_curated
 
 ARMS = [name for name, _, _ in arm_specs(SMALL_CFG)]
 HEADLINE = ("auroc_pool", "auroc_common", "auroc_eval", "spearman_pool", "recall_at_k",
@@ -61,9 +63,10 @@ def test_artifacts_written(ablation_run: dict[str, Any], tmp_path: Path) -> None
     assert len(log) == ablation_run["results"]["arms"]["D_trustswarm"]["blackboard"]["n_events"]
     assert [e.id for e in log] == list(range(len(log)))
     snap = json.loads((out / "trust_snapshot.json").read_text())
-    assert set(snap) == {"models", "candidates", "candidate_members", "tau", "sigma_edges",
-                         "fbar_edges", "p_correct", "counts", "reputation", "wrong_thresholds",
-                         "budget", "created"}
+    assert set(snap) == {"models", "candidates", "candidate_members", "p_global", "tiebreak_order",
+                         "tau", "sigma_edges", "fbar_edges", "p_correct", "counts", "reputation",
+                         "wrong_thresholds", "budget", "created"}
+    assert snap["tiebreak_order"][0] == "consensus" and set(snap["p_global"]) == set(snap["candidates"])
     assert snap["models"] == list(SMALL_CFG.hetero_models)
     assert snap["candidates"] == list(candidate_members(SMALL_CFG.hetero_models))
     assert len(snap["candidates"]) == 7 and snap["candidates"][-1] == "consensus"
@@ -109,6 +112,19 @@ def test_audits_target_only_trusted_systems_within_budget(ablation_run: dict[str
                for p in results)
 
 
+def test_topk_stream_audits_trusted_systems_within_budget() -> None:
+    scores = {f"u{i:02d}": float(i) for i in range(40)}
+    arrival = {u: 0 for u in scores}
+    checked, audited = topk_stream(scores, arrival, k=5, rounds=3, audit_quota=2,
+                                   trusted_below=20.0, rng=np.random.default_rng(0))
+    assert len(checked) == 15 and len(audited) == 6
+    assert all(scores[u] < 20.0 for u in audited)
+    for r in range(3):
+        assert sum(v == r for v in checked.values()) == 5
+    plain, none = topk_stream(scores, arrival, k=5, rounds=1)
+    assert none == set() and sorted(plain) == [f"u{i}" for i in range(35, 40)]
+
+
 def test_calibration_and_silent_failure_metrics(ablation_run: dict[str, Any]) -> None:
     for name, arm in ablation_run["results"]["arms"].items():
         m = arm["metrics"]
@@ -149,14 +165,46 @@ def test_trustswarm_score_is_sigma_order_unless_skeptic_speaks() -> None:
     assert sorted(uids, key=fallback.get) == ["a", "b", "c", "d"]
 
 
-def test_finetune_replay_shipped_and_scored(ablation_run: dict[str, Any]) -> None:
+def test_finetune_without_offline_replay_is_reported(ablation_run: dict[str, Any]) -> None:
     ft = ablation_run["results"]["arms"]["D_trustswarm"]["finetune"]
     assert ft["model"] == max(ft["ledger_force_rmse"], key=ft["ledger_force_rmse"].get)
-    if ft["model"] == SMALL_CFG.curated_base_model:
-        assert ft["shipped"] and ft["eval"]["finetuned_force_rmse"]["value"] is not None
-    else:  # replay is only available for the curated base model -> reported, not hidden
+    assert not ft["shipped"]
+    assert any("fine-tune not shipped" in f for f in ablation_run["results"]["failures"])
+
+
+class Recorder:
+    """Records the Curator's request (as scripts/run_ablation.py does for the GPU script)."""
+
+    def __init__(self) -> None:
+        self.request: tuple[str, list[str]] | None = None
+
+    def __call__(self, model: str, frames: list[Frame]) -> FinetuneReport:
+        self.request = (model, [f.uid for f in frames])
+        return NullFinetune()(model, frames)
+
+
+def test_two_pass_finetune_ships_only_with_matching_provenance(
+        synthetic_dir: Path, frames: list[Frame], tmp_path: Path) -> None:
+    shutil.copytree(synthetic_dir / "preds", tmp_path / "preds")
+    cfg = dataclasses.replace(SMALL_CFG, n_bootstrap=10, mace_seed_models=None)
+    rec = Recorder()
+    run_ablation(frames, tmp_path / "preds", cfg, finetune_fn=rec)      # pass 1: labels
+    assert rec.request is not None
+    model, uids = rec.request
+    write_curated(tmp_path, uids, SMALL_SPEC)                           # "GPU" fine-tune
+    again = run_ablation(frames, tmp_path / "preds", cfg)               # pass 2: replay
+    ft = again["arms"]["D_trustswarm"]["finetune"]
+    if model == cfg.curated_base_model:
+        assert ft["shipped"], ft["report"]
+        assert ft["eval"]["finetuned_force_rmse"]["value"] is not None
+    else:
         assert not ft["shipped"]
-        assert any("fine-tune not shipped" in f for f in ablation_run["results"]["failures"])
+    # a different budget means different oracle labels: the replay must not ship
+    other = run_ablation(frames, tmp_path / "preds", dataclasses.replace(cfg, budget_per_round=6))
+    ft_other = other["arms"]["D_trustswarm"]["finetune"]
+    assert not ft_other["shipped"]
+    if model == cfg.curated_base_model:
+        assert "not re-run" in ft_other["report"]["reason"]
 
 
 def test_missing_model_skips_arm_without_crashing(synthetic_dir: Path, frames: list[Frame],
@@ -187,11 +235,55 @@ def test_null_finetune_is_reported(synthetic_dir: Path, frames: list[Frame]) -> 
     assert any("NullFinetune" in f for f in results["failures"])
 
 
-def test_replay_refuses_mismatched_base_model(synthetic_dir: Path, frames: list[Frame]) -> None:
-    replay = ReplayFinetune({"orb": synthetic_dir / "preds" / "mace_lora_curated.npz"})
-    report = replay("orb", frames[:3])
-    assert not report.shipped and "fine-tuned from 'mace_mpa0'" in report.report["reason"]
+def test_replay_enforces_provenance(frames: list[Frame], tmp_path: Path) -> None:
+    pool = [f for f in frames if f.split == "pool"][:40]
+    path = write_curated(tmp_path, [f.uid for f in pool], SMALL_SPEC)
+    assert "fine-tuned from 'mace_mpa0'" in ReplayFinetune({"orb": path})("orb", pool).report["reason"]
+    trained = load_predictions(path).meta["train_uids"]
+    leak = ReplayFinetune({"mace_mpa0": path}, held_out_uids=trained[:1])("mace_mpa0", pool)
+    assert not leak.shipped and "held-out" in leak.report["reason"]
+    foreign = ReplayFinetune({"mace_mpa0": path})("mace_mpa0", pool[:5])
+    assert not foreign.shipped and "different label set" in foreign.report["reason"]
+    ok = ReplayFinetune({"mace_mpa0": path})("mace_mpa0", pool)
+    assert ok.shipped == (load_predictions(path).meta["acceptance_report"]["verdict"] == "pass")
     assert not ReplayFinetune({})("aimnet2", []).shipped
+
+
+def test_service_reproduces_calibrator_recommendations(synthetic_dir: Path, frames: list[Frame],
+                                                       tmp_path: Path) -> None:
+    """The trust service, given the exported snapshot and the same predictions, must pick the
+    same served candidate as the Calibrator did for every eval system."""
+    service = pytest.importorskip("trustswarm.service")
+    cfg = dataclasses.replace(SMALL_CFG, mace_seed_models=None)
+    preds = load_models(synthetic_dir / "preds", cfg.hetero_models)
+    data = prepare_data(frames, load_predictions(
+        synthetic_dir / "preds" / f"{cfg.planted_model}.npz"), cfg)
+    arrival = arrival_rounds(data.pool, cfg.rounds, cfg.seed)
+    arrival.update({f.uid: 0 for f in data.injected})
+    bb = Blackboard()
+    driver, agents = build_trustswarm(data, preds, arrival, cfg, NullFinetune(), bb)
+    driver.run(cfg.rounds + 2)
+    (tmp_path / "snap.json").write_text(json.dumps(agents["calibrator"].export_snapshot()))
+    snapshot = service.TrustSnapshot.load(tmp_path / "snap.json")
+
+    served: dict[str, str] = {}
+    for e in bb.read("verdict"):
+        for _, row in iter_rows(e.payload, ("uid", "phase", "recommended_model")):
+            if row["phase"] != "triage":
+                served[row["uid"]] = row["recommended_model"]
+    order = [f.uid for f in data.eval if f.uid in served]
+    systems = [{"Z": data.by_uid[u].Z.tolist(), "R": data.by_uid[u].R.tolist()} for u in order]
+
+    def cached(model: str) -> Any:  # a "predictor" replaying what the ModelAgent posted
+        def predict(Z: np.ndarray, R: np.ndarray, batch: np.ndarray) -> dict[str, np.ndarray]:
+            return {"energy": np.array([preds[model].energy[u] for u in order]),
+                    "forces": np.concatenate([np.round(preds[model].forces[u], 6) for u in order])}
+        return predict
+
+    out = service.score(systems, {m: cached(m) for m in cfg.hetero_models}, snapshot)
+    mismatches = [(u, r["recommended_model"], served[u]) for u, r in zip(order, out)
+                  if r["recommended_model"] != served[u]]
+    assert len(order) == len(data.eval) and not mismatches, mismatches[:5]
 
 
 def test_deterministic_under_fixed_seed(synthetic_dir: Path, frames: list[Frame],

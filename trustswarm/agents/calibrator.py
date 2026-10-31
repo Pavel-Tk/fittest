@@ -166,6 +166,9 @@ class Calibrator(Agent):
             "models": list(self._models),
             "candidates": list(self.candidates),
             "candidate_members": {c: list(m) for c, m in self.members.items()},
+            # recommend() ranks by (p_correct[c][bucket], p_global[c], -index in tiebreak_order)
+            "p_global": {c: float(self._global[c].mean) for c in self.candidates},
+            "tiebreak_order": sorted(self.candidates, key=self._tiebreak.__getitem__),
             "tau": float(self._tau),
             "sigma_edges": [float(x) for x in self._sigma_edges],
             "fbar_edges": [float(x) for x in self._fbar_edges],

@@ -19,9 +19,10 @@ What is built in, and why
   noise, and is not fixed here.
 * **Offsets.** Every model has a per-atom constant energy offset (a level-of-theory shift)
   that cancels in relative energies.
-* **Fine-tune replay.** ``mace_lora_curated`` simulates a LoRA fine-tune of MACE-MPA-0 that
-  shrinks (not removes) its systematic error; its acceptance report is computed on a
-  random slice of pool labels, exactly the role of the GPU script's report.
+* **Fine-tune replay.** :func:`write_curated` simulates a LoRA fine-tune of MACE-MPA-0 on a
+  given set of oracle-labelled uids (shrinking, not removing, its systematic error), with an
+  acceptance report on 10% of those labels held out and ``train_uids`` recorded for the
+  replay's provenance check — the same contract as the GPU script.
 """
 
 from __future__ import annotations
@@ -216,21 +217,42 @@ def write_synthetic(out_dir: str | Path, spec: SyntheticSpec = SyntheticSpec(),
             write(f"mace_seed{k}", *_predict(frames, field, "mace_mpa0", "mace_mpa0",
                                             f"mace_seed{k}", 0.02), lora_seed=k)
 
-    # Simulated offline LoRA fine-tune + its acceptance report on a held-out slice of pool labels.
+    # No replay is written here: like the real pipeline, a fine-tune needs the Curator's
+    # labels first (run the ablation, then :func:`write_curated` with the recorded uids).
+    return paths
+
+
+def write_curated(out_dir: str | Path, train_uids: Sequence[str],
+                  spec: SyntheticSpec = SyntheticSpec()) -> Path:
+    """Simulated offline LoRA fine-tune of MACE-MPA-0 on the given oracle-labelled uids.
+
+    Mirrors ``scripts/finetune.py``: 10% of the given labels are held out for the acceptance
+    report and the file records ``train_uids`` so the replay's provenance can be checked."""
+    out = Path(out_dir)
+    frames = make_frames(spec)
+    by_uid = {f.uid: f for f in frames}
+    labelled = sorted(u for u in train_uids if u in by_uid)
+    if not labelled:
+        raise ValueError("write_curated needs at least one known labelled uid")
+    rng = np.random.default_rng(spec.seed + 2)
+    held = set(rng.choice(labelled, size=max(1, len(labelled) // 10), replace=False).tolist())
+    train = [u for u in labelled if u not in held]
+    field = _ErrorField(spec.seed + 1)
     E_cur, F_cur = _predict(frames, field, CURATED_MODEL, CURATED_BASE_MODEL)
     E_base, F_base = _predict(frames, field, CURATED_BASE_MODEL, CURATED_BASE_MODEL)
-    rng = np.random.default_rng(spec.seed + 2)
-    pool_idx = [i for i, f in enumerate(frames) if f.split == "pool"]
-    held = rng.choice(pool_idx, size=max(1, len(pool_idx) // 10), replace=False)
+    index = {f.uid: i for i, f in enumerate(frames)}
 
     def rmse(F_list: list[np.ndarray]) -> float:
-        return float(np.mean([np.sqrt(np.mean((F_list[i] - frames[i].F) ** 2)) for i in held]))
+        return float(np.mean([np.sqrt(np.mean((F_list[index[u]] - by_uid[u].F) ** 2)) for u in held]))
 
     base_rmse, cur_rmse = rmse(F_base), rmse(F_cur)
-    write(CURATED_MODEL, E_cur, F_cur, base_model=CURATED_BASE_MODEL, weights=CURATED_MODEL,
-          acceptance_report={"verdict": "pass" if cur_rmse < base_rmse else "fail",
-                             "heldout_force_rmse_base": base_rmse,
-                             "heldout_force_rmse_finetuned": cur_rmse,
-                             "n_heldout": int(len(held)), "wrong_f": WRONG_F,
-                             "note": "synthetic: simulated LoRA fine-tune"})
-    return paths
+    path = out / "preds" / f"{CURATED_MODEL}.npz"
+    save_predictions(path, CURATED_MODEL, [f.uid for f in frames], E_cur, F_cur,
+                     {"synthetic": True, "base_model": CURATED_BASE_MODEL, "weights": CURATED_MODEL,
+                      "train_uids": train, "holdout_uids": sorted(held),
+                      "acceptance_report": {"verdict": "pass" if cur_rmse < base_rmse else "fail",
+                                            "heldout_force_rmse_base": base_rmse,
+                                            "heldout_force_rmse_finetuned": cur_rmse,
+                                            "n_heldout": len(held), "wrong_f": WRONG_F,
+                                            "note": "synthetic: simulated LoRA fine-tune"}})
+    return path

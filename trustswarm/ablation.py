@@ -57,7 +57,7 @@ from trustswarm.agents.calibrator import isotonic_probability
 from trustswarm.agents.stream import TRIAGE
 from trustswarm.blackboard import Blackboard
 from trustswarm.cache import Predictions, load_models, load_predictions, prediction_path
-from trustswarm.data import (EVAL, PLANTED, POOL, SKEPTIC_REF, Frame, arrival_rounds, by_split,
+from trustswarm.data import (EVAL, PLANTED, POOL, SEED_TRAIN, SKEPTIC_REF, Frame, arrival_rounds, by_split,
                              reactant_index, split_val_by_formula, strip_all)
 from trustswarm.round_driver import RoundDriver
 from trustswarm.signals import force_rmse, force_spread, max_abs_force
@@ -270,14 +270,29 @@ class ArmOutcome:
 
 
 def topk_stream(scores: Mapping[str, float], arrival: Mapping[str, int], k: int,
-                rounds: int) -> dict[str, int]:
-    """Each round, check the k highest-scoring arrived, unchecked systems (ties by uid)."""
+                rounds: int, audit_quota: int = 0, trusted_below: float = np.inf,
+                rng: np.random.Generator | None = None) -> tuple[dict[str, int], set[str]]:
+    """Each round, check the k highest-scoring arrived, unchecked systems (ties by uid).
+
+    With ``audit_quota > 0``, that many of the k calls first go to a uniform random sample
+    of arrived, unchecked *trusted* systems (score < ``trusted_below``) — the same
+    exploration rule as arm D's Skeptic. Returns (uid -> round checked, audited uids)."""
     checked: dict[str, int] = {}
+    audited: set[str] = set()
     for r in range(rounds):
-        cand = [u for u in scores if arrival[u] <= r and u not in checked]
-        for u in sorted(cand, key=lambda u: (-scores[u], u))[:k]:
+        cand = sorted(u for u in scores if arrival[u] <= r and u not in checked)
+        if audit_quota > 0:
+            assert rng is not None, "audits need a seeded rng"
+            trusted = [u for u in cand if scores[u] < trusted_below]
+            for i in sorted(rng.choice(len(trusted), size=min(audit_quota, len(trusted)),
+                                       replace=False)):
+                checked[trusted[i]] = r
+                audited.add(trusted[i])
+            cand = [u for u in cand if u not in checked]
+        n_audit = sum(1 for u in audited if checked[u] == r)
+        for u in sorted(cand, key=lambda u: (-scores[u], u))[: k - n_audit]:
             checked[u] = r
-    return checked
+    return checked, audited
 
 
 def _round0_tau(scores: Mapping[str, float], arrival: Mapping[str, int], q: float) -> float:
@@ -318,14 +333,18 @@ def run_baseline_arm(name: str, preds: Mapping[str, Predictions], score_name: st
         rng = np.random.default_rng([cfg.seed, zlib.crc32(name.encode())])
         allu = [*cand, *eval_uids]
         score = dict(zip(allu, rng.random(len(allu)).tolist()))
-    elif score_name == "sigma_F":
+    elif score_name in ("sigma_F", "sigma_F+audit"):
         score = {u: force_spread(np.stack([p.forces[u] for p in preds.values()]))[0]
                  for u in [*cand, *eval_uids]}
     else:
         raise ValueError(score_name)
     cand_scores = {u: score[u] for u in cand}
     tau = _round0_tau(cand_scores, arrival, cfg.flag_quantile)
-    checked = topk_stream(cand_scores, arrival, cfg.budget_per_round, cfg.rounds)
+    audit = score_name.endswith("+audit")
+    checked, audited = topk_stream(
+        cand_scores, arrival, cfg.budget_per_round, cfg.rounds,
+        audit_quota=cfg.audit_quota if audit else 0, trusted_below=tau,
+        rng=np.random.default_rng([cfg.seed, zlib.crc32(name.encode())]))
     served_eval = _ensemble_served(preds, eval_uids, data)
     per_round = {r: sum(1 for v in checked.values() if v == r) for r in range(cfg.rounds)}
     return ArmOutcome(
@@ -335,7 +354,7 @@ def run_baseline_arm(name: str, preds: Mapping[str, Predictions], score_name: st
         served_pool=_ensemble_served(preds, cand, data), served_eval_pre=served_eval,
         served_eval_post=served_eval, checked=checked,
         flagged={u for u, s in cand_scores.items() if s >= tau},
-        eval_flagged={u for u in eval_uids if score[u] >= tau},
+        eval_flagged={u for u in eval_uids if score[u] >= tau}, audited=audited,
         oracle_calls_per_round=per_round)
 
 
@@ -677,6 +696,7 @@ def arm_specs(cfg: AblationConfig) -> list[tuple[str, tuple[str, ...], str]]:
     if cfg.mace_seed_models:
         specs.append(("B_mace_seeds", cfg.mace_seed_models, "sigma_F"))
     specs += [("C_collective", cfg.hetero_models, "sigma_F"),
+              ("C_audit", cfg.hetero_models, "sigma_F+audit"),
               ("D_trustswarm", cfg.hetero_models, "trustswarm")]
     return specs
 
@@ -734,6 +754,9 @@ def run_ablation(frames: Sequence[Frame], preds_dir: str | Path, cfg: AblationCo
     scorer = ArmScorer(data, cfg, common)
     needed = [f.uid for f in [*data.candidates, *data.eval]]
     finetune_fn = finetune_fn or default_finetune(preds_dir, cfg)
+    bind = getattr(finetune_fn, "bind_held_out", None)
+    if bind is not None:  # replayed fine-tunes must never have trained on held-out frames
+        bind({f.uid for f in frames if f.split not in (POOL, SEED_TRAIN)})
 
     for name, models, score in arm_specs(cfg):
         entry: dict[str, Any] = {"models": list(models), "score": score}
@@ -818,11 +841,15 @@ def _compare(results: dict[str, Any], scorer: ArmScorer, failures: list[str]) ->
             worse = None if ci is None else (ci[1] < 0 if higher else ci[0] > 0)
             comp[key] = {"diff": diff, "ci": ci, "higher_is_better": higher,
                          "d_significantly_better": better, "d_significantly_worse": worse}
-            if better is False and ci is not None:
-                verdict = "significantly WORSE" if worse else "not significantly better"
+            if better is not True:  # False, or None = not established (CI undefined)
                 shown = "n/a" if diff is None else f"{diff:+.3f}"
-                failures.append(f"D vs {name}: {key} {verdict} "
-                                f"(diff {shown}, paired 95% CI [{ci[0]:+.3f}, {ci[1]:+.3f}])")
+                if ci is None:
+                    failures.append(f"D vs {name}: {key} improvement not established "
+                                    f"(diff {shown}, no CI: metric undefined in resamples)")
+                else:
+                    verdict = "significantly WORSE" if worse else "not significantly better"
+                    failures.append(f"D vs {name}: {key} {verdict} "
+                                    f"(diff {shown}, paired 95% CI [{ci[0]:+.3f}, {ci[1]:+.3f}])")
         results["comparisons"][f"D_vs_{name}"] = comp
 
 
@@ -898,7 +925,8 @@ def plot_budget(results: Mapping[str, Any], path: str | Path) -> None:
 # --- figure ---------------------------------------------------------------------------------------
 
 ARM_LABELS = {"A_single": "A\nsingle", "A_random": "A\nrandom", "B_seed": "B\nseeds",
-              "B_mace_seeds": "B′\nMACE", "C_collective": "C\nhetero", "D_trustswarm": "D\nswarm"}
+              "B_mace_seeds": "B′\nMACE", "C_collective": "C\nhetero", "C_audit": "C+\naudit",
+              "D_trustswarm": "D\nswarm"}
 ACCENT, ACCENT_LIGHT = "#2a78d6", "#86b6ef"
 NEUTRAL, NEUTRAL_LIGHT = "#6e6d68", "#c3c2b7"
 ARM_GREYS = ("#3d3c39", "#8a8984", "#6e6d68", "#b0afa8", "#52514e")
@@ -914,13 +942,14 @@ METRIC_SHORT = {"auroc_pool": "AUC-pool", "auroc_eval": "AUC-eval", "recall_at_k
 def _failure_lines(results: Mapping[str, Any], max_lines: int = 8) -> tuple[list[str], list[str]]:
     """(run failures, D-vs-baseline shortfalls) as short lines for the figure."""
     run = [f for f in results.get("failures", []) if not f.startswith("D vs ")]
-    left = [f"• {f[:88]}" for f in run[:max_lines]] or ["• no run failures (all arms ran, full budget used)"]
+    left = [f"• {f[:78]}" for f in run[:max_lines]] or ["• no run failures (all arms ran, full budget used)"]
     if len(run) > max_lines:
         left[-1] = f"• … and {len(run) - max_lines + 1} more"
-    right = ["• D NOT significantly better (paired 95% CI) than:  (* = significantly worse)"]
+    right = ["• D NOT significantly better (paired 95% CI) than:  (* = worse, ? = no CI)"]
     for name, comp in results.get("comparisons", {}).items():
-        worse = [METRIC_SHORT.get(k, k) + ("*" if c["d_significantly_worse"] else "")
-                 for k, c in comp.items() if c["d_significantly_better"] is False]
+        worse = [METRIC_SHORT.get(k, k) + ("*" if c["d_significantly_worse"]
+                                           else "?" if c["d_significantly_better"] is None else "")
+                 for k, c in comp.items() if c["d_significantly_better"] is not True]
         if worse:
             right.append(f"    {name[5:]:<13} {', '.join(worse)}")
     if len(right) == 1:
@@ -1064,7 +1093,7 @@ def plot_ablation(results: Mapping[str, Any], path: str | Path) -> None:
     for i, e in enumerate(entries):  # 0 silent failures means little if nothing is trusted
         v, _ = val(e, "trusted_fraction_eval")
         if np.isfinite(v):
-            axes[5].text(i, 0.80, f"T={v:.0%}", ha="center", va="bottom", fontsize=7.5,
+            axes[5].text(i, 0.70, f"T={v:.0%}", ha="center", va="bottom", fontsize=7.5,
                          color=INK_MUTED, transform=axes[5].get_xaxis_transform())
 
     ax_f = fig.add_subplot(gs[2, :])

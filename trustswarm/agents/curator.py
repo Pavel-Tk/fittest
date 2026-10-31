@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import hashlib
 from collections import defaultdict
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, ClassVar, Protocol
@@ -52,10 +52,26 @@ class NullFinetune:
 
 
 class ReplayFinetune:
-    """Replay offline fine-tunes. ``replay`` maps base model -> predictions file (.npz)."""
+    """Replay offline fine-tunes. ``replay`` maps base model -> predictions file (.npz).
 
-    def __init__(self, replay: Mapping[str, str | Path]) -> None:
+    Provenance is enforced, not assumed. A replay ships only if its ``meta`` has
+    * ``base_model`` equal to the model the Curator chose,
+    * a non-empty ``train_uids`` list that is a subset of the labels the Curator handed over
+      (otherwise it was trained on another run's labels: "fine-tune not re-run"),
+    * no train uid among the held-out uids (eval / skeptic_ref / planted; see
+      :meth:`bind_held_out`), and
+    * ``acceptance_report.verdict == "pass"``.
+    Every refusal is reported with its reason.
+    """
+
+    def __init__(self, replay: Mapping[str, str | Path],
+                 held_out_uids: Iterable[str] = ()) -> None:
         self._replay = {m: Path(p) for m, p in replay.items()}
+        self._held_out = frozenset(held_out_uids)
+
+    def bind_held_out(self, uids: Iterable[str]) -> None:
+        """Called by the ablation with every uid that must never be trained on."""
+        self._held_out = frozenset(uids)
 
     def __call__(self, model_name: str, labelled_frames: Sequence[Frame]) -> FinetuneReport:
         uids = [f.uid for f in labelled_frames]
@@ -69,17 +85,29 @@ class ReplayFinetune:
         acceptance = dict(meta.get("acceptance_report", {}))
         report = {**base, "predictions_path": str(path), "acceptance_report": acceptance,
                   "weights": meta.get("weights", path.stem)}
-        if meta.get("base_model") not in (None, model_name):
-            return FinetuneReport(False, {**report, "reason": f"replay file was fine-tuned from "
-                                          f"{meta.get('base_model')!r}, not {model_name!r}"})
-        if "train_uids" in meta:
-            trained = set(meta["train_uids"])
-            report["train_overlap"] = len(trained & set(uids)) / max(len(uids), 1)
-            report["train_digest_replayed"] = uid_digest(sorted(trained))
-        shipped = acceptance.get("verdict") == "pass"
-        if not shipped:
-            report["reason"] = f"acceptance verdict {acceptance.get('verdict')!r} != 'pass'"
-        return FinetuneReport(shipped, report, str(path) if shipped else None)
+
+        def refuse(reason: str) -> FinetuneReport:
+            return FinetuneReport(False, {**report, "reason": reason})
+
+        if meta.get("base_model") != model_name:
+            return refuse(f"replay file was fine-tuned from {meta.get('base_model')!r}, "
+                          f"not {model_name!r}")
+        trained = set(meta.get("train_uids") or [])
+        if not trained:
+            return refuse("replay file has no train_uids: provenance unknown")
+        report["n_train"] = len(trained)
+        report["train_digest_replayed"] = uid_digest(sorted(trained))
+        leaked = sorted(trained & self._held_out)
+        if leaked:
+            return refuse(f"{len(leaked)} train uids are held-out frames (e.g. {leaked[0]})")
+        foreign = trained - set(uids)
+        if foreign:
+            return refuse(f"replay was trained on a different label set ({len(foreign)} of "
+                          f"{len(trained)} train uids are not this run's oracle labels): "
+                          f"fine-tune not re-run for this budget/configuration")
+        if acceptance.get("verdict") != "pass":
+            return refuse(f"acceptance verdict {acceptance.get('verdict')!r} != 'pass'")
+        return FinetuneReport(True, report, str(path))
 
 
 class Curator(Agent):

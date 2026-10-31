@@ -72,7 +72,8 @@ class OrbBackend(Backend):
             g = batch_graphs([ase_atoms_to_atom_graphs(a, self.model.system_config, device=self.device)
                               for a in atoms])
         out = self.model.predict(g, split=False)
-        forces_key = next(k for k in ("forces", "grad_forces") if k in out)
+        # Conservative checkpoints return -dE/dR as "grad_forces"; prefer it over any direct head.
+        forces_key = next(k for k in ("grad_forces", "forces") if k in out)
         E = out["energy"].detach().double().cpu().numpy().reshape(-1)
         F_flat = out[forces_key].detach().double().cpu().numpy()
         F = np.empty_like(R)
@@ -176,13 +177,23 @@ class ModelClient:
         while True:
             try:
                 self._conn = Client(("127.0.0.1", self.port), authkey=AUTHKEY)
-                return self
             except (ConnectionRefusedError, OSError):
+                self._conn = None
                 if self.proc is not None and self.proc.poll() is not None:
                     raise RuntimeError(f"{self.model} server exited with {self.proc.returncode}")
                 if time.time() - t0 > timeout:
                     raise TimeoutError(f"{self.model} server did not come up on {self.port}")
                 time.sleep(1.0)
+                continue
+            # Never trust whoever happens to hold the port: a stale server from a crashed run
+            # would silently answer for the wrong model.
+            info = self.info()
+            if info.get("model") != self.model or (self.proc is not None and info.get("pid") != self.proc.pid):
+                self._conn.close()
+                self._conn = None
+                raise RuntimeError(f"port {self.port} is held by {info.get('model')!r} (pid {info.get('pid')}), "
+                                   f"not the {self.model!r} server we started; stop stale servers first")
+            return self
 
     def predict(self, Z, R, batch, charge=None) -> dict:
         n_sys = int(np.max(batch)) + 1
@@ -215,6 +226,11 @@ class ModelClient:
 def spawn(model: str, port: int, python: str = sys.executable, device: str = "cuda",
           model_path: str | None = None, log_dir: str = "logs") -> ModelClient:
     """Start a model agent in its own process (optionally another interpreter/env)."""
+    import socket
+
+    with socket.socket() as probe:  # fail fast if a stale server still holds the port
+        if probe.connect_ex(("127.0.0.1", port)) == 0:
+            raise RuntimeError(f"port {port} is already in use; stop the stale model server first")
     os.makedirs(log_dir, exist_ok=True)
     cmd = [python, "-m", "trustswarm.model_server", "--model", model, "--port", str(port), "--device", device]
     if model_path:

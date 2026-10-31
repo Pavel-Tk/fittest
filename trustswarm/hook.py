@@ -32,6 +32,7 @@ given as a list (names from ``.model``/``.name``) or a ``{name: client}`` dict.
 
 from __future__ import annotations
 
+import concurrent.futures
 import math
 import threading
 import time
@@ -191,6 +192,10 @@ class DisagreementMonitor:
                 msg = f"{type(exc).__name__}: {exc}"
                 self.failures.setdefault(n, []).append(msg)
                 self._consecutive[n] += 1
+                if isinstance(exc, concurrent.futures.TimeoutError):
+                    # The worker may still be blocked in recv() on this client's connection; a
+                    # later request could then read this stale reply. Retire the member.
+                    self.dead.add(n)
                 if self._consecutive[n] >= self.max_failures:
                     self.dead.add(n)
         self.gather_seconds += time.perf_counter() - t0
