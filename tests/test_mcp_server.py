@@ -107,11 +107,22 @@ def test_parse_errors_are_per_structure(bad, msg):
     assert len(out) == 1 and "error" in out[0] and msg in out[0]["error"], out
 
 
-@pytest.mark.parametrize("bad, msg", [("", "empty"), ("  \n ", "empty"), (42, "must be XYZ"), ([], "at least one"),
-                                      ("[" * 5000 + "]" * 5000, "nested too deeply")])
+@pytest.mark.parametrize("bad, msg", [("", "empty"), ("  \n ", "empty"), (42, "must be XYZ"), ([], "at least one")])
 def test_call_level_errors(bad, msg):
     with pytest.raises(ms.InputError, match=msg):
         ms.parse_structures(bad)
+
+def test_deeply_nested_json_is_a_clean_error():
+    # CPython < 3.12 raises RecursionError in json.loads (-> InputError); 3.12+ parses it and the
+    # nested list becomes one per-structure error. Either way: a clean error, never a crash.
+    bad = "[" * 5000 + "]" * 5000
+    try:
+        out = ms.parse_structures(bad)
+    except ms.InputError as exc:
+        assert "nested too deeply" in str(exc)
+    else:
+        assert len(out) == 1 and "error" in out[0]
+
 
 
 def test_limits():
