@@ -1,13 +1,17 @@
-# Handoff: fittest-mcp (2026-10-31, ~13:40 EST)
+# Handoff: fittest-mcp (updated 2026-10-31 19:20 UTC)
 
 ## State
 - Live and healthy at https://fittest-mcp.westus2.cloudapp.azure.com/mcp (`/health` 200, all 3 model agents active).
-- Commit bcce57c (fixes) is deployed. The commit that adds this file also updates `deploy/verify_mcp.py`
-  (re-verification) and docs/MCP.md; those are not runtime code, so no redeploy is needed for them.
-- Users = 0 before and after (all 171 calls so far are internal). The definition changed: a user now
-  needs at least one structure verdict from check_structures/explain, and the client id is name + IP
-  with no version.
-- Tests: full suite 170 passed, 2 skipped (laptop, `.venv/Scripts/python -m pytest -q`).
+- master is deployed (last deploy 2026-10-31 19:17 UTC); `deploy/verify_mcp.py` 12/12 PASS after it.
+- /stats at 19:20 UTC: users = 1, external_calls = 4 (first real external use, before 19:11 UTC); every
+  test call is marked internal. A user needs at least one structure verdict from check_structures/explain;
+  the client id is name + IP with no version.
+- Caddy logs (since 2026-10-31 19:11:31 UTC): the global default logger deletes remote_ip/client_ip/port and
+  forwarding headers, so http.log.error entries (502s during restarts) carry no client IP; unmapped hosts
+  (bare IP, unknown Host) get 404 + close via catch-all `http://`/`https://` blocks with `log_skip`. Checked
+  live: 0 non-loopback IPv4 in `journalctl -u caddy` since then, incl. 46 provoked 502s. Older journal
+  entries (140, 9 distinct client IPs) were NOT vacuumed: that is the owner's decision.
+- MCP tests: 72 passed (`tests/test_mcp_server.py tests/test_usage_log.py`, VM, ~/envs/mcp).
 
 ## The 16 review defects: all fixed, deployed, with a regression test each (`tests/test_mcp_server.py::test_defect_NN_*`)
 1. A model rejecting an input no longer changes its status. One link per agent, closed before reconnect;
@@ -28,26 +32,27 @@
 10. fittest-mcp runs as the dedicated `fittest-mcp` user with NoNewPrivileges, ProtectSystem=strict,
     ProtectHome=read-only, PrivateTmp and StateDirectory=/var/lib/fittest-mcp (systemd exposure 3.1).
     The model agents are sandboxed but still run as azureuser, because the model cache lives in
-    ~/.cache. The usage DB and salt were migrated to /var/lib/fittest-mcp.
+    ~/.cache; they may write only ~/.cache/{mace,aimnet,warp,cached_path}. The usage DB and salt were
+    migrated to /var/lib/fittest-mcp.
 11. Docs say plainly that plain uvx is fake-models only. The command for a real-models env is
     documented, but it is NOT end-to-end tested (open item).
 12. The example prompt works verbatim (comma- and semicolon-separated atoms).
 13. Every call is logged through one dispatcher: unknown_tool, invalid_arguments, not_ready, busy,
     timeout, rate_limited.
 14. No input or tracebacks reach the server logs; the SDK logger is silenced. Caddy now also drops
-    X-Real-IP, Forwarded, Cf-Connecting-Ip and True-Client-Ip.
+    X-Real-Ip, Forwarded, Cf-Connecting-Ip and True-Client-Ip (the key must be Go's canonical
+    `X-Real-Ip`; the original `X-Real-IP` never matched).
 15. Links use /blob/master; serverInfo.version is the fittest version; docstring ports are 7300-7302.
-    Family trees are read from results/evolution/ and results/evolution_c/ (none exist on the VM yet).
+    Family trees are read from results/evolution/, results/evolution_aimnet/ and results/evolution_c/*/
+    (runs A, B, C; all present on the VM).
 16. Per-structure errors; the rest of the batch is still scored.
 
 ## Open
 - The real-models local install (`uv pip install "fittest[models] @ git+..."` into a fresh venv) has not
   been tested end to end.
-- README "1.1 Hosted MCP server" / "1.2 Local" / "Privacy" sections still describe the old behaviour.
-  They need updating from docs/MCP.md: users definition, client id without version, the verdict rule,
-  the example output (trust score is now 0.857, not 1.0), local install wording, and the data path
-  (/var/lib/fittest-mcp).
-- The "Verification log, Round 2" section in docs/MCP.md is a stub; paste the results below into it.
+- The hosted `trust_score` (per-bucket Beta posterior) has no calibration measurement beyond the
+  12-frame spot check; the README's ECE 0.080 is arm D's risk score.
+- Whether to vacuum the pre-19:11 UTC Caddy journal entries that contain client IPs.
 - The reviewer's t3_scan.py crashes on the new per-structure error entries, which have no sigma_F.
   That is the script, not the server.
 
