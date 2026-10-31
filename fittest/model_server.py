@@ -186,8 +186,7 @@ class ModelClient:
                         with open(self.log_path, errors="replace") as fh:
                             tail = "".join(fh.readlines()[-8:])
                     raise RuntimeError(f"{self.model} server exited with {self.proc.returncode}"
-                                       f" (log {self.log_path}):
-{tail}")
+                                       f" (log {self.log_path}):\n{tail}")
                 if time.time() - t0 > timeout:
                     raise TimeoutError(f"{self.model} server did not come up on {self.port}")
                 time.sleep(1.0)
