@@ -601,7 +601,8 @@ class Caller:
 
 def build_server(engine: Engine, ulog: UsageLog, transport: str = "stdio", host: str = "127.0.0.1",
                  port: int = 8765, public_host: str | None = None,
-                 limiter: TokenBucket | None = None, ip_limiter: TokenBucket | None = None):
+                 limiter: TokenBucket | None = None, ip_limiter: TokenBucket | None = None,
+                 log_level: str = "WARNING"):
     import anyio
     from mcp.server.fastmcp import FastMCP
     from mcp.server.fastmcp.exceptions import ToolError
@@ -613,7 +614,8 @@ def build_server(engine: Engine, ulog: UsageLog, transport: str = "stdio", host:
     if public_host:  # public server behind a TLS proxy: no local secrets to protect from DNS rebinding
         security = TransportSecuritySettings(enable_dns_rebinding_protection=False)
     mcp = FastMCP("fittest", instructions=INSTRUCTIONS, website_url=REPO_URL, host=host, port=port,
-                  transport_security=security, max_request_body_size=2 * 1024 * 1024)
+                  transport_security=security, max_request_body_size=2 * 1024 * 1024,
+                  log_level=log_level.upper())
     limiter = limiter or TokenBucket(capacity=20, rate=0.5)
     ip_limiter = ip_limiter or TokenBucket(capacity=60, rate=1.0)
     trusted = {"127.0.0.1", "::1"}
@@ -876,7 +878,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     ap.add_argument("--orb-python", default=os.environ.get("FITTEST_ORB_PYTHON"))
     ap.add_argument("--data-dir", default=None, help="usage log + salt (default: ~/.fittest-mcp)")
     ap.add_argument("--salt-file", default=os.environ.get("FITTEST_SALT_FILE"))
-    ap.add_argument("--log-level", default="INFO")
+    ap.add_argument("--log-level", default="WARNING")
     a = ap.parse_args(argv)
 
     logging.basicConfig(stream=sys.stderr, level=a.log_level.upper(),
@@ -921,13 +923,18 @@ def main(argv: Sequence[str] | None = None) -> None:
         engine.evaluate([WATER])
 
     server = build_server(engine, ulog, transport=a.transport, host=a.host, port=a.port,
-                          public_host=a.public_host)
+                          public_host=a.public_host, log_level=a.log_level)
     if engine.mode == "local" and have:  # spawn only once the server is built (no orphans on errors)
         start_local_models(engine, have, a.device, a.orb_python, str(data_dir / "logs"))
     if a.transport == "stdio":
         server.run("stdio")
     else:
-        server.run("streamable-http")
+        import uvicorn
+
+        # access_log=False: uvicorn's access log would record client IPs, which we never store
+        uvicorn.run(server.streamable_http_app(), host=a.host, port=a.port, access_log=False,
+                    log_level=a.log_level.lower(), proxy_headers=True, forwarded_allow_ips="127.0.0.1",
+                    timeout_keep_alive=30)
 
 
 if __name__ == "__main__":
