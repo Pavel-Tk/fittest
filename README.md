@@ -81,18 +81,8 @@ claude mcp add --transport http fittest https://fittest-mcp.westus2.cloudapp.azu
 { "mcpServers": { "fittest": { "url": "https://fittest-mcp.westus2.cloudapp.azure.com/mcp" } } }
 ```
 
-**Claude Desktop** (`claude_desktop_config.json`; runs the server locally over stdio; uses the real model agents only if they are installed in that environment, TODO(mcp): confirm fallback behaviour)
-
-```json
-{
-  "mcpServers": {
-    "fittest": {
-      "command": "uvx",
-      "args": ["--from", "git+https://github.com/Pavel-Tk/fittest", "fittest-mcp"]
-    }
-  }
-}
-```
+**Claude Desktop / claude.ai**: Settings → Connectors → Add custom connector →
+`https://fittest-mcp.westus2.cloudapp.azure.com/mcp`.
 
 Example prompt: *"Here is an XYZ of a C3H5NO2 transition-state guess. Use fittest to tell me
 whether AIMNet2 can be trusted on it or whether I need DFT, and explain why."*
@@ -104,6 +94,7 @@ tool says so with `domain_warning`.
 ### 1.2 Local MCP server
 
 ```bash
+claude mcp add fittest -- uvx --from git+https://github.com/Pavel-Tk/fittest fittest-mcp   # register with Claude Code
 uvx --from git+https://github.com/Pavel-Tk/fittest fittest-mcp                 # stdio; real models if installed
 uvx --from git+https://github.com/Pavel-Tk/fittest fittest-mcp --fake-models   # CPU stand-ins, for wiring tests only
 ```
@@ -562,7 +553,7 @@ bash scripts/setup_gpu.sh ..            # toolkit 0.3.0-rc (cu13) + core env, Or
 | 7 ablation again | step 5 (arm D replays the fine-tune; B′ uses the seeds) | `results/ablation.*` | ~12 s |
 | 8 report + figures | `python scripts/write_results.py && python scripts/make_figures.py` | `results/RESULTS.md`, `results/fig/*` | seconds |
 | 9 service demo | `python scripts/demo_service.py --snapshot results/trust_snapshot.json` | `results/service_demo.json` | ~1 min |
-| 10 evolution | TODO(evolution): exact `scripts/evolve.py` command from SUMMARY | `results/evolution/` | TODO |
+| 10 evolution | `python scripts/evolve.py --frames data/frames.pkl --preds data/preds_base --out results/evolution --generations 4 --labels-per-generation 50 --seeds 0 --python <core env python>` TODO(evolution): confirm flags used for the reported run | `results/evolution/` (`SUMMARY.md`, `family_tree.json`, `generations.json`, `blackboard.jsonl`) | TODO |
 
 The arm-D label set is md5-pinned (`ad5f14229a51679267d4fd9456feb589`, `docs/STATUS_core.md`); the v3 and v4
 reporting changes did not alter it. Environment variables (`FITTEST_T1X`, `FITTEST_CORE_PYTHON`,
@@ -593,9 +584,9 @@ scripts/            GPU and CPU job scripts (see §5), setup_gpu.sh, setup_cpu.s
 results/            every number in this README; RESULTS.md; fig/; earlier versions v1–v3
 docs/               DESIGN.md (contract), REPRODUCE.md, alchemi_api_notes.md, data_and_models.md, MCP.md
 tests/              CPU pytest suite (synthetic data; no GPU or Transition1x needed)
+deploy/             hosted MCP: Caddy (TLS) + systemd units for fittest-mcp and warm CPU model agents
 ```
 
-TODO(mcp): add `deploy/` once it lands.
 
 ### Privacy: what the hosted MCP server logs
 
@@ -603,7 +594,8 @@ Every call is logged as one SQLite row (`fittest/usage_log.py`): UTC time, tool 
 anonymous client id (HMAC-SHA256 of client name, client version and remote IP under a server-side secret
 salt, truncated to 16 hex characters; raw IPs are never written), structure count, total atom count,
 verdict counts, latency, ok/error and the exception *type* (never its message). **Structures, coordinates
-and names are not stored.** Aggregate counts are public at `/stats` and through the `usage_stats` tool. Local (stdio) mode logs only on your machine.
+and names are not stored.** Aggregate counts are public at `/stats` and through the `usage_stats` tool. A test (`tests/test_usage_log.py::test_schema_has_only_counts`) asserts the log table has no other
+columns. Caddy's access log drops client IPs (`deploy/Caddyfile`). Local (stdio) mode logs only on your machine.
 TODO(mcp): confirm against `docs/MCP.md` (retention, `/stats` URL).
 
 ### Licence
