@@ -1,0 +1,20 @@
+<section id="disagree" data-transition="fade" style="background:#F1ECE1;color:#0E1310;font-family:Geist, 'Helvetica Neue', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:48px">
+<p style="font-family:'Geist Mono', 'Courier New', monospace;font-size:24px;letter-spacing:4px;text-transform:uppercase;color:#B9420E">03 · The signal</p>
+<h2 style="font-family:'Instrument Serif', Georgia, serif;font-size:96px;font-weight:400;line-height:1.05;letter-spacing:-2px;width:1600px">Disagreement is free data. <i style="color:#B9420E">Independent models also get its size right.</i></h2>
+<div style="display:flex;gap:96px">
+<div style="flex:1;display:flex;flex-direction:column;gap:20px;border-top:4px solid #0E1310;padding:32px 0 0 0">
+<h3 style="font-size:32px;font-weight:600">Copies of one model</h3>
+<p style="font-family:'Instrument Serif', Georgia, serif;font-size:160px;line-height:0.9;color:#0E1310">36×</p>
+<p style="font-size:28px;line-height:1.4;color:#2E3631;width:760px">Four LoRA seeds of MACE rank errors well but under-report them: their spread is 36× smaller than their error (AIMNet2 seeds: 2.4×).</p>
+<svg aria-label="Error 0.278 versus spread 0.008 eV per angstrom, drawn to scale" viewBox="0 0 760 120" style="width:760px;height:120px"><rect x="0" y="8" width="649" height="36" fill="#2E3631"/><text x="663" y="36" font-family="Geist Mono, monospace" font-size="24" fill="#2E3631">error</text><rect x="0" y="72" width="19" height="36" fill="#B9420E"/><text x="33" y="100" font-family="Geist Mono, monospace" font-size="24" fill="#B9420E">spread</text></svg>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:20px;border-top:4px solid #B9420E;padding:32px 0 0 0">
+<h3 style="font-size:32px;font-weight:600">Three independent models</h3>
+<p style="font-family:'Instrument Serif', Georgia, serif;font-size:160px;line-height:0.9;color:#B9420E">0.92</p>
+<p style="font-size:28px;line-height:1.4;color:#2E3631;width:760px">Their spread flags where AIMNet2 is wrong (AUROC 0.917) on 1,485 held-out structures.</p>
+<svg aria-label="AUROC scale from 0.5 (chance) to 1.0 with a marker at 0.917" viewBox="0 0 760 120" style="width:760px;height:120px"><rect x="0" y="40" width="700" height="12" fill="#CFC7B6"/><rect x="0" y="40" width="584" height="12" fill="#B9420E"/><circle cx="584" cy="46" r="16" fill="#B9420E"/><text x="0" y="100" font-family="Geist Mono, monospace" font-size="24" fill="#5F6760">0.5 = chance</text><text x="700" y="100" text-anchor="end" font-family="Geist Mono, monospace" font-size="24" fill="#5F6760">1.0</text></svg>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-family:'Geist Mono', 'Courier New', monospace;font-size:24px;color:#5F6760">Force RMSE vs member spread, eV/Å (0.278 vs 0.008); AUROC vs “AIMNet2 wrong” · eval split · results/RESULTS.md</p>
+<aside>Talking points: when models are genuinely different, their disagreement is an error signal that costs no labels. MACE, AIMNet2 and Orb have different architectures and training sets; their spread ranks AIMNet2's failures at AUROC 0.92. Fine-tuned copies of one model share its mistakes: four LoRA seeds of MACE disagree 36 times less than they are wrong. So diversity in the population is not decoration; it is the sensor.</aside>
+</section>
