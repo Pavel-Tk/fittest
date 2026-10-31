@@ -40,6 +40,9 @@ from fittest.data import (ENDPOINT_ROLES, EVAL, POOL, assign_leakfree_splits,  #
                           geometry_hash, reaction_components)
 
 
+MIN_STEPS = 160
+
+
 def _load_finetune_module():
     spec = importlib.util.spec_from_file_location("fittest_finetune_script", ROOT / "scripts" / "finetune.py")
     mod = importlib.util.module_from_spec(spec)
@@ -91,14 +94,18 @@ def main(argv=None) -> None:
     hold, leak_h = ft.exclude_eval_geometry(hold, frames)
     disjoint = assert_disjoint(train, hold, frames)
     recipe = spec["recipe"]
-    ns = SimpleNamespace(device=args.device, batch_size=int(recipe["batch_size"]),
-                         epochs=int(recipe["epochs"]), energy_weight=float(recipe["energy_weight"]),
+    bs = min(int(recipe["batch_size"]), len(train))
+    steps_per_epoch = max(1, len(train) // bs)
+    # small label sets: at least MIN_STEPS optimizer steps (the curated repair took 400)
+    epochs = max(int(recipe["epochs"]), -(-int(recipe.get("min_steps", MIN_STEPS)) // steps_per_epoch))
+    ns = SimpleNamespace(device=args.device, batch_size=bs,
+                         epochs=epochs, energy_weight=float(recipe["energy_weight"]),
                          force_weight=float(recipe["force_weight"]), lr=float(recipe["lr"]),
                          lora_rank=int(recipe["lora_rank"]), lora_alpha=float(recipe["lora_alpha"]),
                          full_finetune_last_layers=False)
     name, parent = spec["id"], spec["parent"]
     ckpt, out = Path(spec["ckpt"]), Path(spec["out"])
-    print(f"=== {name}: parent {parent}, {len(train)} train / {len(hold)} hold-out, recipe {recipe}", flush=True)
+    print(f"=== {name}: parent {parent}, {len(train)} train / {len(hold)} hold-out, recipe {recipe}, epochs used {epochs}", flush=True)
 
     from nvalchemi.models.mace import MACEWrapper
 
@@ -152,7 +159,7 @@ def main(argv=None) -> None:
             "holdout_uids": [f.uid for f in hold], "geometry_leak_check": leak, "holdout_leak_check": leak_h,
             "disjoint_check": disjoint, "train_seconds": info["train_seconds"],
             "finetune_wall_seconds": finetune_seconds, "predict_wall_seconds": predict_seconds,
-            "n_frames": len(targets), "threads": torch.get_num_threads(),
+            "epochs_used": epochs, "n_frames": len(targets), "threads": torch.get_num_threads(),
             "training": {k: v for k, v in info.items() if k != "loss_history"},
             "loss_history": info.get("loss_history")}
     save_predictions(out, model=name, uids=[f.uid for f in targets], energies=E, forces=F, meta=ft._jsonable(meta))

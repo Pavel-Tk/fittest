@@ -77,7 +77,7 @@ WRONG_UNITS = "F_RMSE/WRONG_F + |dE_rel|/WRONG_E"
 
 BASE_RECIPE: dict[str, Any] = {"energy_weight": 10.0, "force_weight": 10.0, "lora_rank": 16,
                                "lora_alpha": 2.0, "lr": 1e-3, "epochs": 40, "batch_size": 16,
-                               "label_fraction": 1.0}
+                               "label_fraction": 1.0, "min_steps": 160}
 
 
 @dataclass(frozen=True)
