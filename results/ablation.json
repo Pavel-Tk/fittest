@@ -1294,8 +1294,411 @@
         "mace_seed3"
       ],
       "score": "sigma_F",
-      "status": "skipped",
-      "reason": "missing prediction file(s): data\\preds\\mace_seed0.npz, data\\preds\\mace_seed1.npz, data\\preds\\mace_seed2.npz, data\\preds\\mace_seed3.npz"
+      "status": "ok",
+      "served": "ensemble mean",
+      "oracle_calls": 200,
+      "oracle_labels_by_source": {
+        "audit": [],
+        "bid": [
+          "test:C3H5NO2/rxn0098:ts",
+          "test:C3H5NO2/rxn0099:ts",
+          "test:C3H5NO2/rxn0101:path150",
+          "test:C3H5NO2/rxn0101:path526",
+          "test:C3H5NO2/rxn0101:path638",
+          "test:C3H5NO2/rxn0101:path94",
+          "test:C3H5NO2/rxn0101:ts",
+          "test:C3H5NO2/rxn0104:path254",
+          "test:C3H5NO2/rxn0104:ts",
+          "test:C3H5NO2/rxn0106:path166",
+          "test:C3H5NO2/rxn0106:product",
+          "test:C3H5NO2/rxn0106:ts",
+          "test:C3H5NO2/rxn0107:path269",
+          "test:C3H5NO2/rxn0344:path478",
+          "test:C3H5NO2/rxn0344:path807",
+          "test:C3H5NO2/rxn0344:ts",
+          "test:C3H5NO2/rxn0345:path189",
+          "test:C3H5NO2/rxn0345:path365",
+          "test:C3H5NO2/rxn0345:path374",
+          "test:C3H5NO2/rxn0345:path580",
+          "test:C3H5NO2/rxn0345:product",
+          "test:C3H5NO2/rxn0345:ts",
+          "test:C3H5NO2/rxn0346:path24",
+          "test:C3H5NO2/rxn0346:path48",
+          "test:C3H5NO2/rxn0346:path63",
+          "test:C3H5NO2/rxn0346:path80",
+          "test:C3H5NO2/rxn0346:product",
+          "test:C3H5NO2/rxn0347:path95",
+          "test:C3H5NO2/rxn1084:path165",
+          "test:C3H5NO2/rxn1084:path53",
+          "test:C3H5NO2/rxn1085:path2927",
+          "test:C3H5NO2/rxn1090:path30",
+          "test:C3H5NO2/rxn1090:path38",
+          "test:C3H5NO2/rxn1090:ts",
+          "test:C3H5NO2/rxn1092:path25",
+          "test:C3H5NO2/rxn1093:path454",
+          "test:C3H5NO2/rxn1093:path542",
+          "test:C3H5NO2/rxn1093:path702",
+          "test:C3H5NO2/rxn1093:ts",
+          "test:C3H5NO2/rxn1095:path1288",
+          "test:C3H5NO2/rxn1095:path687",
+          "test:C3H5NO2/rxn1282:path310",
+          "test:C3H5NO2/rxn1282:ts",
+          "test:C3H5NO2/rxn1283:path197",
+          "test:C3H5NO2/rxn1284:path390",
+          "test:C3H5NO2/rxn1284:path46",
+          "test:C3H5NO2/rxn1284:ts",
+          "test:C3H5NO2/rxn1285:path296",
+          "test:C3H5NO2/rxn1285:path479",
+          "test:C3H5NO2/rxn1285:path592",
+          "test:C3H5NO2/rxn1285:path765",
+          "test:C3H5NO2/rxn1285:product",
+          "test:C3H5NO2/rxn1285:ts",
+          "test:C3H5NO2/rxn1286:ts",
+          "test:C3H5NO2/rxn1786:path431",
+          "test:C3H5NO2/rxn1786:path63",
+          "test:C3H5NO2/rxn1786:path71",
+          "test:C3H5NO2/rxn1786:path87",
+          "test:C3H5NO2/rxn1786:ts",
+          "test:C3H5NO2/rxn1792:path5",
+          "test:C3H5NO2/rxn1792:path54",
+          "test:C3H5NO2/rxn1792:ts",
+          "test:C3H5NO2/rxn3107:path1086",
+          "test:C3H5NO2/rxn3107:ts",
+          "test:C3H5NO2/rxn3108:path233",
+          "test:C3H5NO2/rxn3108:path321",
+          "test:C3H5NO2/rxn3108:path38",
+          "test:C3H5NO2/rxn3108:product",
+          "test:C3H5NO2/rxn3108:ts",
+          "test:C3H5NO2/rxn4113:path15",
+          "test:C3H5NO2/rxn4113:path415",
+          "test:C3H5NO2/rxn4113:path87",
+          "test:C3H5NO2/rxn4117:path111",
+          "test:C3H5NO2/rxn4513:ts",
+          "test:C3H5NO2/rxn4518:path142",
+          "test:C3H5NO2/rxn4518:path230",
+          "test:C3H5NO2/rxn4518:path6",
+          "test:C3H5NO2/rxn4518:product",
+          "test:C3H5NO2/rxn4518:ts",
+          "test:C3H5NO2/rxn4519:path7",
+          "test:C3H5NO2/rxn4521:path1111",
+          "test:C3H5NO2/rxn4521:path1113",
+          "test:C3H5NO2/rxn4521:path1136",
+          "test:C3H5NO2/rxn4521:path223",
+          "test:C3H5NO2/rxn4521:path4",
+          "test:C3H5NO2/rxn4521:path535",
+          "test:C3H5NO2/rxn4521:product",
+          "test:C3H5NO2/rxn4521:ts",
+          "test:C3H5NO2/rxn8967:path118",
+          "test:C3H5NO2/rxn9059:ts",
+          "test:C3H5NO2/rxn9060:path1121",
+          "test:C3H5NO2/rxn9060:path1488",
+          "test:C3H5NO2/rxn9060:path1520",
+          "test:C3H5NO2/rxn9060:product",
+          "test:C3HNO2/rxn0108:path240",
+          "test:C3HNO2/rxn0108:path280",
+          "test:C3HNO2/rxn0108:path863",
+          "test:C3HNO2/rxn0108:ts",
+          "test:C3HNO2/rxn0110:path158",
+          "test:C3HNO2/rxn0110:path24",
+          "test:C3HNO2/rxn0110:path303",
+          "test:C3HNO2/rxn0110:path89",
+          "test:C3HNO2/rxn0110:ts",
+          "test:C3HNO2/rxn8946:path1566",
+          "test:C3HNO2/rxn8946:path2030",
+          "test:C3HNO2/rxn8946:path2102",
+          "test:C3HNO2/rxn8946:path2413",
+          "test:C3HNO2/rxn8946:ts",
+          "test:C5H5NO/rxn7548:path113",
+          "test:C5H5NO/rxn7548:path209",
+          "test:C5H5NO/rxn7548:path23",
+          "test:C5H5NO/rxn7548:path56",
+          "test:C5H5NO/rxn7548:product",
+          "test:C5H5NO/rxn7548:ts",
+          "test:C5H5NO/rxn7549:path468",
+          "test:C5H5NO/rxn7549:path476",
+          "test:C5H5NO/rxn7549:path500",
+          "test:C5H5NO/rxn7549:path505",
+          "test:C5H5NO/rxn7549:product",
+          "test:C5H5NO/rxn7549:ts",
+          "test:C5H5NO/rxn7550:path132",
+          "test:C5H5NO/rxn7550:path219",
+          "test:C5H5NO/rxn7550:path263",
+          "test:C5H5NO/rxn7550:path313",
+          "test:C5H5NO/rxn7550:path77",
+          "test:C5H5NO/rxn7550:product",
+          "test:C5H5NO/rxn7550:ts",
+          "test:C5H5NO/rxn7936:path168",
+          "test:C5H5NO/rxn7936:path193",
+          "test:C5H5NO/rxn7936:path512",
+          "test:C5H5NO/rxn7936:path576",
+          "test:C5H5NO/rxn7937:ts",
+          "test:C5H5NO/rxn7945:path254",
+          "test:C5H5NO/rxn7945:path366",
+          "test:C5H5NO/rxn7945:ts",
+          "test:C5H5NO/rxn7947:ts",
+          "test:C5H5NO/rxn7948:path1031",
+          "test:C5H5NO/rxn7948:ts",
+          "test:C5H5NO/rxn7951:path1649",
+          "test:C5H5NO/rxn7951:product",
+          "test:C5H5NO/rxn7952:path287",
+          "test:C5H5NO/rxn7953:path14",
+          "test:C5H5NO/rxn7953:path94",
+          "test:C5H5NO/rxn7953:ts",
+          "test:C5H5NO/rxn7954:path150",
+          "test:C5H5NO/rxn7954:path222",
+          "test:C5H5NO/rxn7954:path289",
+          "test:C5H5NO/rxn7954:product",
+          "test:C5H5NO/rxn7954:ts",
+          "test:C5H5NO/rxn7956:path165",
+          "test:C5H5NO/rxn7956:path47",
+          "test:C5H5NO/rxn7956:ts",
+          "test:C5H5NO/rxn7957:product",
+          "test:C5H5NO/rxn8826:path272",
+          "test:C5H5NO/rxn8826:path384",
+          "test:C5H5NO/rxn8826:product",
+          "test:C5H5NO/rxn8827:path127",
+          "test:C5H5NO/rxn8827:path136",
+          "test:C5H5NO/rxn8827:path160",
+          "test:C5H5NO/rxn8827:path198",
+          "test:C5H5NO/rxn8827:path224",
+          "test:C5H5NO/rxn8827:path56",
+          "test:C5H5NO/rxn8827:product",
+          "test:C5H5NO/rxn8827:ts",
+          "test:C5H5NO/rxn8829:path121",
+          "test:C5H5NO/rxn8829:path184",
+          "test:C5H5NO/rxn8829:path384",
+          "test:C5H5NO/rxn8832:path127",
+          "test:C5H5NO/rxn8832:ts",
+          "test:C5H5NO/rxn8833:path792",
+          "test:C5H5NO/rxn8836:path209",
+          "test:C5H5NO/rxn8836:product",
+          "test:C5H5NO/rxn8838:path56",
+          "test:C5H5NO/rxn8840:path167",
+          "test:C5H5NO/rxn8840:path185",
+          "test:C5H5NO/rxn8840:path217",
+          "test:C5H5NO/rxn8840:path481",
+          "test:C5H5NO/rxn8840:product",
+          "test:C5H5NO/rxn8840:ts",
+          "test:C5H5NO/rxn8841:ts",
+          "test:C5H5NO/rxn8844:ts",
+          "test:C5H5NO/rxn8885:path238",
+          "test:C5H5NO/rxn8885:ts",
+          "val:C2H2N2O/rxn2091:reactant",
+          "val:C2H2N2O/rxn2545:path13",
+          "val:C2H2N2O/rxn2545:reactant",
+          "val:C2H2N2O/rxn2547:path62",
+          "val:C2H2N2O/rxn2547:reactant",
+          "val:C2H2N2O/rxn3122:reactant",
+          "val:C2H2N2O/rxn3125:reactant",
+          "val:C2H2N2O/rxn3125:ts",
+          "val:C2H2N2O/rxn3127:product",
+          "val:C2H2N2O/rxn3127:reactant",
+          "val:C3H6N2O/rxn0033:ts",
+          "val:C3H6N2O/rxn2583:path1062",
+          "val:C3H6N2O/rxn2583:path438",
+          "val:CHN3O/rxn2765:path17",
+          "val:CHN3O/rxn2765:reactant",
+          "val:CN2O3/rxn1929:path117",
+          "val:CN2O3/rxn1929:reactant"
+        ]
+      },
+      "oracle_calls_per_round": {
+        "0": 40,
+        "1": 40,
+        "2": 40,
+        "3": 40,
+        "4": 40
+      },
+      "metrics": {
+        "auroc_pool": {
+          "value": 0.8518394943593876,
+          "ci": [
+            0.8193533978382657,
+            0.8837904428897465
+          ],
+          "n": 1672
+        },
+        "auroc_common": {
+          "value": 0.5698804036872218,
+          "ci": [
+            0.5177292490459593,
+            0.6224960265101738
+          ],
+          "n": 1672
+        },
+        "spearman_pool": {
+          "value": 0.7545304426550381,
+          "ci": [
+            0.7158883499921781,
+            0.787368493643835
+          ],
+          "n": 1672
+        },
+        "recall_at_k": {
+          "value": 0.16636029411764705,
+          "ci": [
+            0.1271390733137062,
+            0.20864450440364737
+          ],
+          "n": 1088
+        },
+        "served_wrong_rate_pool": {
+          "value": 0.6507177033492823,
+          "ci": [
+            0.6202003588516747,
+            0.6800239234449761
+          ],
+          "n": 1672
+        },
+        "silent_failures_pool": {
+          "value": 0.0,
+          "ci": [
+            0.0,
+            0.0
+          ],
+          "n": 306
+        },
+        "auroc_eval": {
+          "value": 0.852647719960892,
+          "ci": [
+            0.8181837570485265,
+            0.8840647600232026
+          ],
+          "n": 1485
+        },
+        "spearman_eval": {
+          "value": 0.7013933818931407,
+          "ci": [
+            0.6541838721423968,
+            0.7470102675918007
+          ],
+          "n": 1485
+        },
+        "ece_eval": {
+          "value": 0.30123112423311904,
+          "ci": [
+            0.26784377385689623,
+            0.3329190261322194
+          ],
+          "n": 1485
+        },
+        "trusted_fraction_eval": {
+          "value": 0.0,
+          "ci": [
+            0.0,
+            0.0
+          ],
+          "n": 1485
+        },
+        "brier_eval": {
+          "value": 0.30726912747139334,
+          "ci": [
+            0.27479641250919823,
+            0.3377899976622345
+          ],
+          "n": 1485
+        },
+        "silent_failures_eval": {
+          "value": 0.0,
+          "ci": [
+            0.0,
+            0.0
+          ],
+          "n": 300
+        },
+        "eval_force_rmse_pre": {
+          "value": 0.2925369660037228,
+          "ci": [
+            0.27854626277386296,
+            0.3076136531246424
+          ],
+          "n": 1485
+        },
+        "eval_rel_e_mae_pre": {
+          "value": 0.4778557877103594,
+          "ci": [
+            0.4350723982384989,
+            0.5218949513634011
+          ],
+          "n": 1485
+        },
+        "eval_wrong_rate_pre": {
+          "value": 0.6814814814814815,
+          "ci": [
+            0.6498148148148148,
+            0.7151683501683502
+          ],
+          "n": 1485
+        },
+        "eval_force_rmse_post": {
+          "value": 0.2925369660037228,
+          "ci": [
+            0.27854626277386296,
+            0.3076136531246424
+          ],
+          "n": 1485
+        },
+        "eval_rel_e_mae_post": {
+          "value": 0.4778557877103594,
+          "ci": [
+            0.4350723982384989,
+            0.5218949513634011
+          ],
+          "n": 1485
+        },
+        "eval_wrong_rate_post": {
+          "value": 0.6814814814814815,
+          "ci": [
+            0.6498148148148148,
+            0.7151683501683502
+          ],
+          "n": 1485
+        },
+        "planted_caught": {
+          "value": 0.45,
+          "ci": [
+            0.2777083333333334,
+            0.625
+          ],
+          "n": 40
+        },
+        "planted_breakdown": {
+          "oracle_checked": 9,
+          "flagged": 18,
+          "vetoed": 0,
+          "n": 40
+        }
+      },
+      "by_threshold": {
+        "F0.15_E0.15": {
+          "wrong_f": 0.15,
+          "wrong_e": 0.15,
+          "auroc_pool": 0.8670612936377943,
+          "auroc_common": 0.7153781132668908,
+          "auroc_eval": 0.8905634558829089,
+          "recall_at_k": 0.1425233644859813,
+          "served_wrong_rate_pool": 0.7679425837320574
+        },
+        "F0.25_E0.25": {
+          "wrong_f": 0.25,
+          "wrong_e": 0.25,
+          "auroc_pool": 0.8518394943593876,
+          "auroc_common": 0.5698804036872218,
+          "auroc_eval": 0.852647719960892,
+          "recall_at_k": 0.16636029411764705,
+          "served_wrong_rate_pool": 0.6507177033492823
+        },
+        "F0.4_E0.4": {
+          "wrong_f": 0.4,
+          "wrong_e": 0.4,
+          "auroc_pool": 0.7996294150051153,
+          "auroc_common": 0.6558041836224168,
+          "auroc_eval": 0.8089823773826128,
+          "recall_at_k": 0.1935483870967742,
+          "served_wrong_rate_pool": 0.5005980861244019
+        }
+      },
+      "notes": []
     },
     "C_collective": {
       "models": [
@@ -2138,7 +2541,7 @@
         "aimnet2",
         "orb"
       ],
-      "score": "max(isotonic P(served wrong | \u03c3_served), Skeptic p_S); ties by \u03c3_served",
+      "score": "max(isotonic P(served wrong | selected feature), Skeptic p_S); ties by feature",
       "blackboard": {
         "n_events": 5921,
         "path": "results\\blackboard_armD.jsonl"
@@ -2146,6 +2549,11 @@
       "status": "ok",
       "served": "Calibrator recommendation (a model or the consensus)",
       "oracle_calls": 200,
+      "risk_feature": "sigma_F",
+      "risk_feature_cv_auroc": {
+        "sigma_F": 0.7563095238095238,
+        "sigma_served": 0.7519642857142856
+      },
       "oracle_labels_by_source": {
         "audit": [
           "test:C2H5NO2/rxn1961:path55",
@@ -2361,26 +2769,26 @@
       },
       "metrics": {
         "auroc_pool": {
-          "value": 0.5965018857045357,
+          "value": 0.6593626259833023,
           "ci": [
-            0.5495056563082968,
-            0.6424293088234266
+            0.6171682048205762,
+            0.7004795817097396
           ],
           "n": 1672
         },
         "auroc_common": {
-          "value": 0.6859007469802925,
+          "value": 0.737739060182242,
           "ci": [
-            0.6260718220182658,
-            0.7392272967466987
+            0.6837354168338494,
+            0.7855363878677115
           ],
           "n": 1672
         },
         "spearman_pool": {
-          "value": 0.27295202491568177,
+          "value": 0.38853252386364023,
           "ci": [
-            0.17943555463009853,
-            0.3676662047608369
+            0.30294531357368887,
+            0.4709391114719131
           ],
           "n": 1672
         },
@@ -2417,18 +2825,18 @@
           "n": 115
         },
         "auroc_eval": {
-          "value": 0.6820579674993935,
+          "value": 0.7297193336162989,
           "ci": [
-            0.6449003494040884,
-            0.7174826230078803
+            0.6929567368085753,
+            0.764748910202089
           ],
           "n": 1485
         },
         "spearman_eval": {
-          "value": 0.44439774541605465,
+          "value": 0.558920146530294,
           "ci": [
-            0.3763466947814582,
-            0.5007032336381265
+            0.5045830945815428,
+            0.6083661483527836
           ],
           "n": 1485
         },
@@ -2531,27 +2939,27 @@
         "F0.15_E0.15": {
           "wrong_f": 0.15,
           "wrong_e": 0.15,
-          "auroc_pool": 0.5843327222637568,
-          "auroc_common": 0.7744490967348784,
-          "auroc_eval": 0.7491055716505393,
+          "auroc_pool": 0.6330100468031503,
+          "auroc_common": 0.8060388040337323,
+          "auroc_eval": 0.8004809091601105,
           "recall_at_k": 0.12664092664092663,
           "served_wrong_rate_pool": 0.7745215311004785
         },
         "F0.25_E0.25": {
           "wrong_f": 0.25,
           "wrong_e": 0.25,
-          "auroc_pool": 0.5965018857045357,
-          "auroc_common": 0.6859007469802925,
-          "auroc_eval": 0.6820579674993935,
+          "auroc_pool": 0.6593626259833023,
+          "auroc_common": 0.737739060182242,
+          "auroc_eval": 0.7297193336162989,
           "recall_at_k": 0.18624641833810887,
           "served_wrong_rate_pool": 0.41746411483253587
         },
         "F0.4_E0.4": {
           "wrong_f": 0.4,
           "wrong_e": 0.4,
-          "auroc_pool": 0.632993152409848,
-          "auroc_common": 0.6629220538519345,
-          "auroc_eval": 0.6748848824826387,
+          "auroc_pool": 0.6890306642522216,
+          "auroc_common": 0.7330960709923494,
+          "auroc_eval": 0.6975296605720628,
           "recall_at_k": 0.22295081967213115,
           "served_wrong_rate_pool": 0.18241626794258373
         }
@@ -2573,49 +2981,80 @@
           "acceptance_report": {
             "verdict": "fail",
             "accepted": false,
+            "toolkit_accepted": true,
             "checks": [
               {
                 "name": "from_scratch_ratio",
-                "value": 1.3690954425820752,
+                "source": "alchemi",
+                "value": 0.7733266426918681,
                 "limit": 1.0,
                 "comparison": "<=",
-                "passed": false,
+                "passed": true,
                 "detail": "worst error ratio against the equal-size from-scratch student"
+              },
+              {
+                "name": "alchemi_report_accepted",
+                "source": "alchemi",
+                "value": true,
+                "limit": true,
+                "comparison": "==",
+                "passed": true,
+                "detail": "build_acceptance_report(...).accepted"
+              },
+              {
+                "name": "holdout_force_rmse_not_worse",
+                "source": "trustswarm",
+                "value": 0.5003207378553053,
+                "limit": 0.8778179080391152,
+                "comparison": "<=",
+                "passed": true,
+                "detail": "fine-tuned 0.5003 vs base 0.8778 eV/A, held-out labelled slice"
+              },
+              {
+                "name": "holdout_rel_energy_mae_not_worse",
+                "source": "trustswarm",
+                "value": 0.41357457706944845,
+                "limit": 0.4019207405700789,
+                "comparison": "<=",
+                "passed": false,
+                "detail": "fine-tuned 0.4136 vs base 0.4019 eV, held-out labelled slice"
               }
             ],
             "thresholds": {
-              "max_from_scratch_ratio": 1.0
+              "max_from_scratch_ratio": 1.0,
+              "holdout_force_rmse": "<= base",
+              "holdout_rel_energy_mae": "<= base"
             },
             "baseline": "base MACE-MPA-0 with the same refitted E0s",
             "holdout_metrics": {
               "before": {
-                "n_frames": 21,
-                "n_atoms": 246,
-                "force_rmse": 0.6754465295339379,
-                "force_mae": 0.4727165168039192,
-                "frame_force_rmse_mean": 0.6708469813255046,
+                "n_frames": 36,
+                "n_atoms": 418,
+                "force_rmse": 0.8778179080391152,
+                "force_mae": 0.5794903341363989,
+                "frame_force_rmse_mean": 0.8281601249010675,
                 "frac_force_wrong": 1.0,
-                "rel_energy_mae": 0.17907225724368747,
-                "n_rel_energy": 17
+                "rel_energy_mae": 0.4019207405700789,
+                "n_rel_energy": 35
               },
               "after": {
-                "n_frames": 21,
-                "n_atoms": 246,
-                "force_rmse": 0.39857237896181924,
-                "force_mae": 0.2294098237430731,
-                "frame_force_rmse_mean": 0.34803858100017976,
-                "frac_force_wrong": 0.7142857142857143,
-                "rel_energy_mae": 0.3074511173996571,
-                "n_rel_energy": 17
+                "n_frames": 36,
+                "n_atoms": 418,
+                "force_rmse": 0.5003207378553053,
+                "force_mae": 0.30454261749512623,
+                "frame_force_rmse_mean": 0.4445458829857021,
+                "frac_force_wrong": 0.8055555555555556,
+                "rel_energy_mae": 0.41357457706944845,
+                "n_rel_energy": 35
               }
             },
-            "n_train": 168,
-            "n_holdout": 21
+            "n_train": 150,
+            "n_holdout": 36
           },
           "weights": "data/ckpt/mace_lora_curated",
-          "n_train": 168,
-          "train_digest_replayed": "17d905fbebcdbfaf",
-          "reason": "78 train uids are held-out frames (e.g. test:C2H3N3O2/rxn10005:path1888)"
+          "n_train": 150,
+          "train_digest_replayed": "07983ab53398bf26",
+          "reason": "acceptance verdict 'fail' != 'pass'"
         },
         "new_predictions_path": null
       },
@@ -2623,28 +3062,33 @@
     }
   },
   "failures": [
-    "B_mace_seeds skipped: missing prediction file(s): data\\preds\\mace_seed0.npz, data\\preds\\mace_seed1.npz, data\\preds\\mace_seed2.npz, data\\preds\\mace_seed3.npz",
-    "D_trustswarm: fine-tune not shipped (78 train uids are held-out frames (e.g. test:C2H3N3O2/rxn10005:path1888))",
-    "D vs A_single: auroc_pool significantly WORSE (diff -0.195, paired 95% CI [-0.248, -0.143])",
-    "D vs A_single: auroc_eval significantly WORSE (diff -0.156, paired 95% CI [-0.198, -0.118])",
+    "D_trustswarm: fine-tune not shipped (acceptance verdict 'fail' != 'pass')",
+    "D vs A_single: auroc_pool significantly WORSE (diff -0.132, paired 95% CI [-0.184, -0.082])",
+    "D vs A_single: auroc_eval significantly WORSE (diff -0.108, paired 95% CI [-0.149, -0.070])",
     "D vs A_single: recall_at_k not significantly better (diff +0.055, paired 95% CI [-0.008, +0.116])",
     "D vs A_single: planted_caught not significantly better (diff -0.150, paired 95% CI [-0.405, +0.132])",
     "D vs A_single: silent_failures_pool not significantly better (diff +0.009, paired 95% CI [+0.000, +0.031])",
     "D vs A_single: silent_failures_eval not significantly better (diff +0.000, paired 95% CI [+0.000, +0.000])",
     "D vs A_random: planted_caught not significantly better (diff +0.125, paired 95% CI [-0.135, +0.375])",
-    "D vs B_seed: auroc_pool significantly WORSE (diff -0.168, paired 95% CI [-0.226, -0.116])",
-    "D vs B_seed: auroc_eval significantly WORSE (diff -0.120, paired 95% CI [-0.163, -0.077])",
+    "D vs B_seed: auroc_pool significantly WORSE (diff -0.105, paired 95% CI [-0.155, -0.058])",
+    "D vs B_seed: auroc_eval significantly WORSE (diff -0.072, paired 95% CI [-0.116, -0.029])",
     "D vs B_seed: recall_at_k not significantly better (diff +0.020, paired 95% CI [-0.042, +0.085])",
     "D vs B_seed: planted_caught not significantly better (diff -0.250, paired 95% CI [-0.513, +0.024])",
     "D vs B_seed: silent_failures_pool not significantly better (diff +0.009, paired 95% CI [+0.000, +0.031])",
     "D vs B_seed: silent_failures_eval not significantly better (diff +0.000, paired 95% CI [+0.000, +0.000])",
-    "D vs C_collective: auroc_pool significantly WORSE (diff -0.130, paired 95% CI [-0.183, -0.077])",
-    "D vs C_collective: auroc_eval significantly WORSE (diff -0.120, paired 95% CI [-0.160, -0.079])",
+    "D vs B_mace_seeds: auroc_pool significantly WORSE (diff -0.192, paired 95% CI [-0.251, -0.137])",
+    "D vs B_mace_seeds: auroc_eval significantly WORSE (diff -0.123, paired 95% CI [-0.171, -0.076])",
+    "D vs B_mace_seeds: recall_at_k not significantly better (diff +0.020, paired 95% CI [-0.051, +0.091])",
+    "D vs B_mace_seeds: planted_caught not significantly better (diff +0.000, paired 95% CI [-0.179, +0.175])",
+    "D vs B_mace_seeds: silent_failures_pool not significantly better (diff +0.009, paired 95% CI [+0.000, +0.031])",
+    "D vs B_mace_seeds: silent_failures_eval not significantly better (diff +0.000, paired 95% CI [+0.000, +0.000])",
+    "D vs C_collective: auroc_pool significantly WORSE (diff -0.067, paired 95% CI [-0.113, -0.021])",
+    "D vs C_collective: auroc_eval significantly WORSE (diff -0.073, paired 95% CI [-0.115, -0.033])",
     "D vs C_collective: recall_at_k not significantly better (diff +0.027, paired 95% CI [-0.035, +0.088])",
     "D vs C_collective: silent_failures_pool not significantly better (diff +0.009, paired 95% CI [+0.000, +0.031])",
     "D vs C_collective: silent_failures_eval not significantly better (diff +0.000, paired 95% CI [+0.000, +0.000])",
-    "D vs C_audit: auroc_pool significantly WORSE (diff -0.130, paired 95% CI [-0.183, -0.077])",
-    "D vs C_audit: auroc_eval significantly WORSE (diff -0.120, paired 95% CI [-0.160, -0.079])",
+    "D vs C_audit: auroc_pool significantly WORSE (diff -0.067, paired 95% CI [-0.113, -0.021])",
+    "D vs C_audit: auroc_eval significantly WORSE (diff -0.073, paired 95% CI [-0.115, -0.033])",
     "D vs C_audit: recall_at_k not significantly better (diff +0.049, paired 95% CI [-0.013, +0.109])",
     "D vs C_audit: planted_caught not significantly better (diff +0.075, paired 95% CI [-0.026, +0.200])",
     "D vs C_audit: ece_eval not significantly better (diff +0.001, paired 95% CI [-0.032, +0.048])",
@@ -2655,20 +3099,20 @@
   "comparisons": {
     "D_vs_A_single": {
       "auroc_pool": {
-        "diff": -0.19512670350928074,
+        "diff": -0.1322659632305141,
         "ci": [
-          -0.24808110293209049,
-          -0.14275818990982292
+          -0.18393023708612335,
+          -0.08170076768340652
         ],
         "higher_is_better": true,
         "d_significantly_better": false,
         "d_significantly_worse": true
       },
       "auroc_eval": {
-        "diff": -0.15575007156897602,
+        "diff": -0.10808870545207061,
         "ci": [
-          -0.19835567512469274,
-          -0.11790690617839981
+          -0.14949170506703188,
+          -0.06994257818548513
         ],
         "higher_is_better": true,
         "d_significantly_better": false,
@@ -2747,20 +3191,20 @@
     },
     "D_vs_A_random": {
       "auroc_pool": {
-        "diff": 0.07847635063354608,
+        "diff": 0.14133709091231272,
         "ci": [
-          0.023087716760574743,
-          0.12952369083860946
+          0.08869934013687111,
+          0.1886394735479288
         ],
         "higher_is_better": true,
         "d_significantly_better": true,
         "d_significantly_worse": false
       },
       "auroc_eval": {
-        "diff": 0.18273790739420948,
+        "diff": 0.2303992735111149,
         "ci": [
-          0.13746424767627116,
-          0.23026926061259895
+          0.18711100116155388,
+          0.27879193898358634
         ],
         "higher_is_better": true,
         "d_significantly_better": true,
@@ -2839,20 +3283,20 @@
     },
     "D_vs_B_seed": {
       "auroc_pool": {
-        "diff": -0.16813090932302566,
+        "diff": -0.10527016904425901,
         "ci": [
-          -0.22570258347622688,
-          -0.1162390425777805
+          -0.15478592957622148,
+          -0.05830407856706656
         ],
         "higher_is_better": true,
         "d_significantly_better": false,
         "d_significantly_worse": true
       },
       "auroc_eval": {
-        "diff": -0.11980459925567111,
+        "diff": -0.0721432331387657,
         "ci": [
-          -0.1633481346618322,
-          -0.0765831152945572
+          -0.11607514741591403,
+          -0.028635802971205566
         ],
         "higher_is_better": true,
         "d_significantly_better": false,
@@ -2929,22 +3373,114 @@
         "d_significantly_worse": false
       }
     },
-    "D_vs_C_collective": {
+    "D_vs_B_mace_seeds": {
       "auroc_pool": {
-        "diff": -0.12978179153110225,
+        "diff": -0.19247686837608524,
         "ci": [
-          -0.18286825389077266,
-          -0.07655292386440082
+          -0.2510376924667595,
+          -0.13726327896556215
         ],
         "higher_is_better": true,
         "d_significantly_better": false,
         "d_significantly_worse": true
       },
       "auroc_eval": {
-        "diff": -0.12020913099555786,
+        "diff": -0.12292838634459302,
         "ci": [
-          -0.16023968246752113,
-          -0.07913135931390189
+          -0.17132284817317736,
+          -0.0756932312755271
+        ],
+        "higher_is_better": true,
+        "d_significantly_better": false,
+        "d_significantly_worse": true
+      },
+      "recall_at_k": {
+        "diff": 0.01988612422046182,
+        "ci": [
+          -0.051302037404639254,
+          0.09051645527508848
+        ],
+        "higher_is_better": true,
+        "d_significantly_better": false,
+        "d_significantly_worse": false
+      },
+      "planted_caught": {
+        "diff": 0.0,
+        "ci": [
+          -0.17948717948717952,
+          0.17511217948717941
+        ],
+        "higher_is_better": true,
+        "d_significantly_better": false,
+        "d_significantly_worse": false
+      },
+      "eval_force_rmse_post": {
+        "diff": -0.08620785368357958,
+        "ci": [
+          -0.09800819763614498,
+          -0.07495675458432902
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": true,
+        "d_significantly_worse": false
+      },
+      "ece_eval": {
+        "diff": -0.2210974546277434,
+        "ci": [
+          -0.2572099144890544,
+          -0.16395762579091558
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": true,
+        "d_significantly_worse": false
+      },
+      "brier_eval": {
+        "diff": -0.12182553194373699,
+        "ci": [
+          -0.15887564373533777,
+          -0.08404893209477853
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": true,
+        "d_significantly_worse": false
+      },
+      "silent_failures_pool": {
+        "diff": 0.008695652173913044,
+        "ci": [
+          0.0,
+          0.03077319587628866
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": false,
+        "d_significantly_worse": false
+      },
+      "silent_failures_eval": {
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": false,
+        "d_significantly_worse": false
+      }
+    },
+    "D_vs_C_collective": {
+      "auroc_pool": {
+        "diff": -0.0669210512523356,
+        "ci": [
+          -0.11266569057603955,
+          -0.021022078230502412
+        ],
+        "higher_is_better": true,
+        "d_significantly_better": false,
+        "d_significantly_worse": true
+      },
+      "auroc_eval": {
+        "diff": -0.07254776487865244,
+        "ci": [
+          -0.11494067820870382,
+          -0.03292158702744538
         ],
         "higher_is_better": true,
         "d_significantly_better": false,
@@ -3023,20 +3559,20 @@
     },
     "D_vs_C_audit": {
       "auroc_pool": {
-        "diff": -0.12978179153110225,
+        "diff": -0.0669210512523356,
         "ci": [
-          -0.18286825389077266,
-          -0.07655292386440082
+          -0.11266569057603955,
+          -0.021022078230502412
         ],
         "higher_is_better": true,
         "d_significantly_better": false,
         "d_significantly_worse": true
       },
       "auroc_eval": {
-        "diff": -0.12020913099555786,
+        "diff": -0.07254776487865244,
         "ci": [
-          -0.16023968246752113,
-          -0.07913135931390189
+          -0.11494067820870382,
+          -0.03292158702744538
         ],
         "higher_is_better": true,
         "d_significantly_better": false,
@@ -3169,5 +3705,5 @@
       "CN2O3"
     ]
   },
-  "runtime_s": 15.3
+  "runtime_s": 14.7
 }

@@ -146,6 +146,10 @@ slice of oracle labels (NOT `eval`). Ship ⇔ report verdict passes; then re-pre
     among the served candidate's members (singleton: RMS distance from the committee mean);
     snapshot `risk_iso`. Reporting only: allocation/labels unchanged (md5-checked).
   - Common-target AUROC uses AIMNet2-wrong (in every arm).
+* v4 (v3 kept in `results/v3_served_sigma/`): the Calibrator selects its risk feature (σ_F vs
+  σ_served) by 5-fold reaction-grouped CV AUROC on its own oracle labels (tie → σ_F); snapshot
+  `risk_feature`, `risk_feature_cv_auroc`, `risk_iso`. Reporting only (labels md5 unchanged).
+  Results summary: `results/RESULTS.md`.
 
 ## 5. Ablation (same oracle budget K = rounds × k)
 

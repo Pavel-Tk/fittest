@@ -1,4 +1,36 @@
 {
+  "split_report": {
+    "seed": 0,
+    "hash": "sorted Z + sorted pair distances (0.01 Å)",
+    "linked_by_roles": [
+      "reactant",
+      "product"
+    ],
+    "test_components": 37,
+    "test_reactions": 287,
+    "val_components": 32,
+    "val_reactions_moved_to_keep_components_whole": 0,
+    "frames_per_split": {
+      "eval": 1485,
+      "planted": 1254,
+      "pool": 1672,
+      "skeptic_ref": 1221
+    },
+    "reactions_per_split": {
+      "eval": 135,
+      "planted": 114,
+      "pool": 152,
+      "skeptic_ref": 111
+    },
+    "shared_endpoint_geometries": {
+      "pool|eval": 0,
+      "skeptic_ref|planted": 0
+    },
+    "near_duplicate_endpoints_max_dR_1e-3": {
+      "pool|eval": 0,
+      "skeptic_ref|planted": 0
+    }
+  },
   "fig1": {
     "n_frames": 3157,
     "n_reactions": 287,
@@ -140,50 +172,407 @@
     "n_converged": 8
   },
   "fig4": {
-    "n_frames": 1573,
-    "n_reactions": 143,
+    "n_frames": 1485,
+    "n_reactions": 135,
     "wrong_f": 0.25,
     "rows_best_first": [
       {
         "name": "AIMNet2 + Orb",
-        "frac_wrong": 0.278,
-        "median_force_rmse": 0.184
-      },
-      {
-        "name": "MACE + AIMNet2",
-        "frac_wrong": 0.536,
-        "median_force_rmse": 0.262
+        "frac_wrong": 0.263,
+        "median_force_rmse": 0.177
       },
       {
         "name": "AIMNet2 seeds ×4",
-        "frac_wrong": 0.565,
-        "median_force_rmse": 0.287
+        "frac_wrong": 0.516,
+        "median_force_rmse": 0.257
+      },
+      {
+        "name": "MACE + AIMNet2",
+        "frac_wrong": 0.524,
+        "median_force_rmse": 0.259
       },
       {
         "name": "MACE + AIMNet2 + Orb",
-        "frac_wrong": 0.573,
-        "median_force_rmse": 0.266
+        "frac_wrong": 0.543,
+        "median_force_rmse": 0.261
       },
       {
         "name": "AIMNet2",
-        "frac_wrong": 0.609,
-        "median_force_rmse": 0.29
+        "frac_wrong": 0.572,
+        "median_force_rmse": 0.278
       },
       {
         "name": "Orb",
-        "frac_wrong": 0.935,
-        "median_force_rmse": 0.394
+        "frac_wrong": 0.913,
+        "median_force_rmse": 0.378
       },
       {
         "name": "MACE + Orb",
-        "frac_wrong": 0.975,
-        "median_force_rmse": 0.441
+        "frac_wrong": 0.989,
+        "median_force_rmse": 0.434
       },
       {
         "name": "MACE-MPA-0",
-        "frac_wrong": 0.997,
-        "median_force_rmse": 0.554
+        "frac_wrong": 0.999,
+        "median_force_rmse": 0.558
       }
     ]
+  },
+  "fig5": {
+    "source_schema": "trustswarm.ablation/v2",
+    "n_eval": 1485,
+    "verdict_vs_other_arms": {
+      "eval_force_rmse_post": "better",
+      "ece_eval": "tied",
+      "auroc_eval": "worse"
+    },
+    "arms": {
+      "A_single": {
+        "eval_force_rmse_post": {
+          "value": 0.317,
+          "ci": [
+            0.303,
+            0.331
+          ]
+        },
+        "auroc_eval": {
+          "value": 0.838,
+          "ci": [
+            0.812,
+            0.868
+          ]
+        },
+        "ece_eval": {
+          "value": 0.175,
+          "ci": [
+            0.13,
+            0.221
+          ]
+        },
+        "trusted_fraction_eval": {
+          "value": 0.0,
+          "ci": [
+            0.0,
+            0.0
+          ]
+        },
+        "eval_wrong_rate_post": {
+          "value": 0.593,
+          "ci": [
+            0.547,
+            0.64
+          ]
+        }
+      },
+      "A_random": {
+        "eval_force_rmse_post": {
+          "value": 0.317,
+          "ci": [
+            0.303,
+            0.331
+          ]
+        },
+        "auroc_eval": {
+          "value": 0.499,
+          "ci": [
+            0.47,
+            0.527
+          ]
+        },
+        "ece_eval": {
+          "value": 0.538,
+          "ci": [
+            0.499,
+            0.581
+          ]
+        },
+        "trusted_fraction_eval": {
+          "value": 0.898,
+          "ci": [
+            0.881,
+            0.914
+          ]
+        },
+        "eval_wrong_rate_post": {
+          "value": 0.593,
+          "ci": [
+            0.547,
+            0.64
+          ]
+        }
+      },
+      "B_seed": {
+        "eval_force_rmse_post": {
+          "value": 0.286,
+          "ci": [
+            0.275,
+            0.299
+          ]
+        },
+        "auroc_eval": {
+          "value": 0.802,
+          "ci": [
+            0.766,
+            0.84
+          ]
+        },
+        "ece_eval": {
+          "value": 0.426,
+          "ci": [
+            0.372,
+            0.475
+          ]
+        },
+        "trusted_fraction_eval": {
+          "value": 0.0,
+          "ci": [
+            0.0,
+            0.0
+          ]
+        },
+        "eval_wrong_rate_post": {
+          "value": 0.541,
+          "ci": [
+            0.493,
+            0.596
+          ]
+        }
+      },
+      "B_mace_seeds": {
+        "eval_force_rmse_post": {
+          "value": 0.293,
+          "ci": [
+            0.279,
+            0.308
+          ]
+        },
+        "auroc_eval": {
+          "value": 0.853,
+          "ci": [
+            0.818,
+            0.884
+          ]
+        },
+        "ece_eval": {
+          "value": 0.301,
+          "ci": [
+            0.268,
+            0.333
+          ]
+        },
+        "trusted_fraction_eval": {
+          "value": 0.0,
+          "ci": [
+            0.0,
+            0.0
+          ]
+        },
+        "eval_wrong_rate_post": {
+          "value": 0.681,
+          "ci": [
+            0.65,
+            0.715
+          ]
+        }
+      },
+      "C_collective": {
+        "eval_force_rmse_post": {
+          "value": 0.293,
+          "ci": [
+            0.28,
+            0.306
+          ]
+        },
+        "auroc_eval": {
+          "value": 0.802,
+          "ci": [
+            0.766,
+            0.838
+          ]
+        },
+        "ece_eval": {
+          "value": 0.37,
+          "ci": [
+            0.327,
+            0.418
+          ]
+        },
+        "trusted_fraction_eval": {
+          "value": 0.0,
+          "ci": [
+            0.0,
+            0.0
+          ]
+        },
+        "eval_wrong_rate_post": {
+          "value": 0.609,
+          "ci": [
+            0.561,
+            0.653
+          ]
+        }
+      },
+      "C_audit": {
+        "eval_force_rmse_post": {
+          "value": 0.293,
+          "ci": [
+            0.28,
+            0.306
+          ]
+        },
+        "auroc_eval": {
+          "value": 0.802,
+          "ci": [
+            0.766,
+            0.838
+          ]
+        },
+        "ece_eval": {
+          "value": 0.079,
+          "ci": [
+            0.057,
+            0.114
+          ]
+        },
+        "trusted_fraction_eval": {
+          "value": 0.419,
+          "ci": [
+            0.362,
+            0.468
+          ]
+        },
+        "eval_wrong_rate_post": {
+          "value": 0.609,
+          "ci": [
+            0.561,
+            0.653
+          ]
+        }
+      },
+      "D_trustswarm": {
+        "eval_force_rmse_post": {
+          "value": 0.206,
+          "ci": [
+            0.196,
+            0.216
+          ]
+        },
+        "auroc_eval": {
+          "value": 0.73,
+          "ci": [
+            0.693,
+            0.765
+          ]
+        },
+        "ece_eval": {
+          "value": 0.08,
+          "ci": [
+            0.06,
+            0.122
+          ]
+        },
+        "trusted_fraction_eval": {
+          "value": 0.708,
+          "ci": [
+            0.665,
+            0.752
+          ]
+        },
+        "eval_wrong_rate_post": {
+          "value": 0.397,
+          "ci": [
+            0.356,
+            0.436
+          ]
+        }
+      }
+    }
+  },
+  "fig6": {
+    "verdict": "FAIL",
+    "shipped": false,
+    "checks": [
+      {
+        "name": "from_scratch_ratio",
+        "source": "alchemi",
+        "value": 0.7733266426918681,
+        "limit": 1.0,
+        "comparison": "<=",
+        "passed": true,
+        "detail": "worst error ratio against the equal-size from-scratch student"
+      },
+      {
+        "name": "alchemi_report_accepted",
+        "source": "alchemi",
+        "value": true,
+        "limit": true,
+        "comparison": "==",
+        "passed": true,
+        "detail": "build_acceptance_report(...).accepted"
+      },
+      {
+        "name": "holdout_force_rmse_not_worse",
+        "source": "trustswarm",
+        "value": 0.5003207378553053,
+        "limit": 0.8778179080391152,
+        "comparison": "<=",
+        "passed": true,
+        "detail": "fine-tuned 0.5003 vs base 0.8778 eV/A, held-out labelled slice"
+      },
+      {
+        "name": "holdout_rel_energy_mae_not_worse",
+        "source": "trustswarm",
+        "value": 0.41357457706944845,
+        "limit": 0.4019207405700789,
+        "comparison": "<=",
+        "passed": false,
+        "detail": "fine-tuned 0.4136 vs base 0.4019 eV, held-out labelled slice"
+      }
+    ],
+    "holdout_before": {
+      "n_frames": 36,
+      "n_atoms": 418,
+      "force_rmse": 0.8778179080391152,
+      "force_mae": 0.5794903341363989,
+      "frame_force_rmse_mean": 0.8281601249010675,
+      "frac_force_wrong": 1.0,
+      "rel_energy_mae": 0.4019207405700789,
+      "n_rel_energy": 35
+    },
+    "holdout_after": {
+      "n_frames": 36,
+      "n_atoms": 418,
+      "force_rmse": 0.5003207378553053,
+      "force_mae": 0.30454261749512623,
+      "frame_force_rmse_mean": 0.4445458829857021,
+      "frac_force_wrong": 0.8055555555555556,
+      "rel_energy_mae": 0.41357457706944845,
+      "n_rel_energy": 35
+    },
+    "eval_n": 1485,
+    "eval_frames_excluded": 0,
+    "eval_reactions_excluded": 0,
+    "eval_median_force_rmse": {
+      "base": 0.558,
+      "finetuned": 0.267
+    },
+    "eval_median_by_role": {
+      "reactant": {
+        "base": 0.513,
+        "finetuned": 0.138
+      },
+      "product": {
+        "base": 0.516,
+        "finetuned": 0.238
+      },
+      "path": {
+        "base": 0.563,
+        "finetuned": 0.27
+      },
+      "ts": {
+        "base": 0.676,
+        "finetuned": 0.381
+      }
+    }
   }
 }
