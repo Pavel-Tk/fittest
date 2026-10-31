@@ -336,6 +336,10 @@ class Engine:
         active = self.active
         if not active:
             states = ", ".join(f"{m}: {s}" for m, s in self.model_status.items())
+            if all(s == "not installed" for s in self.model_status.values()):
+                raise InputError(f"no model agents installed ({states}). Install the [models] extra "
+                                 "(MACE + AIMNet2) and/or set FITTEST_ORB_PYTHON, restart with --fake-models "
+                                 f"for a demo, or use the hosted server {PUBLIC_URL}")
             raise InputError(f"no model agent is ready yet ({states}); retry in a minute")
         return active
 
