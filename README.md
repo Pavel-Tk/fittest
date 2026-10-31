@@ -13,17 +13,18 @@ NVIDIA ALCHEMI Toolkit 0.3.0-rc.
 <!-- RESULTS:START -->
 ## Results
 
-**TrustSwarm on Transition1x (leak-free split, 40×5 = 200 oracle calls per arm, 95% reaction-bootstrap CIs).**
+**TrustSwarm on Transition1x** — leak-free split, 200 Transition1x label lookups per arm (40 per round × 5 rounds; no live DFT); B′ additionally uses MACE LoRA seeds fine-tuned on 160 of arm D's labels; 95% reaction-bootstrap CIs.
 
-* **Better served answers:** TrustSwarm's served force RMSE on held-out eval is **0.206 eV/Å** vs 0.286–0.317 for every baseline; wrong on 40% of eval frames vs 54%–68%. It learned to serve the subset mean of the models that is most often right.
-* **Calibrated trust:** ECE 0.080, Brier 0.185; significantly better than A_single, A_random, B_seed, B_mace_seeds, C_collective, tied with C_audit — the gain comes from the Skeptic's random audits of trusted answers.
-* **Negative result — error ranking:** TrustSwarm's AUROC (eval 0.730) is significantly worse than A_single, B_seed, B_mace_seeds, C_collective, C_audit. Best ranker on eval: B_mace_seeds (0.853).
-* **Heterogeneous disagreement detects AIMNet2's failures best:** AUROC vs 'AIMNet2 wrong' 0.917 (C_collective).
-* **Recall@K:** TrustSwarm 0.186; significantly better than A_random.
-* **Ranking ≠ calibration:** on eval the median seed spread is MACE LoRA seeds 0.009 vs median error 0.266 eV/Å (×29.7 under-dispersed); AIMNet2 ensemble members 0.109 vs median error 0.257 eV/Å (×2.4 under-dispersed); yet B_mace_seeds ranks errors best.
-* **Self-repair:** the Curator chose and LoRA-fine-tuned `mace_mpa0` on its oracle labels; not shipped — forces 0.878 → 0.500 eV/Å but relative-energy MAE 0.402 → 0.414 eV on held-out labels, so our gate refuses it.
-* **Leakage controlled:** pool/eval and skeptic_ref/planted share 0 endpoint geometries (Transition1x reuses reactants: a per-reaction split had 732 near-duplicate pool/eval endpoints).
-* Full tables, per-version history and failures: `results/RESULTS.md`.
+* **Better served answers, by discovery:** TrustSwarm's served force RMSE on held-out eval is **0.206 eV/Å** vs 0.286–0.317 for the baselines (wrong on 40% of eval frames vs 54%–73%). It served `mean(aimnet2+orb)` on 1373/1485 eval frames: the gain comes from discovering that combination from 200 oracle labels; no baseline had subset candidates. A fixed AIMNet2+Orb average chosen in hindsight (using eval labels) scores 0.202 eV/Å — as good.
+* **Calibrated trust:** ECE 0.080, Brier 0.185; significantly better than A_single, A_random, B_seed, B_mace_seeds, C_collective; tied with C_audit — the gain comes from the Skeptic's random audits of trusted answers.
+* **Negative result — error ranking:** TrustSwarm's AUROC (eval 0.730) is significantly worse than A_single, B_seed, B_mace_seeds, C_collective, C_audit. Best ranker: B_mace_seeds (0.867).
+* **Committee disagreement detects AIMNet2's failures best:** AUROC vs 'AIMNet2 wrong' 0.917 (C_collective).
+* **Seed ensembles rank but do not measure:** B′ AUROC 0.867 (best); B ties C at 0.802; on all 3,157 test frames at 0.4 eV/Å the AIMNet2 seed spread beats the committee (0.905 vs 0.866) — but seed spreads are 2.4–36× smaller than the errors on the 1,485 eval frames: not usable as an error bar.
+* **Silent failures:** TrustSwarm has 0/96 on eval (badly wrong, F-RMSE > 0.4) and 1/115 on pool; not significantly different from 5 of 5 non-random baselines, 4 of which trust nothing (zero by construction).
+* **Planted failures:** 0.45 caught vs 0.33–0.70; significantly better than C_collective, not significant vs 5 of 6.
+* **Self-repair:** the Curator chose and LoRA-fine-tuned `mace_mpa0`; not shipped — forces 1.355 → 0.692 eV/Å but relative-energy MAE 0.314 → 0.364 eV on 26 held-out labels.
+* **Leakage controlled:** split by reactant- and product-linked components; 0 shared endpoint geometries (a per-reaction split had 732 near-duplicate pool/eval endpoints).
+* Details, history and failures: `results/RESULTS.md`.
 
 ![Ablation](results/fig/fig5_ablation.png)
 
@@ -33,7 +34,7 @@ NVIDIA ALCHEMI Toolkit 0.3.0-rc.
 | Independent-model spread tracks error (Spearman 0.73); a seed ensemble's spread is 0.4× its error | `results/fig/fig2_spread_vs_error.png` |
 | In ALCHEMI batched NEB, spread follows force error along the path (median ρ 0.96, 8 reactions) | `results/fig/fig3_neb.png` |
 | Averaging AIMNet2 + Orb halves wrong answers (57% → 26%); adding MACE undoes it | `results/fig/fig4_best_subset.png` |
-| Curator's LoRA repair: forces 0.88 → 0.50 eV/Å, relative energies slightly worse, gate refuses | `results/fig/fig6_repair.png` |
+| Curator's LoRA repair: forces 1.35 → 0.69 eV/Å on unseen reactions, relative energies worse, gate refuses | `results/fig/fig6_repair.png` |
 
 Pitch deck: see the link in the hackathon submission. Announcement text: `docs/discord_post.md`.
 <!-- RESULTS:END -->

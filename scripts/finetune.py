@@ -574,8 +574,10 @@ def _jsonable(x: Any) -> Any:
 
 
 def _fmt_check(c: dict) -> str:
-    value = "n/a" if c["value"] is None else f"{c['value']:.4g}"
-    return f"{c['name']} {value} {c['comparison']} {c['limit']}: {'ok' if c['passed'] else 'FAIL'}"
+    value = ("n/a" if c["value"] is None else str(c["value"]) if isinstance(c["value"], bool)
+             else f"{c['value']:.4g}")
+    limit = c["limit"] if isinstance(c["limit"], (bool, str)) or c["limit"] is None else f"{c['limit']:.4g}"
+    return f"{c['name']} {value} {c['comparison']} {limit}: {'ok' if c['passed'] else 'FAIL'}"
 
 
 def _fmt(before: dict, after: dict) -> str:
@@ -656,7 +658,7 @@ def run_one(*, name: str, seed: int, frames: list[Frame], train: list[Frame], ho
 
     checks = ", ".join(_fmt_check(c) for c in report["checks"])
     print(f"--- {name}: acceptance {report['verdict'].upper()} ({checks})")
-    print("  hold-out (labelled, by reaction)  before -> after")
+    print("  hold-out (labelled, by component) before -> after")
     print(_fmt(base_eval["holdout"], after["holdout"]))
     print("  train                             before -> after")
     print(_fmt(base_eval["train"], after["train"]))

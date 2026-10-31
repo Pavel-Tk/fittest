@@ -408,104 +408,104 @@
     "B_mace_seeds": {
       "auroc_pool": [
         {
-          "value": 0.8518394943593876,
+          "value": 0.8252959428452232,
           "ci": [
-            0.8259308210827121,
-            0.8805478781884774
+            0.7832289425880132,
+            0.855312172045898
           ],
           "n": 1672
         },
         {
-          "value": 0.8518394943593876,
+          "value": 0.8252959428452232,
           "ci": [
-            0.8259308210827121,
-            0.8805478781884774
+            0.7832289425880132,
+            0.855312172045898
           ],
           "n": 1672
         },
         {
-          "value": 0.8518394943593876,
+          "value": 0.8252959428452232,
           "ci": [
-            0.8259308210827121,
-            0.8805478781884774
+            0.7832289425880132,
+            0.855312172045898
           ],
           "n": 1672
         }
       ],
       "recall_at_k": [
         {
-          "value": 0.07904411764705882,
+          "value": 0.07358156028368794,
           "ci": [
-            0.05024739174076591,
-            0.10682943068401304
+            0.039594585952893877,
+            0.1038637137433065
           ],
-          "n": 1088
+          "n": 1128
         },
         {
-          "value": 0.16636029411764705,
+          "value": 0.15691489361702127,
           "ci": [
-            0.12621805857526538,
-            0.2088379132762788
+            0.11394854990929032,
+            0.19536032328070044
           ],
-          "n": 1088
+          "n": 1128
         },
         {
-          "value": 0.3272058823529412,
+          "value": 0.32092198581560283,
           "ci": [
-            0.26811638527825427,
-            0.3866201811497464
+            0.265478250590036,
+            0.38229800173761946
           ],
-          "n": 1088
+          "n": 1128
         }
       ],
       "planted_caught": [
         {
-          "value": 0.45,
+          "value": 0.5,
           "ci": [
-            0.28194444444444444,
-            0.6447967479674798
+            0.32411095305832155,
+            0.658562532433835
           ],
           "n": 40
         },
         {
-          "value": 0.45,
+          "value": 0.5,
           "ci": [
-            0.28194444444444444,
-            0.6447967479674798
+            0.32411095305832155,
+            0.658562532433835
           ],
           "n": 40
         },
         {
-          "value": 0.45,
+          "value": 0.5,
           "ci": [
-            0.28194444444444444,
-            0.6447967479674798
+            0.32411095305832155,
+            0.658562532433835
           ],
           "n": 40
         }
       ],
       "eval_force_rmse_post": [
         {
-          "value": 0.2925369660037228,
+          "value": 0.30393697277219206,
           "ci": [
-            0.27977132234591656,
-            0.30930377267785153
+            0.290555941250279,
+            0.3227832362688164
           ],
           "n": 1485
         },
         {
-          "value": 0.2925369660037228,
+          "value": 0.30393697277219206,
           "ci": [
-            0.27977132234591656,
-            0.30930377267785153
+            0.290555941250279,
+            0.3227832362688164
           ],
           "n": 1485
         },
         {
-          "value": 0.2925369660037228,
+          "value": 0.30393697277219206,
           "ci": [
-            0.27977132234591656,
-            0.30930377267785153
+            0.290555941250279,
+            0.3227832362688164
           ],
           "n": 1485
         }
@@ -517,7 +517,7 @@
             0.0,
             0.0
           ],
-          "n": 300
+          "n": 328
         },
         {
           "value": 0.0,
@@ -525,15 +525,15 @@
             0.0,
             0.0
           ],
-          "n": 300
+          "n": 328
         },
         {
-          "value": 0.0,
+          "value": 0.27439024390243905,
           "ci": [
-            0.0,
-            0.0
+            0.20395412642669006,
+            0.3539008413765223
           ],
-          "n": 300
+          "n": 328
         }
       ]
     },
@@ -936,7 +936,7 @@
   },
   "failures": {
     "20": [
-      "D_trustswarm: fine-tune not shipped (replay was trained on a different label set (99 of 150 train uids are not this run's oracle labels): fine-tune not re-run for this budget/configuration)",
+      "D_trustswarm: fine-tune not shipped (replay was trained on a different label set (102 of 160 train uids are not this run's oracle labels): fine-tune not re-run for this budget/configuration)",
       "D vs A_single: auroc_pool significantly WORSE (diff -0.223, paired 95% CI [-0.271, -0.159])",
       "D vs A_single: auroc_eval significantly WORSE (diff -0.147, paired 95% CI [-0.186, -0.107])",
       "D vs A_single: recall_at_k not significantly better (diff +0.021, paired 95% CI [-0.021, +0.071])",
@@ -955,10 +955,10 @@
       "D vs B_seed: planted_caught not significantly better (diff -0.150, paired 95% CI [-0.334, +0.025])",
       "D vs B_seed: silent_failures_pool not significantly better (diff +0.000, paired 95% CI [+0.000, +0.000])",
       "D vs B_seed: silent_failures_eval not significantly better (diff +0.000, paired 95% CI [+0.000, +0.000])",
-      "D vs B_mace_seeds: auroc_pool significantly WORSE (diff -0.283, paired 95% CI [-0.340, -0.222])",
-      "D vs B_mace_seeds: auroc_eval significantly WORSE (diff -0.162, paired 95% CI [-0.203, -0.110])",
-      "D vs B_mace_seeds: recall_at_k not significantly better (diff +0.008, paired 95% CI [-0.044, +0.058])",
-      "D vs B_mace_seeds: planted_caught not significantly better (diff +0.100, paired 95% CI [-0.047, +0.250])",
+      "D vs B_mace_seeds: auroc_pool significantly WORSE (diff -0.257, paired 95% CI [-0.312, -0.198])",
+      "D vs B_mace_seeds: auroc_eval significantly WORSE (diff -0.176, paired 95% CI [-0.229, -0.129])",
+      "D vs B_mace_seeds: recall_at_k not significantly better (diff +0.014, paired 95% CI [-0.026, +0.060])",
+      "D vs B_mace_seeds: planted_caught not significantly better (diff +0.050, paired 95% CI [-0.077, +0.200])",
       "D vs B_mace_seeds: silent_failures_pool not significantly better (diff +0.000, paired 95% CI [+0.000, +0.000])",
       "D vs B_mace_seeds: silent_failures_eval not significantly better (diff +0.000, paired 95% CI [+0.000, +0.000])",
       "D vs C_collective: auroc_pool significantly WORSE (diff -0.158, paired 95% CI [-0.210, -0.084])",
@@ -988,10 +988,10 @@
       "D vs B_seed: planted_caught not significantly better (diff -0.250, paired 95% CI [-0.477, +0.049])",
       "D vs B_seed: silent_failures_pool not significantly better (diff +0.009, paired 95% CI [+0.000, +0.033])",
       "D vs B_seed: silent_failures_eval not significantly better (diff +0.000, paired 95% CI [+0.000, +0.000])",
-      "D vs B_mace_seeds: auroc_pool significantly WORSE (diff -0.192, paired 95% CI [-0.248, -0.138])",
-      "D vs B_mace_seeds: auroc_eval significantly WORSE (diff -0.123, paired 95% CI [-0.167, -0.078])",
-      "D vs B_mace_seeds: recall_at_k not significantly better (diff +0.020, paired 95% CI [-0.051, +0.083])",
-      "D vs B_mace_seeds: planted_caught not significantly better (diff +0.000, paired 95% CI [-0.167, +0.194])",
+      "D vs B_mace_seeds: auroc_pool significantly WORSE (diff -0.166, paired 95% CI [-0.219, -0.122])",
+      "D vs B_mace_seeds: auroc_eval significantly WORSE (diff -0.138, paired 95% CI [-0.182, -0.096])",
+      "D vs B_mace_seeds: recall_at_k not significantly better (diff +0.029, paired 95% CI [-0.043, +0.099])",
+      "D vs B_mace_seeds: planted_caught not significantly better (diff -0.050, paired 95% CI [-0.220, +0.122])",
       "D vs B_mace_seeds: silent_failures_pool not significantly better (diff +0.009, paired 95% CI [+0.000, +0.033])",
       "D vs B_mace_seeds: silent_failures_eval not significantly better (diff +0.000, paired 95% CI [+0.000, +0.000])",
       "D vs C_collective: auroc_pool significantly WORSE (diff -0.067, paired 95% CI [-0.108, -0.021])",
@@ -1009,7 +1009,7 @@
       "D vs C_audit: silent_failures_eval not significantly better (diff -0.029, paired 95% CI [-0.078, +0.000])"
     ],
     "80": [
-      "D_trustswarm: fine-tune not shipped (replay was trained on a different label set (43 of 150 train uids are not this run's oracle labels): fine-tune not re-run for this budget/configuration)",
+      "D_trustswarm: fine-tune not shipped (replay was trained on a different label set (44 of 160 train uids are not this run's oracle labels): fine-tune not re-run for this budget/configuration)",
       "D vs A_single: auroc_pool significantly WORSE (diff -0.138, paired 95% CI [-0.186, -0.087])",
       "D vs A_single: auroc_eval significantly WORSE (diff -0.158, paired 95% CI [-0.198, -0.110])",
       "D vs A_single: planted_caught not significantly better (diff +0.050, paired 95% CI [-0.150, +0.282])",
@@ -1021,11 +1021,10 @@
       "D vs B_seed: planted_caught not significantly better (diff -0.050, paired 95% CI [-0.244, +0.164])",
       "D vs B_seed: silent_failures_pool not significantly better (diff +0.000, paired 95% CI [+0.000, +0.000])",
       "D vs B_seed: silent_failures_eval not significantly better (diff +0.000, paired 95% CI [+0.000, +0.000])",
-      "D vs B_mace_seeds: auroc_pool significantly WORSE (diff -0.198, paired 95% CI [-0.249, -0.150])",
-      "D vs B_mace_seeds: auroc_eval significantly WORSE (diff -0.173, paired 95% CI [-0.227, -0.119])",
-      "D vs B_mace_seeds: recall_at_k not significantly better (diff +0.051, paired 95% CI [-0.028, +0.128])",
-      "D vs B_mace_seeds: silent_failures_pool not significantly better (diff +0.000, paired 95% CI [+0.000, +0.000])",
-      "D vs B_mace_seeds: silent_failures_eval not significantly better (diff +0.000, paired 95% CI [+0.000, +0.000])",
+      "D vs B_mace_seeds: auroc_pool significantly WORSE (diff -0.172, paired 95% CI [-0.224, -0.119])",
+      "D vs B_mace_seeds: auroc_eval significantly WORSE (diff -0.187, paired 95% CI [-0.241, -0.132])",
+      "D vs B_mace_seeds: recall_at_k not significantly better (diff +0.057, paired 95% CI [-0.028, +0.126])",
+      "D vs B_mace_seeds: planted_caught not significantly better (diff +0.150, paired 95% CI [-0.026, +0.333])",
       "D vs C_collective: auroc_pool significantly WORSE (diff -0.073, paired 95% CI [-0.114, -0.032])",
       "D vs C_collective: auroc_eval significantly WORSE (diff -0.122, paired 95% CI [-0.160, -0.086])",
       "D vs C_collective: silent_failures_pool not significantly better (diff +0.000, paired 95% CI [+0.000, +0.000])",
@@ -1038,5 +1037,5 @@
       "D vs C_audit: silent_failures_eval not significantly better (diff -0.025, paired 95% CI [-0.073, +0.000])"
     ]
   },
-  "runtime_s": 14.6
+  "runtime_s": 30.6
 }

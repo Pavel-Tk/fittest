@@ -340,24 +340,24 @@
       },
       "B_mace_seeds": {
         "eval_force_rmse_post": {
-          "value": 0.293,
+          "value": 0.304,
           "ci": [
-            0.279,
-            0.308
+            0.289,
+            0.32
           ]
         },
         "auroc_eval": {
-          "value": 0.853,
+          "value": 0.867,
           "ci": [
-            0.818,
-            0.884
+            0.836,
+            0.898
           ]
         },
         "ece_eval": {
-          "value": 0.301,
+          "value": 0.263,
           "ci": [
-            0.268,
-            0.333
+            0.228,
+            0.297
           ]
         },
         "trusted_fraction_eval": {
@@ -368,10 +368,10 @@
           ]
         },
         "eval_wrong_rate_post": {
-          "value": 0.681,
+          "value": 0.728,
           "ci": [
-            0.65,
-            0.715
+            0.694,
+            0.763
           ]
         }
       },
@@ -495,83 +495,83 @@
       {
         "name": "from_scratch_ratio",
         "source": "alchemi",
-        "value": 0.7733266426918681,
+        "value": 1.4039306956296873,
         "limit": 1.0,
         "comparison": "<=",
-        "passed": true,
+        "passed": false,
         "detail": "worst error ratio against the equal-size from-scratch student"
       },
       {
         "name": "alchemi_report_accepted",
         "source": "alchemi",
-        "value": true,
+        "value": false,
         "limit": true,
         "comparison": "==",
-        "passed": true,
+        "passed": false,
         "detail": "build_acceptance_report(...).accepted"
       },
       {
         "name": "holdout_force_rmse_not_worse",
         "source": "trustswarm",
-        "value": 0.5003207378553053,
-        "limit": 0.8778179080391152,
+        "value": 0.6917768567266076,
+        "limit": 1.3549763973049527,
         "comparison": "<=",
         "passed": true,
-        "detail": "fine-tuned 0.5003 vs base 0.8778 eV/A, held-out labelled slice"
+        "detail": "fine-tuned 0.6918 vs base 1.3550 eV/A, held-out labelled slice"
       },
       {
         "name": "holdout_rel_energy_mae_not_worse",
         "source": "trustswarm",
-        "value": 0.41357457706944845,
-        "limit": 0.4019207405700789,
+        "value": 0.36364658802588,
+        "limit": 0.3139502423892693,
         "comparison": "<=",
         "passed": false,
-        "detail": "fine-tuned 0.4136 vs base 0.4019 eV, held-out labelled slice"
+        "detail": "fine-tuned 0.3636 vs base 0.3140 eV, held-out labelled slice"
       }
     ],
     "holdout_before": {
-      "n_frames": 36,
-      "n_atoms": 418,
-      "force_rmse": 0.8778179080391152,
-      "force_mae": 0.5794903341363989,
-      "frame_force_rmse_mean": 0.8281601249010675,
+      "n_frames": 26,
+      "n_atoms": 285,
+      "force_rmse": 1.3549763973049527,
+      "force_mae": 0.7271354054309708,
+      "frame_force_rmse_mean": 1.213652374650213,
       "frac_force_wrong": 1.0,
-      "rel_energy_mae": 0.4019207405700789,
-      "n_rel_energy": 35
+      "rel_energy_mae": 0.3139502423892693,
+      "n_rel_energy": 21
     },
     "holdout_after": {
-      "n_frames": 36,
-      "n_atoms": 418,
-      "force_rmse": 0.5003207378553053,
-      "force_mae": 0.30454261749512623,
-      "frame_force_rmse_mean": 0.4445458829857021,
-      "frac_force_wrong": 0.8055555555555556,
-      "rel_energy_mae": 0.41357457706944845,
-      "n_rel_energy": 35
+      "n_frames": 26,
+      "n_atoms": 285,
+      "force_rmse": 0.6917768567266076,
+      "force_mae": 0.3772697349951494,
+      "frame_force_rmse_mean": 0.6077065938065892,
+      "frac_force_wrong": 0.8461538461538461,
+      "rel_energy_mae": 0.36364658802588,
+      "n_rel_energy": 21
     },
     "eval_n": 1485,
     "eval_frames_excluded": 0,
     "eval_reactions_excluded": 0,
     "eval_median_force_rmse": {
       "base": 0.558,
-      "finetuned": 0.267
+      "finetuned": 0.279
     },
     "eval_median_by_role": {
       "reactant": {
         "base": 0.513,
-        "finetuned": 0.138
+        "finetuned": 0.143
       },
       "product": {
         "base": 0.516,
-        "finetuned": 0.238
+        "finetuned": 0.24
       },
       "path": {
         "base": 0.563,
-        "finetuned": 0.27
+        "finetuned": 0.28
       },
       "ts": {
         "base": 0.676,
-        "finetuned": 0.381
+        "finetuned": 0.389
       }
     }
   }

@@ -620,8 +620,7 @@ def fig6(test, preds, nums):
 
     checks = rep_.get("checks", [])
     failed = [c for c in checks if not c.get("passed", True)]
-    chk_txt = "; ".join(f"{c['name']} = {c['value']:.2f} (limit {CMP_SYM.get(c['comparison'], c['comparison'])} {c['limit']:g})"
-                        for c in (failed or checks)[:2])
+    chk_txt = f"{len(failed)} of {len(checks)} checks failed" if failed else "all checks passed"
     med_b, med_c = float(np.median(e_base)), float(np.median(e_cur))
     f_dir = "cuts" if ha["force_rmse"] < hb["force_rmse"] else "raises"
     gate = "passes its gate" if shipped else "fails its gate"
@@ -632,8 +631,7 @@ def fig6(test, preds, nums):
                                                           if e_b is not None and e_a is not None else ""),
              ha="left", va="top", fontsize=13, color=MUTED)
     footnote(fig, f"Gate {'passed' if shipped else 'failed (not shipped)'}{': ' + chk_txt if chk_txt else ''}.\n"
-                  f"Eval = leak-free eval minus {n_rxn_excl} reactions the fine-tune trained or held out on. "
-                  f"Whiskers = IQR.")
+                  f"Hold-out shares no geometry with training. Eval: leak-free held-out reactions. Whiskers = IQR.")
     save(fig, "fig6_repair")
     nums["fig6"] = {"verdict": verdict, "shipped": shipped, "checks": checks,
                     "holdout_before": hb, "holdout_after": ha,
