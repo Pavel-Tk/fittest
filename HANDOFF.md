@@ -69,3 +69,5 @@ Deadline from Pavel: **Sat Oct 31, 19:00 EST** for everything; slides due Sun No
   side, with the verdict under the decision rule), make the figures, then commit and push.
 - The original `~/fittest` had an unmerged `scripts/finetune.py`; it was reset to origin/master, and the old file is
   backed up at `~/handoff/finetune.py.vm_unmerged_backup`.
+
+- Update 13:55: run B (seeds 0,1 + newest control for both) FINISHED, outputs in `~/fittest_evoB/results/evolution_aimnet` (not scored yet). Run A seed 1 (PID 12933) still running, ETA ~18:40 UTC.
