@@ -149,7 +149,8 @@ def cmd_run(args) -> None:
     out = Path(args.out) / f"b{args.budget}{args.tag}"
     out.mkdir(parents=True, exist_ok=True)
     frames, split_report = assign_leakfree_splits(load_frames(args.frames), 0)
-    base_cfg = budget_config(args.budget, args.generations, n_bootstrap_eval=args.n_boot)
+    base_cfg = budget_config(args.budget, args.generations, n_bootstrap_eval=args.n_boot,
+                             families=tuple(f for f in args.families.split(",") if f))
     base = load_models(args.preds, list(base_cfg.base_models))
     scorer = EvalScorer(args.n_boot, 0)
     factory = GPUFactory(Path(args.out), args.frames, args.core_python, args.orb_python, args.device,
@@ -340,6 +341,8 @@ def main(argv=None) -> None:
     r.add_argument("--gpu-slots", type=int, default=5)
     r.add_argument("--threads", type=int, default=2)
     r.add_argument("--n-boot", type=int, default=1000)
+    r.add_argument("--families", default="aimnet2,orb,mace",
+                   help="specialist families to breed (CPU VM: aimnet2 only)")
     s = sub.add_parser("summarize")
     s.add_argument("--out", default="results/evolution_c")
     args = ap.parse_args(argv)
