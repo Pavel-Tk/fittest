@@ -1,0 +1,24 @@
+Warp 1.18.0 initialized:
+   CUDA Toolkit 13.4, Driver 13.0
+   Devices:
+     "cpu"      : "x86_64"
+     "cuda:0"   : "NVIDIA L4" (22 GiB, sm_89, mempool enabled)
+   Kernel cache:
+     /root/.cache/warp/1.18.0
+/usr/local/lib/python3.13/dist-packages/torch/jit/_script.py:1488: DeprecationWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
+  warnings.warn(
+Using medium MPA-0 model as default MACE-MP model, to use previous (before 3.10) default model please specify 'medium' as model argument
+/content/fittest/scripts/evolve_c_offspring.py:220: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:836.)
+  "rel_e_mse": float(el / len(lab_pos))})
+{"step": 0, "loss": 1.5097553730010986, "force_mse": 0.860462486743927, "rel_e_mse": 0.6492928862571716}
+{"step": 20, "loss": 0.9161248207092285, "force_mse": 0.8447737097740173, "rel_e_mse": 0.07135113328695297}
+{"step": 40, "loss": 2.553584337234497, "force_mse": 2.1117970943450928, "rel_e_mse": 0.4417872130870819}
+{"step": 60, "loss": 1.4703028202056885, "force_mse": 0.8816560506820679, "rel_e_mse": 0.5886468291282654}
+{"step": 80, "loss": 1.8391094207763672, "force_mse": 1.5780863761901855, "rel_e_mse": 0.26102298498153687}
+{"step": 100, "loss": 0.8523411154747009, "force_mse": 0.6391066312789917, "rel_e_mse": 0.21323449909687042}
+{"step": 120, "loss": 1.4975427389144897, "force_mse": 1.2586753368377686, "rel_e_mse": 0.2388673573732376}
+{"step": 140, "loss": 1.1988675594329834, "force_mse": 0.837770938873291, "rel_e_mse": 0.3610965609550476}
+{"step": 160, "loss": 0.9681093692779541, "force_mse": 0.5660882592201233, "rel_e_mse": 0.4020210802555084}
+{"step": 180, "loss": 0.905927300453186, "force_mse": 0.5703364014625549, "rel_e_mse": 0.3355908691883087}
+{"step": 199, "loss": 0.7878707647323608, "force_mse": 0.47086888551712036, "rel_e_mse": 0.3170018494129181}

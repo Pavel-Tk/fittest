@@ -226,7 +226,7 @@ def main(argv=None) -> None:
     uids = spec["predict_uids"][:50] if args.smoke else spec["predict_uids"]
     pf = [by_uid[u] for u in uids]
     t1 = time.time()
-    E, F = predict(ad, pf)
+    E, F = predict(ad, pf, max_atoms=1000 if fam == "mace" else 3000)
     save_predictions(spec["out"], spec["id"], uids, E, F,
                      {"family": fam, "recipe": rec, "parent_ckpt": spec.get("parent_ckpt"),
                       "n_train": len(train)})

@@ -55,6 +55,7 @@ class GPUFactory:
         self.frames, self.device = frames, device
         self.py = {"aimnet2": core_python, "mace": core_python, "orb": orb_python}
         self.parallel, self.gpu_slots, self.threads = parallel, gpu_slots, threads
+        self.max_tries = 4
         self.log: list[dict[str, Any]] = []
 
     @staticmethod
@@ -97,9 +98,10 @@ class GPUFactory:
                     continue
                 slot = self._slot()
                 sp = Path(s["result"]).with_suffix("").with_suffix(".spec.json")
-                sp.write_text(json.dumps(s))
+                sp.write_text(json.dumps({k: v for k, v in s.items() if not k.startswith("_")}))
                 log = open(Path(s["result"]).with_suffix("").with_suffix(".log"), "w")
-                env = {**os.environ, "PYTHONPATH": str(ROOT), "OMP_NUM_THREADS": str(self.threads)}
+                env = {**os.environ, "PYTHONPATH": str(ROOT), "OMP_NUM_THREADS": str(self.threads),
+                       "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True"}
                 cmd = [self.py[s["family"]], str(ROOT / "scripts" / "evolve_c_offspring.py"), "--frames",
                        self.frames, "--spec", str(sp), "--device", self.device]
                 print(f"[factory] start {s['id']} ({s['key']}, parent {s['parent_id']}, recipe {s['recipe']}, "
@@ -114,6 +116,15 @@ class GPUFactory:
                     continue
                 log.close()
                 slot.close()
+                lp = Path(s["result"]).with_suffix("").with_suffix(".log")
+                oom = p.returncode != 0 and "OutOfMemoryError" in lp.read_text(errors="replace")
+                tries = s.setdefault("_tries", 1)
+                if oom and tries < self.max_tries:  # infrastructure failure, not an outcome: retry
+                    s["_tries"] = tries + 1
+                    lp.rename(lp.with_suffix(f".oom{tries}.log"))
+                    print(f"[factory] {s['id']} CUDA OOM, retry {tries + 1}/{self.max_tries}", flush=True)
+                    pending.append(s)
+                    continue
                 done[s["id"]] = p.returncode
                 print(f"[factory] {s['id']} exit {p.returncode} after {time.time() - t0:.0f} s", flush=True)
             running = still

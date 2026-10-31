@@ -1,0 +1,98 @@
+Warp 1.18.0 initialized:
+   CUDA Toolkit 13.4, Driver 13.0
+   Devices:
+     "cpu"      : "x86_64"
+     "cuda:0"   : "NVIDIA L4" (22 GiB, sm_89, mempool enabled)
+   Kernel cache:
+     /root/.cache/warp/1.18.0
+/usr/local/lib/python3.13/dist-packages/torch/jit/_script.py:1488: DeprecationWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
+  warnings.warn(
+Using medium MPA-0 model as default MACE-MP model, to use previous (before 3.10) default model please specify 'medium' as model argument
+/content/fittest/scripts/evolve_c_offspring.py:172: UserWarning: Environment variable TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD detected, since the`weights_only` argument was not explicitly passed to `torch.load`, forcing weights_only=False.
+  state = torch.load(spec["parent_ckpt"], map_location=args.device)
+/content/fittest/scripts/evolve_c_offspring.py:220: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:836.)
+  "rel_e_mse": float(el / len(lab_pos))})
+{"step": 0, "loss": 0.680968701839447, "force_mse": 0.46126824617385864, "rel_e_mse": 0.43940091133117676}
+{"step": 20, "loss": 0.9879683256149292, "force_mse": 0.5443058609962463, "rel_e_mse": 0.8873249292373657}
+{"step": 40, "loss": 0.6395728588104248, "force_mse": 0.48925307393074036, "rel_e_mse": 0.3006395995616913}
+{"step": 60, "loss": 0.4347825050354004, "force_mse": 0.3782196044921875, "rel_e_mse": 0.1131257712841034}
+{"step": 80, "loss": 0.7299211621284485, "force_mse": 0.5051352381706238, "rel_e_mse": 0.4495718777179718}
+{"step": 100, "loss": 0.96674644947052, "force_mse": 0.7478228211402893, "rel_e_mse": 0.43784719705581665}
+{"step": 120, "loss": 0.9844868183135986, "force_mse": 0.5874496698379517, "rel_e_mse": 0.7940742373466492}
+{"step": 140, "loss": 0.8470609784126282, "force_mse": 0.6559075117111206, "rel_e_mse": 0.3823069632053375}
+{"step": 160, "loss": 0.568240225315094, "force_mse": 0.43533962965011597, "rel_e_mse": 0.26580116152763367}
+{"step": 180, "loss": 0.5846471786499023, "force_mse": 0.4466463029384613, "rel_e_mse": 0.27600181102752686}
+{"step": 199, "loss": 0.747018575668335, "force_mse": 0.39057496190071106, "rel_e_mse": 0.7128872871398926}
+Traceback (most recent call last):
+  File "/content/fittest/scripts/evolve_c_offspring.py", line 242, in <module>
+    main()
+    ~~~~^^
+  File "/content/fittest/scripts/evolve_c_offspring.py", line 229, in main
+    E, F = predict(ad, pf)
+           ~~~~~~~^^^^^^^^
+  File "/content/fittest/scripts/evolve_c_offspring.py", line 139, in predict
+    e, f = ad.ef(frames[i:j], train=False)
+           ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/content/fittest/scripts/evolve_c_offspring.py", line 115, in ef
+    out = self.module(bt)
+  File "/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py", line 1779, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py", line 1790, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/content/nvalchemi-toolkit/nvalchemi/models/mace.py", line 948, in forward
+    raw_output = self.model.forward(
+        model_inputs,
+    ...<8 lines>...
+        training=self.training,
+    )
+  File "/usr/local/lib/python3.13/dist-packages/mace/modules/models.py", line 561, in forward
+    node_feats = product(
+        node_feats=node_feats, sc=sc, node_attrs=node_attrs_slice
+    )
+  File "/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py", line 1779, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py", line 1790, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/usr/local/lib/python3.13/dist-packages/mace/modules/blocks.py", line 450, in forward
+    node_feats = self.symmetric_contractions(node_feats, node_attrs)
+  File "/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py", line 1779, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py", line 1790, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/usr/local/lib/python3.13/dist-packages/mace/modules/symmetric_contraction.py", line 86, in forward
+    outs = [contraction(x, y) for contraction in self.contractions]
+            ~~~~~~~~~~~^^^^^^
+  File "/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py", line 1779, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py", line 1790, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/usr/local/lib/python3.13/dist-packages/mace/modules/symmetric_contraction.py", line 241, in forward
+    out = self.graph_opt_main(
+        self.U_tensors(self.correlation),
+    ...<2 lines>...
+        y,
+    )
+  File "/usr/local/lib/python3.13/dist-packages/torch/fx/graph_module.py", line 949, in call_wrapped
+    return self._wrapped_call(self, *args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/dist-packages/torch/fx/graph_module.py", line 461, in __call__
+    raise e
+  File "/usr/local/lib/python3.13/dist-packages/torch/fx/graph_module.py", line 447, in __call__
+    return super(self.cls, obj).__call__(*args, **kwargs)  # type: ignore[misc]
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py", line 1779, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py", line 1790, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "<eval_with_key>.9 from <eval_with_key>.8:10 in forward", line 7, in forward
+    tensordot_1 = torch.functional.tensordot(einsum, x, dims = ((3, 1), (2, 3)), out = None);  einsum = x = None
+  File "/usr/local/lib/python3.13/dist-packages/torch/functional.py", line 1358, in tensordot
+    return _VF.tensordot(a, b, dims_a, dims_b)  # type: ignore[attr-defined]
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 538.00 MiB. GPU 0 has a total capacity of 22.03 GiB of which 477.44 MiB is free. Process 7276 has 6.94 GiB memory in use. Process 7558 has 6.92 GiB memory in use. Process 7602 has 2.13 GiB memory in use. Including non-PyTorch memory, this process has 1.68 GiB memory in use. Process 7736 has 346.00 MiB memory in use. Process 7746 has 3.52 GiB memory in use. Of the allocated memory 1.31 GiB is allocated by PyTorch, and 148.35 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)

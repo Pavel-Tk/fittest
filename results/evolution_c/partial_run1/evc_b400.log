@@ -1,0 +1,29 @@
+[static_s0] g0 labels 100 pop ['mace_mpa0', 'aimnet2', 'orb'] F-RMSE 0.2119 relE 0.1470 (1 s)
+[static_s0] g1 labels 200 pop ['mace_mpa0', 'aimnet2', 'orb'] F-RMSE 0.2119 relE 0.1470 (2 s)
+[static_s0] g2 labels 300 pop ['mace_mpa0', 'aimnet2', 'orb'] F-RMSE 0.2119 relE 0.1470 (3 s)
+[static_s0] g3 labels 400 pop ['mace_mpa0', 'aimnet2', 'orb'] F-RMSE 0.2160 relE 0.1433 (4 s)
+[factory] start g1_aimnet2_flagged (6ab097e3e0ddcb55, parent aimnet2, recipe {'lr': 0.0001, 'energy_weight': 1.0, 'force_weight': 1.0, 'steps': 200, 'reactions_per_batch': 4}, n_train 45)
+[factory] start g1_orb_flagged (128c920ca8787ff1, parent orb, recipe {'lr': 0.0001, 'energy_weight': 1.0, 'force_weight': 1.0, 'steps': 200, 'reactions_per_batch': 4}, n_train 45)
+[factory] start g1_mace_flagged (929d38eebaed3e2a, parent mace_mpa0, recipe {'lr': 0.001, 'energy_weight': 1.0, 'force_weight': 1.0, 'steps': 200, 'reactions_per_batch': 4}, n_train 45)
+[factory] g1_aimnet2_flagged exit 0 after 30 s
+[factory] g1_mace_flagged exit 0 after 75 s
+[factory] g1_orb_flagged exit 0 after 126 s
+[evolved_s0] g0 labels 100 pop ['mace_mpa0', 'aimnet2', 'orb'] F-RMSE 0.2119 relE 0.1470 (127 s)
+[factory] start g2_aimnet2_flagged (e69297fdecb8972f, parent aimnet2, recipe {'lr': 0.0001, 'energy_weight': 1.0, 'force_weight': 1.0, 'steps': 200, 'reactions_per_batch': 4}, n_train 91)
+[factory] start g2_orb_flagged (94f6789fca799308, parent g1_orb_flagged, recipe {'lr': 0.0002, 'energy_weight': 0.5, 'force_weight': 1.0, 'steps': 200, 'reactions_per_batch': 4}, n_train 91)
+[factory] start g2_mace_flagged (c3db1895be9e3a77, parent g1_mace_flagged, recipe {'lr': 0.002, 'energy_weight': 2.0, 'force_weight': 1.0, 'steps': 200, 'reactions_per_batch': 4}, n_train 91)
+[factory] g2_aimnet2_flagged exit 0 after 49 s
+[factory] g2_mace_flagged exit 0 after 66 s
+[factory] g2_orb_flagged exit 0 after 115 s
+[evolved_s0] g1 labels 200 pop ['aimnet2', 'g1_orb_flagged', 'g1_mace_flagged'] F-RMSE 0.2588 relE 0.1362 (274 s)
+[factory] start g3_aimnet2_flagged (502e53f394eccd46, parent aimnet2, recipe {'lr': 0.0001, 'energy_weight': 1.0, 'force_weight': 1.0, 'steps': 200, 'reactions_per_batch': 4}, n_train 136)
+[factory] start g3_orb_flagged (354c2789be31523b, parent g1_orb_flagged, recipe {'lr': 0.0002, 'energy_weight': 2.0, 'force_weight': 1.0, 'steps': 200, 'reactions_per_batch': 4}, n_train 136)
+[factory] start g3_mace_flagged (a7e10bbfa7116830, parent g1_mace_flagged, recipe {'lr': 0.002, 'energy_weight': 0.5, 'force_weight': 1.0, 'steps': 200, 'reactions_per_batch': 4}, n_train 136)
+[factory] g3_aimnet2_flagged exit 0 after 30 s
+[factory] g3_mace_flagged exit 1 after 66 s
+[factory] g3_orb_flagged exit 0 after 164 s
+[evolved_s0] g2 labels 300 pop ['aimnet2', 'g1_orb_flagged', 'g1_mace_flagged'] F-RMSE 0.2599 relE 0.1388 (511 s)
+[evolved_s0] g3 labels 400 pop ['aimnet2', 'g1_mace_flagged', 'g3_orb_flagged'] F-RMSE 0.2349 relE 0.1184 (513 s)
+[static_s1] g0 labels 100 pop ['mace_mpa0', 'aimnet2', 'orb'] F-RMSE 0.2085 relE 0.1600 (1 s)
+[static_s1] g1 labels 200 pop ['mace_mpa0', 'aimnet2', 'orb'] F-RMSE 0.2051 relE 0.1514 (2 s)
+[static_s1] g2 labels 300 pop ['mace_mpa0', 'aimnet2', 'orb'] F-RMSE 0.2051 relE 0.1514 (3 s)

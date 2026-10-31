@@ -1,0 +1,2 @@
+import subprocess
+print(subprocess.run(r'''for f in /content/logs/evc_*.log; do echo "== $f"; grep -E "^\[(static|evolved|noselect)|exit|Error|Traceback|RUN_DONE" $f | tail -8; done; ls /content/fittest/results/evolution_c/cache/*.result.json 2>/dev/null | wc -l; nvidia-smi --query-gpu=memory.used,utilization.gpu --format=csv,noheader''', shell=True, capture_output=True, text=True, executable="/bin/bash").stdout[-6000:])

@@ -1,0 +1,25 @@
+Warp 1.18.0 initialized:
+   CUDA Toolkit 13.4, Driver 13.0
+   Devices:
+     "cpu"      : "x86_64"
+     "cuda:0"   : "NVIDIA L4" (22 GiB, sm_89, mempool enabled)
+   Kernel cache:
+     /root/.cache/warp/1.18.0
+/usr/local/lib/python3.13/dist-packages/torch/jit/_script.py:1488: DeprecationWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
+  warnings.warn(
+Using medium MPA-0 model as default MACE-MP model, to use previous (before 3.10) default model please specify 'medium' as model argument
+/content/fittest/scripts/evolve_c_offspring.py:220: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:836.)
+  "rel_e_mse": float(el / len(lab_pos))})
+{"step": 0, "loss": 1.5542229413986206, "force_mse": 0.7681286334991455, "rel_e_mse": 0.7860943078994751}
+{"step": 20, "loss": 2.341216564178467, "force_mse": 0.7169740796089172, "rel_e_mse": 1.6242424249649048}
+{"step": 40, "loss": 2.090733051300049, "force_mse": 0.6093573570251465, "rel_e_mse": 1.481375813484192}
+{"step": 60, "loss": 1.5039204359054565, "force_mse": 0.8988319635391235, "rel_e_mse": 0.605088472366333}
+{"step": 80, "loss": 0.48093315958976746, "force_mse": 0.47104617953300476, "rel_e_mse": 0.0098869688808918}
+{"step": 100, "loss": 1.0658031702041626, "force_mse": 0.44267818331718445, "rel_e_mse": 0.6231250166893005}
+{"step": 120, "loss": 0.8414908647537231, "force_mse": 0.5710600018501282, "rel_e_mse": 0.27043089270591736}
+{"step": 140, "loss": 0.909756064414978, "force_mse": 0.5364922285079956, "rel_e_mse": 0.37326380610466003}
+{"step": 160, "loss": 0.956369161605835, "force_mse": 0.6272953152656555, "rel_e_mse": 0.32907384634017944}
+{"step": 180, "loss": 1.2252631187438965, "force_mse": 0.4487415552139282, "rel_e_mse": 0.7765215039253235}
+{"step": 199, "loss": 0.8389734029769897, "force_mse": 0.7607812881469727, "rel_e_mse": 0.07819214463233948}
+DONE {"id": "g1_mace_flagged", "ckpt": "results/evolution_c/cache/mace_769a765d47a7388e.pt", "n_train": 90, "n_train_reactions": 36, "n_head_params": 2192, "train_seconds": 54.08250594139099, "predict_seconds": 16.086612701416016, "wall_seconds": 70.16911911964417, "toolkit": {}}
