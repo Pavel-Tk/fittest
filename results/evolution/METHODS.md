@@ -44,6 +44,23 @@ LoRA on top, E0 inherited); a child of the foundation model refits E0 on its tra
 Clone rejection: Pearson r of child's and a member's deviations from the population-mean force over
 pool atoms > 0.95, or median per-frame force RMS difference < 0.02 eV/Å.
 
+**Run B (pre-planned extension, run after run A's outcome was known): AIMNet2 offspring.**
+`scripts/evolve_offspring_aimnet.py`. Same budget, generations, split, fitness, selection, gate
+(minus the ALCHEMI report, not applicable to AIMNet2; recorded as n/a), clone check, eval and
+decision rule; only the bred family changes (germline `aimnet2`, ensemble member 0). Fine-tune with
+`AIMNet2Calculator(train=True)`, Adam, cosine schedule, ≥ 200 steps, batch 16; base recipe lr 1e-4,
+head only (mlps.2.* + outputs.*). Loss = w_F · MSE(forces) + w_rel · MSE((Ê_i − Ê_reactant) −
+(E_i − E_reactant)). The relative-energy target uses the Oracle's free reactant reference energy —
+the same contract every arm and run A get (DESIGN.md: the reactant reference is not charged to the
+budget); it is not an extra label. No absolute-energy term. Each job also reports how many training
+labels have a *labelled* same-reaction partner (16 of 30 at generation 0, seed 0). Sibling mutations:
+a: w_rel ×3; b: train the whole network at lr ÷3 (or back to head at lr ×3); c: lr ×3 or ÷3,
+epochs −20/+30, 80 % reaction subsample. Level of theory: AIMNet2 is ωB97M-D3/def2-TZVPP, T1x is
+ωB97x/6-31G(d); part of any gain is learning the T1x level from budgeted labels (legitimate, the
+labels came out of the budget). **Newest-child control**: one child per generation with the
+parent's recipe unchanged, no fitness, no pruning, no gate, no clone check; the newest child always
+replaces the previous one.
+
 **Gate** (select labels, component-disjoint from the child's training labels, asserted in both the
 engine and the torch job): force RMSE ≤ parent; reactant-relative ΔE MAE ≤ parent; ALCHEMI
 `build_acceptance_report` from-scratch ratio (child vs parent, same hold-out batches) ≤ 1.01.
