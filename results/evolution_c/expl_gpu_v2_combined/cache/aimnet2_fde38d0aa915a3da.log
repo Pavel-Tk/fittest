@@ -1,0 +1,23 @@
+/content/fittest/scripts/evolve_c_offspring.py:220: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:836.)
+  "rel_e_mse": float(el / len(lab_pos))})
+Warp 1.18.0 initialized:
+   CUDA Toolkit 13.4, Driver 13.0
+   Devices:
+     "cpu"      : "x86_64"
+     "cuda:0"   : "NVIDIA L4" (22 GiB, sm_89, mempool enabled)
+   Kernel cache:
+     /root/.cache/warp/1.18.0
+Downloading https://storage.googleapis.com/aimnetcentral/aimnet2v2/AIMNet2/aimnet2_wb97m_d3_0.pt -> /root/.cache/aimnet/aimnet2_wb97m_d3_0.pt
+{"step": 0, "loss": 1.5481576344221772, "force_mse": 0.20198726654052734, "rel_e_mse": 0.134617036788165}
+{"step": 20, "loss": 0.621012461017055, "force_mse": 0.19166496396064758, "rel_e_mse": 0.04293474970564074}
+{"step": 40, "loss": 0.24783809294261594, "force_mse": 0.07583709806203842, "rel_e_mse": 0.017200099488057754}
+{"step": 60, "loss": 0.14907259000699674, "force_mse": 0.07465536147356033, "rel_e_mse": 0.007441722853343642}
+{"step": 80, "loss": 0.16229101500516976, "force_mse": 0.05426235496997833, "rel_e_mse": 0.010802866003519145}
+{"step": 100, "loss": 0.9274839790831632, "force_mse": 0.06618552654981613, "rel_e_mse": 0.08612984525333471}
+{"step": 120, "loss": 0.26154097608521854, "force_mse": 0.06218685582280159, "rel_e_mse": 0.019935412026241696}
+{"step": 140, "loss": 0.08991449870994331, "force_mse": 0.06414851546287537, "rel_e_mse": 0.0025765983247067943}
+{"step": 160, "loss": 0.04823609739105226, "force_mse": 0.03368523716926575, "rel_e_mse": 0.0014550860221786515}
+{"step": 180, "loss": 0.12093743369398081, "force_mse": 0.044705767184495926, "rel_e_mse": 0.007623166650948489}
+{"step": 199, "loss": 0.12231364422107784, "force_mse": 0.0286423172801733, "rel_e_mse": 0.009367132694090452}
+DONE {"id": "g1_aimnet2_flagged_b", "ckpt": "results/evolution_c_v2/cache/aimnet2_fde38d0aa915a3da.pt", "n_train": 45, "n_train_reactions": 23, "n_head_params": 862665, "train_seconds": 48.90443468093872, "predict_seconds": 0.4379596710205078, "wall_seconds": 49.342395067214966, "toolkit": {}}

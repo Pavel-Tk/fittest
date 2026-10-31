@@ -1,0 +1,22 @@
+/content/fittest/scripts/evolve_c_offspring.py:220: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:836.)
+  "rel_e_mse": float(el / len(lab_pos))})
+Warp 1.18.0 initialized:
+   CUDA Toolkit 13.4, Driver 13.0
+   Devices:
+     "cpu"      : "x86_64"
+     "cuda:0"   : "NVIDIA L4" (22 GiB, sm_89, mempool enabled)
+   Kernel cache:
+     /root/.cache/warp/1.18.0
+{"step": 0, "loss": 0.21973152571404078, "force_mse": 0.06790725886821747, "rel_e_mse": 0.030364853369164665}
+{"step": 20, "loss": 0.46009467043143965, "force_mse": 0.05372738838195801, "rel_e_mse": 0.08127345640989633}
+{"step": 40, "loss": 0.49243986598599426, "force_mse": 0.06673838198184967, "rel_e_mse": 0.08514029680082892}
+{"step": 60, "loss": 0.6524076820961148, "force_mse": 0.09390867501497269, "rel_e_mse": 0.11169980141622843}
+{"step": 80, "loss": 0.10567150981824033, "force_mse": 0.07333433628082275, "rel_e_mse": 0.006467434707483517}
+{"step": 100, "loss": 0.066539318716762, "force_mse": 0.03542729467153549, "rel_e_mse": 0.006222404809045301}
+{"step": 120, "loss": 0.1204821967214223, "force_mse": 0.04203874245285988, "rel_e_mse": 0.015688690853712484}
+{"step": 140, "loss": 0.17082836512294508, "force_mse": 0.0421711727976799, "rel_e_mse": 0.025731438465053037}
+{"step": 160, "loss": 0.0802884627547114, "force_mse": 0.06137334182858467, "rel_e_mse": 0.0037830241852253453}
+{"step": 180, "loss": 0.445084723832075, "force_mse": 0.04706071317195892, "rel_e_mse": 0.07960480213202321}
+{"step": 199, "loss": 0.08052836849155265, "force_mse": 0.03704658895730972, "rel_e_mse": 0.008696355906848587}
+DONE {"id": "g2_aimnet2_flagged_b", "ckpt": "results/evolution_c_v2/cache/aimnet2_e8851991ffd3422e.pt", "n_train": 183, "n_train_reactions": 58, "n_head_params": 862665, "train_seconds": 19.986706018447876, "predict_seconds": 0.3933384418487549, "wall_seconds": 20.38004493713379, "toolkit": {}}
