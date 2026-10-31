@@ -87,5 +87,5 @@ def test_token_bucket():
     assert tb2.allow("k")[0]
     import time
 
-    time.sleep(0.01)
+    time.sleep(0.05)  # Windows monotonic clock ticks ~16 ms
     assert tb2.allow("k")[0]
