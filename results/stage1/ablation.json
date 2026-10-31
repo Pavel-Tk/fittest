@@ -1,0 +1,1519 @@
+{
+  "schema": "trustswarm.ablation/v2",
+  "config": {
+    "budget_per_round": 40,
+    "rounds": 5,
+    "seed": 0,
+    "n_bootstrap": 200,
+    "single_model": "aimnet2",
+    "seed_models": [
+      "aimnet2_m0",
+      "aimnet2_m1",
+      "aimnet2_m2",
+      "aimnet2_m3"
+    ],
+    "mace_seed_models": [
+      "mace_seed0",
+      "mace_seed1",
+      "mace_seed2",
+      "mace_seed3"
+    ],
+    "hetero_models": [
+      "mace_mpa0",
+      "aimnet2",
+      "orb"
+    ],
+    "common_target": "mace_mpa0",
+    "curated_model": "mace_lora_curated",
+    "curated_base_model": "mace_mpa0",
+    "wrong_f": 0.25,
+    "wrong_e": 0.25,
+    "wrong_thresholds": [
+      [
+        0.1,
+        0.087
+      ],
+      [
+        0.25,
+        0.25
+      ],
+      [
+        0.4,
+        0.4
+      ]
+    ],
+    "flag_quantile": 0.7,
+    "max_planted": 40,
+    "total_budget": 200
+  },
+  "arms": {
+    "A_single": {
+      "models": [
+        "aimnet2"
+      ],
+      "score": "max|F|",
+      "status": "ok",
+      "served": "aimnet2",
+      "oracle_calls": 200,
+      "oracle_calls_per_round": {
+        "0": 40,
+        "1": 40,
+        "2": 40,
+        "3": 40,
+        "4": 40
+      },
+      "metrics": {
+        "auroc_pool": {
+          "value": 0.8239314371729973,
+          "ci": [
+            0.7927076316963981,
+            0.857403511710363
+          ],
+          "n": 1584
+        },
+        "auroc_common": {
+          "value": null,
+          "ci": null,
+          "n": 1584
+        },
+        "spearman_pool": {
+          "value": 0.6731142287483219,
+          "ci": [
+            0.6334166144965829,
+            0.7114470901734836
+          ],
+          "n": 1584
+        },
+        "recall_at_k": {
+          "value": 0.16027531956735497,
+          "ci": [
+            0.13005681158859708,
+            0.18849719485495348
+          ],
+          "n": 1017
+        },
+        "served_wrong_rate_pool": {
+          "value": 0.6420454545454546,
+          "ci": [
+            0.5952493686868687,
+            0.6907039141414141
+          ],
+          "n": 1584
+        },
+        "silent_failures_pool": {
+          "value": 0.0,
+          "ci": [
+            0.0,
+            0.0
+          ],
+          "n": 322
+        },
+        "auroc_eval": {
+          "value": 0.8067783466266171,
+          "ci": [
+            0.7773735781048986,
+            0.838090961043591
+          ],
+          "n": 1573
+        },
+        "spearman_eval": {
+          "value": 0.6783687704197692,
+          "ci": [
+            0.6344633581655892,
+            0.7178030004864409
+          ],
+          "n": 1573
+        },
+        "ece_eval": {
+          "value": 0.1410923429088319,
+          "ci": [
+            0.09933509467798823,
+            0.1974153786977479
+          ],
+          "n": 1573
+        },
+        "trusted_fraction_eval": {
+          "value": 0.0,
+          "ci": [
+            0.0,
+            0.0
+          ],
+          "n": 1573
+        },
+        "brier_eval": {
+          "value": 0.24792894903206592,
+          "ci": [
+            0.22530060135929425,
+            0.2783826480861953
+          ],
+          "n": 1573
+        },
+        "silent_failures_eval": {
+          "value": 0.0,
+          "ci": [
+            0.0,
+            0.0
+          ],
+          "n": 334
+        },
+        "eval_force_rmse_pre": {
+          "value": 0.3189611211094774,
+          "ci": [
+            0.3064934945599147,
+            0.3322907762555727
+          ],
+          "n": 1573
+        },
+        "eval_rel_e_mae_pre": {
+          "value": 0.12746409816362295,
+          "ci": [
+            0.11694816734778637,
+            0.13966661147497594
+          ],
+          "n": 1573
+        },
+        "eval_wrong_rate_pre": {
+          "value": 0.6401780038143674,
+          "ci": [
+            0.5841862682771773,
+            0.6815479974570884
+          ],
+          "n": 1573
+        },
+        "eval_force_rmse_post": {
+          "value": 0.3189611211094774,
+          "ci": [
+            0.3064934945599147,
+            0.3322907762555727
+          ],
+          "n": 1573
+        },
+        "eval_rel_e_mae_post": {
+          "value": 0.12746409816362295,
+          "ci": [
+            0.11694816734778637,
+            0.13966661147497594
+          ],
+          "n": 1573
+        },
+        "eval_wrong_rate_post": {
+          "value": 0.6401780038143674,
+          "ci": [
+            0.5841862682771773,
+            0.6815479974570884
+          ],
+          "n": 1573
+        },
+        "planted_caught": {
+          "value": 0.275,
+          "ci": [
+            0.1498214285714286,
+            0.4211513157894737
+          ],
+          "n": 40
+        },
+        "planted_breakdown": {
+          "oracle_checked": 5,
+          "flagged": 11,
+          "vetoed": 0,
+          "n": 40
+        }
+      },
+      "by_threshold": {
+        "F0.1_E0.087": {
+          "wrong_f": 0.1,
+          "wrong_e": 0.087,
+          "auroc_pool": null,
+          "auroc_common": null,
+          "auroc_eval": null,
+          "recall_at_k": 0.12310606060606061,
+          "served_wrong_rate_pool": 1.0
+        },
+        "F0.25_E0.25": {
+          "wrong_f": 0.25,
+          "wrong_e": 0.25,
+          "auroc_pool": 0.8239314371729973,
+          "auroc_common": null,
+          "auroc_eval": 0.8067783466266171,
+          "recall_at_k": 0.16027531956735497,
+          "served_wrong_rate_pool": 0.6420454545454546
+        },
+        "F0.4_E0.4": {
+          "wrong_f": 0.4,
+          "wrong_e": 0.4,
+          "auroc_pool": 0.8243657612657289,
+          "auroc_common": 0.6857516524689831,
+          "auroc_eval": 0.8193458898458162,
+          "recall_at_k": 0.24477611940298508,
+          "served_wrong_rate_pool": 0.21148989898989898
+        }
+      },
+      "notes": []
+    },
+    "A_random": {
+      "models": [
+        "aimnet2"
+      ],
+      "score": "random",
+      "status": "ok",
+      "served": "aimnet2",
+      "oracle_calls": 200,
+      "oracle_calls_per_round": {
+        "0": 40,
+        "1": 40,
+        "2": 40,
+        "3": 40,
+        "4": 40
+      },
+      "metrics": {
+        "auroc_pool": {
+          "value": 0.49523532053849983,
+          "ci": [
+            0.4671009640160427,
+            0.5230848109935484
+          ],
+          "n": 1584
+        },
+        "auroc_common": {
+          "value": null,
+          "ci": null,
+          "n": 1584
+        },
+        "spearman_pool": {
+          "value": -0.011913703112780054,
+          "ci": [
+            -0.06209643212663672,
+            0.02764035162659043
+          ],
+          "n": 1584
+        },
+        "recall_at_k": {
+          "value": 0.11504424778761062,
+          "ci": [
+            0.09746883363176033,
+            0.13433049243771608
+          ],
+          "n": 1017
+        },
+        "served_wrong_rate_pool": {
+          "value": 0.6420454545454546,
+          "ci": [
+            0.5952493686868687,
+            0.6907039141414141
+          ],
+          "n": 1584
+        },
+        "silent_failures_pool": {
+          "value": 0.7111801242236024,
+          "ci": [
+            0.6554973308736376,
+            0.7560329131652661
+          ],
+          "n": 322
+        },
+        "auroc_eval": {
+          "value": 0.4739526494748773,
+          "ci": [
+            0.4489960056635783,
+            0.5016655579441633
+          ],
+          "n": 1573
+        },
+        "spearman_eval": {
+          "value": -0.018178521056657886,
+          "ci": [
+            -0.05345695228870663,
+            0.02726813557840844
+          ],
+          "n": 1573
+        },
+        "ece_eval": {
+          "value": 0.12868904865704942,
+          "ci": [
+            0.07425344780307858,
+            0.17160403378000488
+          ],
+          "n": 1573
+        },
+        "trusted_fraction_eval": {
+          "value": 0.8995549904640814,
+          "ci": [
+            0.8842816274634457,
+            0.912269548633185
+          ],
+          "n": 1573
+        },
+        "brier_eval": {
+          "value": 0.24846929930987127,
+          "ci": [
+            0.2462666139495235,
+            0.25042587498579083
+          ],
+          "n": 1573
+        },
+        "silent_failures_eval": {
+          "value": 0.7155688622754491,
+          "ci": [
+            0.6677252985884907,
+            0.7614564020450587
+          ],
+          "n": 334
+        },
+        "eval_force_rmse_pre": {
+          "value": 0.3189611211094774,
+          "ci": [
+            0.3064934945599147,
+            0.3322907762555727
+          ],
+          "n": 1573
+        },
+        "eval_rel_e_mae_pre": {
+          "value": 0.12746409816362295,
+          "ci": [
+            0.11694816734778637,
+            0.13966661147497594
+          ],
+          "n": 1573
+        },
+        "eval_wrong_rate_pre": {
+          "value": 0.6401780038143674,
+          "ci": [
+            0.5841862682771773,
+            0.6815479974570884
+          ],
+          "n": 1573
+        },
+        "eval_force_rmse_post": {
+          "value": 0.3189611211094774,
+          "ci": [
+            0.3064934945599147,
+            0.3322907762555727
+          ],
+          "n": 1573
+        },
+        "eval_rel_e_mae_post": {
+          "value": 0.12746409816362295,
+          "ci": [
+            0.11694816734778637,
+            0.13966661147497594
+          ],
+          "n": 1573
+        },
+        "eval_wrong_rate_post": {
+          "value": 0.6401780038143674,
+          "ci": [
+            0.5841862682771773,
+            0.6815479974570884
+          ],
+          "n": 1573
+        },
+        "planted_caught": {
+          "value": 0.25,
+          "ci": [
+            0.1498214285714286,
+            0.41489329268292685
+          ],
+          "n": 40
+        },
+        "planted_breakdown": {
+          "oracle_checked": 5,
+          "flagged": 10,
+          "vetoed": 0,
+          "n": 40
+        }
+      },
+      "by_threshold": {
+        "F0.1_E0.087": {
+          "wrong_f": 0.1,
+          "wrong_e": 0.087,
+          "auroc_pool": null,
+          "auroc_common": null,
+          "auroc_eval": null,
+          "recall_at_k": 0.12058080808080808,
+          "served_wrong_rate_pool": 1.0
+        },
+        "F0.25_E0.25": {
+          "wrong_f": 0.25,
+          "wrong_e": 0.25,
+          "auroc_pool": 0.49523532053849983,
+          "auroc_common": null,
+          "auroc_eval": 0.4739526494748773,
+          "recall_at_k": 0.11504424778761062,
+          "served_wrong_rate_pool": 0.6420454545454546
+        },
+        "F0.4_E0.4": {
+          "wrong_f": 0.4,
+          "wrong_e": 0.4,
+          "auroc_pool": 0.4957470453975121,
+          "auroc_common": 0.5165034816726167,
+          "auroc_eval": 0.49185595839670315,
+          "recall_at_k": 0.11940298507462686,
+          "served_wrong_rate_pool": 0.21148989898989898
+        }
+      },
+      "notes": []
+    },
+    "B_seed": {
+      "models": [
+        "aimnet2_m0",
+        "aimnet2_m1",
+        "aimnet2_m2",
+        "aimnet2_m3"
+      ],
+      "score": "sigma_F",
+      "status": "ok",
+      "served": "ensemble mean",
+      "oracle_calls": 200,
+      "oracle_calls_per_round": {
+        "0": 40,
+        "1": 40,
+        "2": 40,
+        "3": 40,
+        "4": 40
+      },
+      "metrics": {
+        "auroc_pool": {
+          "value": 0.7849349081987972,
+          "ci": [
+            0.7447910272480309,
+            0.8195406165241613
+          ],
+          "n": 1584
+        },
+        "auroc_common": {
+          "value": null,
+          "ci": null,
+          "n": 1584
+        },
+        "spearman_pool": {
+          "value": 0.5924929390595747,
+          "ci": [
+            0.5277394292060399,
+            0.6527782146161594
+          ],
+          "n": 1584
+        },
+        "recall_at_k": {
+          "value": 0.20833333333333334,
+          "ci": [
+            0.17356499178937737,
+            0.24276254824626414
+          ],
+          "n": 936
+        },
+        "served_wrong_rate_pool": {
+          "value": 0.5909090909090909,
+          "ci": [
+            0.540988005050505,
+            0.6540561868686869
+          ],
+          "n": 1584
+        },
+        "silent_failures_pool": {
+          "value": 0.0,
+          "ci": [
+            0.0,
+            0.0
+          ],
+          "n": 235
+        },
+        "auroc_eval": {
+          "value": 0.7819277962018953,
+          "ci": [
+            0.7450026960821965,
+            0.819242823032098
+          ],
+          "n": 1573
+        },
+        "spearman_eval": {
+          "value": 0.6086099481264846,
+          "ci": [
+            0.5537873592366047,
+            0.6632271935066539
+          ],
+          "n": 1573
+        },
+        "ece_eval": {
+          "value": 0.22546408991293096,
+          "ci": [
+            0.1750526609716185,
+            0.2897840461817285
+          ],
+          "n": 1573
+        },
+        "trusted_fraction_eval": {
+          "value": 0.0,
+          "ci": [
+            0.0,
+            0.0
+          ],
+          "n": 1573
+        },
+        "brier_eval": {
+          "value": 0.2743743183490354,
+          "ci": [
+            0.2413695737530326,
+            0.313111037905169
+          ],
+          "n": 1573
+        },
+        "silent_failures_eval": {
+          "value": 0.0,
+          "ci": [
+            0.0,
+            0.0
+          ],
+          "n": 234
+        },
+        "eval_force_rmse_pre": {
+          "value": 0.2920098884413104,
+          "ci": [
+            0.27998490229497086,
+            0.30489216984636774
+          ],
+          "n": 1573
+        },
+        "eval_rel_e_mae_pre": {
+          "value": 0.11584557478301744,
+          "ci": [
+            0.10682585099007075,
+            0.12653489088505632
+          ],
+          "n": 1573
+        },
+        "eval_wrong_rate_pre": {
+          "value": 0.6020343293070566,
+          "ci": [
+            0.5377304513668151,
+            0.6561188811188811
+          ],
+          "n": 1573
+        },
+        "eval_force_rmse_post": {
+          "value": 0.2920098884413104,
+          "ci": [
+            0.27998490229497086,
+            0.30489216984636774
+          ],
+          "n": 1573
+        },
+        "eval_rel_e_mae_post": {
+          "value": 0.11584557478301744,
+          "ci": [
+            0.10682585099007075,
+            0.12653489088505632
+          ],
+          "n": 1573
+        },
+        "eval_wrong_rate_post": {
+          "value": 0.6020343293070566,
+          "ci": [
+            0.5377304513668151,
+            0.6561188811188811
+          ],
+          "n": 1573
+        },
+        "planted_caught": {
+          "value": 0.35,
+          "ci": [
+            0.21392857142857147,
+            0.5003205128205129
+          ],
+          "n": 40
+        },
+        "planted_breakdown": {
+          "oracle_checked": 3,
+          "flagged": 14,
+          "vetoed": 0,
+          "n": 40
+        }
+      },
+      "by_threshold": {
+        "F0.1_E0.087": {
+          "wrong_f": 0.1,
+          "wrong_e": 0.087,
+          "auroc_pool": null,
+          "auroc_common": null,
+          "auroc_eval": null,
+          "recall_at_k": 0.12436868686868686,
+          "served_wrong_rate_pool": 1.0
+        },
+        "F0.25_E0.25": {
+          "wrong_f": 0.25,
+          "wrong_e": 0.25,
+          "auroc_pool": 0.7849349081987972,
+          "auroc_common": null,
+          "auroc_eval": 0.7819277962018953,
+          "recall_at_k": 0.20833333333333334,
+          "served_wrong_rate_pool": 0.5909090909090909
+        },
+        "F0.4_E0.4": {
+          "wrong_f": 0.4,
+          "wrong_e": 0.4,
+          "auroc_pool": 0.8760645578568957,
+          "auroc_common": 0.789247463857764,
+          "auroc_eval": 0.8686047980838427,
+          "recall_at_k": 0.5341365461847389,
+          "served_wrong_rate_pool": 0.1571969696969697
+        }
+      },
+      "notes": []
+    },
+    "B_mace_seeds": {
+      "models": [
+        "mace_seed0",
+        "mace_seed1",
+        "mace_seed2",
+        "mace_seed3"
+      ],
+      "score": "sigma_F",
+      "status": "skipped",
+      "reason": "missing prediction file(s): data/preds/mace_seed0.npz, data/preds/mace_seed1.npz, data/preds/mace_seed2.npz, data/preds/mace_seed3.npz"
+    },
+    "C_collective": {
+      "models": [
+        "mace_mpa0",
+        "aimnet2",
+        "orb"
+      ],
+      "score": "sigma_F",
+      "status": "ok",
+      "served": "ensemble mean",
+      "oracle_calls": 200,
+      "oracle_calls_per_round": {
+        "0": 40,
+        "1": 40,
+        "2": 40,
+        "3": 40,
+        "4": 40
+      },
+      "metrics": {
+        "auroc_pool": {
+          "value": 0.7584705165055308,
+          "ci": [
+            0.7135076053120593,
+            0.7999066855421177
+          ],
+          "n": 1584
+        },
+        "auroc_common": {
+          "value": null,
+          "ci": null,
+          "n": 1584
+        },
+        "spearman_pool": {
+          "value": 0.6262449589405356,
+          "ci": [
+            0.5602162045357244,
+            0.6861681190366055
+          ],
+          "n": 1584
+        },
+        "recall_at_k": {
+          "value": 0.18258426966292135,
+          "ci": [
+            0.1365731439989659,
+            0.23108545816992615
+          ],
+          "n": 1068
+        },
+        "served_wrong_rate_pool": {
+          "value": 0.6742424242424242,
+          "ci": [
+            0.6325284090909091,
+            0.7128630050505051
+          ],
+          "n": 1584
+        },
+        "silent_failures_pool": {
+          "value": 0.0,
+          "ci": [
+            0.0,
+            0.0
+          ],
+          "n": 271
+        },
+        "auroc_eval": {
+          "value": 0.7689610367406952,
+          "ci": [
+            0.7255110910586051,
+            0.8027609700312618
+          ],
+          "n": 1573
+        },
+        "spearman_eval": {
+          "value": 0.6355722862441601,
+          "ci": [
+            0.5558016599923506,
+            0.6918705859391221
+          ],
+          "n": 1573
+        },
+        "ece_eval": {
+          "value": 0.38334392879847423,
+          "ci": [
+            0.33685632549268907,
+            0.43167514303877946
+          ],
+          "n": 1573
+        },
+        "trusted_fraction_eval": {
+          "value": 0.0,
+          "ci": [
+            0.0,
+            0.0
+          ],
+          "n": 1573
+        },
+        "brier_eval": {
+          "value": 0.38334392879847423,
+          "ci": [
+            0.3368563254926891,
+            0.4316751430387794
+          ],
+          "n": 1573
+        },
+        "silent_failures_eval": {
+          "value": 0.0,
+          "ci": [
+            0.0,
+            0.0
+          ],
+          "n": 267
+        },
+        "eval_force_rmse_pre": {
+          "value": 0.2978259684782818,
+          "ci": [
+            0.28490340403080233,
+            0.3093954120152431
+          ],
+          "n": 1573
+        },
+        "eval_rel_e_mae_pre": {
+          "value": 0.21925707415381865,
+          "ci": [
+            0.20087481396301113,
+            0.24012510010563426
+          ],
+          "n": 1573
+        },
+        "eval_wrong_rate_pre": {
+          "value": 0.6166560712015258,
+          "ci": [
+            0.5683248569612206,
+            0.6631436745073109
+          ],
+          "n": 1573
+        },
+        "eval_force_rmse_post": {
+          "value": 0.2978259684782818,
+          "ci": [
+            0.28490340403080233,
+            0.3093954120152431
+          ],
+          "n": 1573
+        },
+        "eval_rel_e_mae_post": {
+          "value": 0.21925707415381865,
+          "ci": [
+            0.20087481396301113,
+            0.24012510010563426
+          ],
+          "n": 1573
+        },
+        "eval_wrong_rate_post": {
+          "value": 0.6166560712015258,
+          "ci": [
+            0.5683248569612206,
+            0.6631436745073109
+          ],
+          "n": 1573
+        },
+        "planted_caught": {
+          "value": 0.2,
+          "ci": [
+            0.07495426829268294,
+            0.3423026315789474
+          ],
+          "n": 40
+        },
+        "planted_breakdown": {
+          "oracle_checked": 3,
+          "flagged": 8,
+          "vetoed": 0,
+          "n": 40
+        }
+      },
+      "by_threshold": {
+        "F0.1_E0.087": {
+          "wrong_f": 0.1,
+          "wrong_e": 0.087,
+          "auroc_pool": null,
+          "auroc_common": null,
+          "auroc_eval": null,
+          "recall_at_k": 0.12310606060606061,
+          "served_wrong_rate_pool": 1.0
+        },
+        "F0.25_E0.25": {
+          "wrong_f": 0.25,
+          "wrong_e": 0.25,
+          "auroc_pool": 0.7584705165055308,
+          "auroc_common": null,
+          "auroc_eval": 0.7689610367406952,
+          "recall_at_k": 0.18258426966292135,
+          "served_wrong_rate_pool": 0.6742424242424242
+        },
+        "F0.4_E0.4": {
+          "wrong_f": 0.4,
+          "wrong_e": 0.4,
+          "auroc_pool": 0.7883531680000297,
+          "auroc_common": 0.898716906436676,
+          "auroc_eval": 0.7913451036403135,
+          "recall_at_k": 0.3265720081135903,
+          "served_wrong_rate_pool": 0.31123737373737376
+        }
+      },
+      "notes": []
+    },
+    "D_trustswarm": {
+      "models": [
+        "mace_mpa0",
+        "aimnet2",
+        "orb"
+      ],
+      "score": "max(isotonic P(wrong | \u03c3_F), Skeptic p_S); ties by \u03c3_F",
+      "blackboard": {
+        "n_events": 17345,
+        "path": "results/stage1/blackboard_armD.jsonl"
+      },
+      "status": "ok",
+      "served": "Calibrator recommendation (a model or the consensus)",
+      "oracle_calls": 200,
+      "oracle_calls_per_round": {
+        "0": 40,
+        "1": 40,
+        "2": 40,
+        "3": 40,
+        "4": 40
+      },
+      "metrics": {
+        "auroc_pool": {
+          "value": 0.641239168470793,
+          "ci": [
+            0.6008489343471691,
+            0.6841396343882309
+          ],
+          "n": 1584
+        },
+        "auroc_common": {
+          "value": null,
+          "ci": null,
+          "n": 1584
+        },
+        "spearman_pool": {
+          "value": 0.3895775833265246,
+          "ci": [
+            0.32237269006265595,
+            0.46540219831351864
+          ],
+          "n": 1584
+        },
+        "recall_at_k": {
+          "value": 0.15428033866415805,
+          "ci": [
+            0.10818581780538303,
+            0.20393866463265425
+          ],
+          "n": 1063
+        },
+        "served_wrong_rate_pool": {
+          "value": 0.6710858585858586,
+          "ci": [
+            0.6306502525252525,
+            0.7121527777777779
+          ],
+          "n": 1584
+        },
+        "silent_failures_pool": {
+          "value": 0.0,
+          "ci": [
+            0.0,
+            0.0
+          ],
+          "n": 265
+        },
+        "auroc_eval": {
+          "value": 0.6775712536855355,
+          "ci": [
+            0.6319264104685947,
+            0.7170721347495865
+          ],
+          "n": 1573
+        },
+        "spearman_eval": {
+          "value": 0.3987356792186665,
+          "ci": [
+            0.31115212593696695,
+            0.481294271745542
+          ],
+          "n": 1573
+        },
+        "ece_eval": {
+          "value": 0.09040979876460176,
+          "ci": [
+            0.06007982754578253,
+            0.12589616370624832
+          ],
+          "n": 1573
+        },
+        "trusted_fraction_eval": {
+          "value": 0.6427209154481882,
+          "ci": [
+            0.6051811824539097,
+            0.6897965670692944
+          ],
+          "n": 1573
+        },
+        "brier_eval": {
+          "value": 0.17114349449294283,
+          "ci": [
+            0.1586705481635176,
+            0.18575848992142052
+          ],
+          "n": 1573
+        },
+        "silent_failures_eval": {
+          "value": 0.02181818181818182,
+          "ci": [
+            0.0035835916274442278,
+            0.043800363182385664
+          ],
+          "n": 275
+        },
+        "eval_force_rmse_pre": {
+          "value": 0.3068000661807312,
+          "ci": [
+            0.29615053502543637,
+            0.31953630471189853
+          ],
+          "n": 1573
+        },
+        "eval_rel_e_mae_pre": {
+          "value": 0.17757314509147581,
+          "ci": [
+            0.1643311406694734,
+            0.19508005628797795
+          ],
+          "n": 1573
+        },
+        "eval_wrong_rate_pre": {
+          "value": 0.6249205340114431,
+          "ci": [
+            0.5822472981563891,
+            0.6675301970756515
+          ],
+          "n": 1573
+        },
+        "eval_force_rmse_post": {
+          "value": 0.3068000661807312,
+          "ci": [
+            0.29615053502543637,
+            0.31953630471189853
+          ],
+          "n": 1573
+        },
+        "eval_rel_e_mae_post": {
+          "value": 0.17757314509147581,
+          "ci": [
+            0.1643311406694734,
+            0.19508005628797795
+          ],
+          "n": 1573
+        },
+        "eval_wrong_rate_post": {
+          "value": 0.6249205340114431,
+          "ci": [
+            0.5822472981563891,
+            0.6675301970756515
+          ],
+          "n": 1573
+        },
+        "planted_caught": {
+          "value": 0.4,
+          "ci": [
+            0.23076923076923078,
+            0.5643750000000001
+          ],
+          "n": 40
+        },
+        "planted_breakdown": {
+          "oracle_checked": 8,
+          "flagged": 8,
+          "vetoed": 16,
+          "n": 40
+        }
+      },
+      "by_threshold": {
+        "F0.1_E0.087": {
+          "wrong_f": 0.1,
+          "wrong_e": 0.087,
+          "auroc_pool": null,
+          "auroc_common": null,
+          "auroc_eval": null,
+          "recall_at_k": 0.11931818181818182,
+          "served_wrong_rate_pool": 1.0
+        },
+        "F0.25_E0.25": {
+          "wrong_f": 0.25,
+          "wrong_e": 0.25,
+          "auroc_pool": 0.641239168470793,
+          "auroc_common": null,
+          "auroc_eval": 0.6775712536855355,
+          "recall_at_k": 0.15428033866415805,
+          "served_wrong_rate_pool": 0.6710858585858586
+        },
+        "F0.4_E0.4": {
+          "wrong_f": 0.4,
+          "wrong_e": 0.4,
+          "auroc_pool": 0.6371448147998872,
+          "auroc_common": 0.7010215262804425,
+          "auroc_eval": 0.657614362117509,
+          "recall_at_k": 0.1697674418604651,
+          "served_wrong_rate_pool": 0.27146464646464646
+        }
+      },
+      "finetune": {
+        "model": "mace_mpa0",
+        "shipped": false,
+        "n_labels": 189,
+        "ledger_force_rmse": {
+          "aimnet2": 0.399198344802486,
+          "mace_mpa0": 0.8250492455948042,
+          "orb": 0.5116114027971823
+        },
+        "report": {
+          "mode": "replay",
+          "n_labelled": 189,
+          "train_digest_requested": "caf5a135b7ef4c0b",
+          "reason": "no offline fine-tune available for 'mace_mpa0' (None)"
+        },
+        "new_predictions_path": null
+      },
+      "notes": []
+    }
+  },
+  "failures": [
+    "A_single: auroc_common undefined (single-class target or empty set)",
+    "A_random: auroc_common undefined (single-class target or empty set)",
+    "B_seed: auroc_common undefined (single-class target or empty set)",
+    "B_mace_seeds skipped: missing prediction file(s): data/preds/mace_seed0.npz, data/preds/mace_seed1.npz, data/preds/mace_seed2.npz, data/preds/mace_seed3.npz",
+    "C_collective: auroc_common undefined (single-class target or empty set)",
+    "D_trustswarm: fine-tune not shipped (no offline fine-tune available for 'mace_mpa0' (None))",
+    "D_trustswarm: auroc_common undefined (single-class target or empty set)",
+    "D vs A_single: auroc_pool significantly WORSE (diff -0.183, paired 95% CI [-0.239, -0.124])",
+    "D vs A_single: auroc_eval significantly WORSE (diff -0.129, paired 95% CI [-0.183, -0.076])",
+    "D vs A_single: recall_at_k not significantly better (diff -0.006, paired 95% CI [-0.060, +0.056])",
+    "D vs A_single: planted_caught not significantly better (diff +0.125, paired 95% CI [-0.103, +0.325])",
+    "D vs A_single: ece_eval not significantly better (diff -0.051, paired 95% CI [-0.120, +0.017])",
+    "D vs A_single: silent_failures_pool not significantly better (diff +0.000, paired 95% CI [+0.000, +0.000])",
+    "D vs A_single: silent_failures_eval significantly WORSE (diff +0.022, paired 95% CI [+0.004, +0.044])",
+    "D vs A_random: recall_at_k not significantly better (diff +0.039, paired 95% CI [-0.016, +0.091])",
+    "D vs A_random: planted_caught not significantly better (diff +0.150, paired 95% CI [-0.075, +0.350])",
+    "D vs A_random: ece_eval not significantly better (diff -0.038, paired 95% CI [-0.083, +0.015])",
+    "D vs B_seed: auroc_pool significantly WORSE (diff -0.144, paired 95% CI [-0.191, -0.087])",
+    "D vs B_seed: auroc_eval significantly WORSE (diff -0.104, paired 95% CI [-0.161, -0.054])",
+    "D vs B_seed: recall_at_k not significantly better (diff -0.054, paired 95% CI [-0.116, +0.007])",
+    "D vs B_seed: planted_caught not significantly better (diff +0.050, paired 95% CI [-0.103, +0.200])",
+    "D vs B_seed: eval_force_rmse_post significantly WORSE (diff +0.015, paired 95% CI [+0.005, +0.025])",
+    "D vs B_seed: silent_failures_pool not significantly better (diff +0.000, paired 95% CI [+0.000, +0.000])",
+    "D vs B_seed: silent_failures_eval significantly WORSE (diff +0.022, paired 95% CI [+0.004, +0.044])",
+    "D vs C_collective: auroc_pool significantly WORSE (diff -0.117, paired 95% CI [-0.174, -0.056])",
+    "D vs C_collective: auroc_eval significantly WORSE (diff -0.091, paired 95% CI [-0.146, -0.036])",
+    "D vs C_collective: recall_at_k not significantly better (diff -0.028, paired 95% CI [-0.086, +0.022])",
+    "D vs C_collective: eval_force_rmse_post significantly WORSE (diff +0.009, paired 95% CI [+0.001, +0.016])",
+    "D vs C_collective: silent_failures_pool not significantly better (diff +0.000, paired 95% CI [+0.000, +0.000])",
+    "D vs C_collective: silent_failures_eval significantly WORSE (diff +0.022, paired 95% CI [+0.004, +0.044])"
+  ],
+  "comparisons": {
+    "D_vs_A_single": {
+      "auroc_pool": {
+        "diff": -0.18269226870220434,
+        "ci": [
+          -0.2385310297908316,
+          -0.12367965452815477
+        ],
+        "higher_is_better": true,
+        "d_significantly_better": false,
+        "d_significantly_worse": true
+      },
+      "auroc_eval": {
+        "diff": -0.12920709294108157,
+        "ci": [
+          -0.183436876232194,
+          -0.07638906713572197
+        ],
+        "higher_is_better": true,
+        "d_significantly_better": false,
+        "d_significantly_worse": true
+      },
+      "recall_at_k": {
+        "diff": -0.005994980903196917,
+        "ci": [
+          -0.060178366580132044,
+          0.056212575198327355
+        ],
+        "higher_is_better": true,
+        "d_significantly_better": false,
+        "d_significantly_worse": false
+      },
+      "planted_caught": {
+        "diff": 0.125,
+        "ci": [
+          -0.10256410256410253,
+          0.3252083333333334
+        ],
+        "higher_is_better": true,
+        "d_significantly_better": false,
+        "d_significantly_worse": false
+      },
+      "eval_force_rmse_post": {
+        "diff": -0.012161054928746196,
+        "ci": [
+          -0.021531878617442213,
+          -0.0032833517089510974
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": true,
+        "d_significantly_worse": false
+      },
+      "ece_eval": {
+        "diff": -0.05068254414423015,
+        "ci": [
+          -0.12046004140841644,
+          0.016898786703264633
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": false,
+        "d_significantly_worse": false
+      },
+      "brier_eval": {
+        "diff": -0.07678545453912308,
+        "ci": [
+          -0.10582600329058418,
+          -0.04817369036363972
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": true,
+        "d_significantly_worse": false
+      },
+      "silent_failures_pool": {
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": false,
+        "d_significantly_worse": false
+      },
+      "silent_failures_eval": {
+        "diff": 0.02181818181818182,
+        "ci": [
+          0.0035835916274442278,
+          0.043800363182385664
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": false,
+        "d_significantly_worse": true
+      }
+    },
+    "D_vs_A_random": {
+      "auroc_pool": {
+        "diff": 0.14600384793229315,
+        "ci": [
+          0.09266407803629748,
+          0.19420630478073853
+        ],
+        "higher_is_better": true,
+        "d_significantly_better": true,
+        "d_significantly_worse": false
+      },
+      "auroc_eval": {
+        "diff": 0.2036186042106582,
+        "ci": [
+          0.1381952258072746,
+          0.2507730835987662
+        ],
+        "higher_is_better": true,
+        "d_significantly_better": true,
+        "d_significantly_worse": false
+      },
+      "recall_at_k": {
+        "diff": 0.03923609087654743,
+        "ci": [
+          -0.015842647228042836,
+          0.09122333685572993
+        ],
+        "higher_is_better": true,
+        "d_significantly_better": false,
+        "d_significantly_worse": false
+      },
+      "planted_caught": {
+        "diff": 0.15000000000000002,
+        "ci": [
+          -0.07504807692307693,
+          0.350224358974359
+        ],
+        "higher_is_better": true,
+        "d_significantly_better": false,
+        "d_significantly_worse": false
+      },
+      "eval_force_rmse_post": {
+        "diff": -0.012161054928746196,
+        "ci": [
+          -0.021531878617442213,
+          -0.0032833517089510974
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": true,
+        "d_significantly_worse": false
+      },
+      "ece_eval": {
+        "diff": -0.03827924989244766,
+        "ci": [
+          -0.08251270006379091,
+          0.015364643241681035
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": false,
+        "d_significantly_worse": false
+      },
+      "brier_eval": {
+        "diff": -0.07732580481692844,
+        "ci": [
+          -0.09063220102109695,
+          -0.06142561170913916
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": true,
+        "d_significantly_worse": false
+      },
+      "silent_failures_pool": {
+        "diff": -0.7111801242236024,
+        "ci": [
+          -0.7560329131652661,
+          -0.6554973308736376
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": true,
+        "d_significantly_worse": false
+      },
+      "silent_failures_eval": {
+        "diff": -0.6937506804572673,
+        "ci": [
+          -0.747167101900166,
+          -0.6390681519714257
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": true,
+        "d_significantly_worse": false
+      }
+    },
+    "D_vs_B_seed": {
+      "auroc_pool": {
+        "diff": -0.1436957397280042,
+        "ci": [
+          -0.1905000466574902,
+          -0.08675061192417943
+        ],
+        "higher_is_better": true,
+        "d_significantly_better": false,
+        "d_significantly_worse": true
+      },
+      "auroc_eval": {
+        "diff": -0.10435654251635984,
+        "ci": [
+          -0.16113575199072766,
+          -0.053819266205834944
+        ],
+        "higher_is_better": true,
+        "d_significantly_better": false,
+        "d_significantly_worse": true
+      },
+      "recall_at_k": {
+        "diff": -0.05405299466917529,
+        "ci": [
+          -0.11630887131925186,
+          0.0074736749235151095
+        ],
+        "higher_is_better": true,
+        "d_significantly_better": false,
+        "d_significantly_worse": false
+      },
+      "planted_caught": {
+        "diff": 0.050000000000000044,
+        "ci": [
+          -0.10256410256410253,
+          0.20023255813953494
+        ],
+        "higher_is_better": true,
+        "d_significantly_better": false,
+        "d_significantly_worse": false
+      },
+      "eval_force_rmse_post": {
+        "diff": 0.014790177739420818,
+        "ci": [
+          0.00527888627858567,
+          0.024744881900733717
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": false,
+        "d_significantly_worse": true
+      },
+      "ece_eval": {
+        "diff": -0.1350542911483292,
+        "ci": [
+          -0.21388156353934315,
+          -0.05776842237959783
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": true,
+        "d_significantly_worse": false
+      },
+      "brier_eval": {
+        "diff": -0.10323082385609259,
+        "ci": [
+          -0.14033748817652184,
+          -0.06755989893694091
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": true,
+        "d_significantly_worse": false
+      },
+      "silent_failures_pool": {
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": false,
+        "d_significantly_worse": false
+      },
+      "silent_failures_eval": {
+        "diff": 0.02181818181818182,
+        "ci": [
+          0.0035835916274442278,
+          0.043800363182385664
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": false,
+        "d_significantly_worse": true
+      }
+    },
+    "D_vs_C_collective": {
+      "auroc_pool": {
+        "diff": -0.11723134803473778,
+        "ci": [
+          -0.17414465443217955,
+          -0.05606580248993696
+        ],
+        "higher_is_better": true,
+        "d_significantly_better": false,
+        "d_significantly_worse": true
+      },
+      "auroc_eval": {
+        "diff": -0.09138978305515966,
+        "ci": [
+          -0.14582041160342393,
+          -0.03552903041719921
+        ],
+        "higher_is_better": true,
+        "d_significantly_better": false,
+        "d_significantly_worse": true
+      },
+      "recall_at_k": {
+        "diff": -0.0283039309987633,
+        "ci": [
+          -0.0862310924739525,
+          0.022087143275646714
+        ],
+        "higher_is_better": true,
+        "d_significantly_better": false,
+        "d_significantly_worse": false
+      },
+      "planted_caught": {
+        "diff": 0.2,
+        "ci": [
+          0.07495426829268295,
+          0.3421052631578947
+        ],
+        "higher_is_better": true,
+        "d_significantly_better": true,
+        "d_significantly_worse": false
+      },
+      "eval_force_rmse_post": {
+        "diff": 0.00897409770244939,
+        "ci": [
+          0.0007124486914502956,
+          0.01648534777458327
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": false,
+        "d_significantly_worse": true
+      },
+      "ece_eval": {
+        "diff": -0.2929341300338725,
+        "ci": [
+          -0.366815773479373,
+          -0.2191366093114345
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": true,
+        "d_significantly_worse": false
+      },
+      "brier_eval": {
+        "diff": -0.2122004343055314,
+        "ci": [
+          -0.2642706370061946,
+          -0.1572441270922134
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": true,
+        "d_significantly_worse": false
+      },
+      "silent_failures_pool": {
+        "diff": 0.0,
+        "ci": [
+          0.0,
+          0.0
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": false,
+        "d_significantly_worse": false
+      },
+      "silent_failures_eval": {
+        "diff": 0.02181818181818182,
+        "ci": [
+          0.0035835916274442278,
+          0.043800363182385664
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": false,
+        "d_significantly_worse": true
+      }
+    }
+  },
+  "data": {
+    "n_pool": 1584,
+    "n_eval": 1573,
+    "n_skeptic_ref": 1232,
+    "n_planted": 40,
+    "n_planted_context": 37,
+    "n_pool_reactions": 144,
+    "n_eval_reactions": 143,
+    "pool_eval_shared_formulas": 7,
+    "planted_filter": "mace_mpa0 wrong (F>0.25, E>0.25)"
+  },
+  "runtime_s": 10.4
+}

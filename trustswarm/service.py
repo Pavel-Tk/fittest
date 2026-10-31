@@ -48,18 +48,29 @@ class TrustSnapshot:
     fbar_edges: list[float]
     p_correct: dict[str, list[list[float]]]
     counts: dict[str, list[list[int]]] = field(default_factory=dict)
-    candidates: list[str] = field(default_factory=list)  # models + "consensus" (ensemble mean)
+    candidates: list[str] = field(default_factory=list)  # models, subset means, "consensus"
+    candidate_members: dict[str, list[str]] = field(default_factory=dict)
     meta: dict = field(default_factory=dict)
+
+    def members(self, candidate: str, models: Sequence[str]) -> list[str]:
+        """Model agents whose mean prediction a candidate stands for."""
+        if candidate in self.candidate_members:
+            return list(self.candidate_members[candidate])
+        if candidate == CONSENSUS:
+            return list(models)
+        return [candidate]
 
     @classmethod
     def load(cls, path: str | Path) -> "TrustSnapshot":
         d = json.loads(Path(path).read_text())
-        known = {"models", "tau", "sigma_edges", "fbar_edges", "p_correct", "counts", "candidates"}
+        known = {"models", "tau", "sigma_edges", "fbar_edges", "p_correct", "counts", "candidates",
+                 "candidate_members"}
         return cls(models=list(d["models"]), tau=float(d["tau"]),
                    sigma_edges=[float(x) for x in d["sigma_edges"]],
                    fbar_edges=[float(x) for x in d["fbar_edges"]],
                    p_correct=d["p_correct"], counts=d.get("counts", {}),
                    candidates=list(d.get("candidates", d["models"])),
+                   candidate_members={k: list(v) for k, v in d.get("candidate_members", {}).items()},
                    meta={k: v for k, v in d.items() if k not in known})
 
     def bucket(self, sigma_F: float, mean_abs_fbar: float) -> tuple[int, int]:
@@ -96,8 +107,8 @@ def score(systems: Sequence[dict], predictors: dict[str, Predictor],
         s_mean, s_max = force_spread(F)
         fbar = float(np.linalg.norm(F.mean(axis=0), axis=-1).mean())
         bkt = snapshot.bucket(float(s_mean), fbar)
-        candidates = [c for c in (snapshot.candidates or models)
-                      if c in snapshot.p_correct and (c in models or c == CONSENSUS)]
+        candidates = [c for c in (snapshot.candidates or models) if c in snapshot.p_correct
+                      and set(snapshot.members(c, models)) <= set(models)]
         p_ok = {c: float(snapshot.p_correct[c][bkt[0]][bkt[1]]) for c in candidates}
         rec = max(p_ok, key=p_ok.get) if p_ok else CONSENSUS
         energies = {m: float(np.asarray(outs[m]["energy"])[k]) for m in models}
@@ -108,7 +119,8 @@ def score(systems: Sequence[dict], predictors: dict[str, Predictor],
             "recommended_model": rec, "bucket": list(bkt),
             "action": "send to oracle / DFT" if flagged else f"use {rec}",
             # the served answer: the recommended model's prediction, or the ensemble mean
-            "served_forces": (F.mean(axis=0) if rec == CONSENSUS else F[models.index(rec)]).tolist(),
+            "served_forces": F[[models.index(m) for m in snapshot.members(rec, models)]].mean(axis=0).tolist(),
+            "served_members": snapshot.members(rec, models),
             "per_model": {m: {"energy": energies[m],
                               "max_force": float(np.linalg.norm(F[i], axis=-1).max())}
                           for i, m in enumerate(models)},

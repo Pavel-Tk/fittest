@@ -59,6 +59,16 @@ def test_consensus_candidate_serves_ensemble_mean(snapshot):
     np.testing.assert_allclose(res["served_forces"], -np.asarray(WATER["R"]), atol=1e-12)
 
 
+def test_subset_mean_candidate(snapshot):
+    snapshot.candidates = ["a", "b", "c", "mean(a+b)"]
+    snapshot.candidate_members = {"mean(a+b)": ["a", "b"]}
+    snapshot.p_correct["mean(a+b)"] = [[0.98] * 3] * 4
+    preds = {"a": fake(1.0), "b": fake(3.0), "c": fake(-5.0)}
+    res = score([WATER], preds, snapshot)[0]
+    assert res["recommended_model"] == "mean(a+b)" and res["served_members"] == ["a", "b"]
+    np.testing.assert_allclose(res["served_forces"], -2.0 * np.asarray(WATER["R"]), atol=1e-12)
+
+
 def test_bad_input_rejected(snapshot):
     with pytest.raises(ValueError):
         score([{"Z": [1, 1], "R": [[0, 0, 0]]}], {m: fake(1.0) for m in "abc"}, snapshot)
