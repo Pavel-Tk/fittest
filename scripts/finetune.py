@@ -323,13 +323,15 @@ def to_atomic_data(f: Frame, with_labels: bool = True):
 
 
 def make_loader(frames: Sequence[Frame], batch_size: int, shuffle: bool, device):
+    import torch
     from nvalchemi.data import Batch
     from nvalchemi.data.datapipes import DataLoader, InMemoryDataset
 
     batch = Batch.from_data_list([to_atomic_data(f) for f in frames])
     return DataLoader(InMemoryDataset(in_memory_batch=batch, device=device),
                       batch_size=batch_size, shuffle=shuffle, drop_last=shuffle,
-                      prefetch_factor=0, num_streams=1, use_streams=False, pin_memory=True)
+                      prefetch_factor=0, num_streams=1, use_streams=False,
+                      pin_memory=torch.cuda.is_available())  # pinning needs an accelerator
 
 
 def load_base(checkpoint: str, device, atomic_energies: dict[int, float] | None = None,
