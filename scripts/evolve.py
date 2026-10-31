@@ -55,7 +55,7 @@ class TorchFactory:
 
     def spec(self, r: OffspringRequest) -> dict[str, Any]:
         parent = r.parent.id if r.parent.kind == "base" else r.parent.ckpt
-        return {"id": r.id, "parent": parent, "parent_id": r.parent.id, "recipe": r.recipe,
+        return {"id": r.id, "family": r.parent.family, "parent": parent, "parent_id": r.parent.id, "recipe": r.recipe,
                 "seed": r.seed, "train_uids": r.train_uids, "holdout_uids": r.holdout_uids,
                 "out": str(self.preds / f"{r.id}.npz"), "ckpt": str(self.ckpt / r.id),
                 "result": str(self.jobs / f"{r.id}.result.json")}
@@ -77,7 +77,8 @@ class TorchFactory:
                 sp.write_text(json.dumps(s, indent=1))
                 log = open(self.jobs / f"{s['id']}.log", "w")
                 env = {**os.environ, "OMP_NUM_THREADS": str(self.threads), "MKL_NUM_THREADS": str(self.threads)}
-                cmd = [self.python, str(ROOT / "scripts" / "evolve_offspring.py"), "--frames", self.frames,
+                script = "evolve_offspring_aimnet.py" if s["family"] == "aimnet2" else "evolve_offspring.py"
+                cmd = [self.python, str(ROOT / "scripts" / script), "--frames", self.frames,
                        "--spec", str(sp), "--device", self.device, "--threads", str(self.threads)]
                 print(f"[factory] start {s['id']} (parent {s['parent_id']}, recipe {s['recipe']})", flush=True)
                 running.append((s, subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT, env=env,
@@ -125,7 +126,9 @@ def main(argv=None) -> None:
     ap.add_argument("--labels-per-generation", type=int, default=50)
     ap.add_argument("--offspring", type=int, default=3)
     ap.add_argument("--seeds", default="0")
-    ap.add_argument("--controls", default="", help="comma list: clone,random")
+    ap.add_argument("--controls", default="", help="comma list: clone,random,newest")
+    ap.add_argument("--family", default="mace", choices=("mace", "aimnet2"),
+                    help="which family the Curator breeds (run A: mace, run B: aimnet2)")
     ap.add_argument("--control-seeds", default="0", help="seeds that also run the controls")
     ap.add_argument("--no-breeding", action="store_true")
     ap.add_argument("--python", default=sys.executable)
@@ -139,7 +142,9 @@ def main(argv=None) -> None:
     out.mkdir(parents=True, exist_ok=True)
     frames, split_report = assign_leakfree_splits(load_frames(args.frames), 0)
     base_cfg = EvoConfig(generations=args.generations, labels_per_generation=args.labels_per_generation,
-                         offspring_per_generation=args.offspring, n_bootstrap_eval=args.n_boot)
+                         offspring_per_generation=args.offspring, n_bootstrap_eval=args.n_boot,
+                         breed_family=args.family,
+                         finetunable=("aimnet2",) if args.family == "aimnet2" else ("mace_mpa0",))
     if args.epochs_scale != 1.0:
         import fittest.evolution as ev
         ev.BASE_RECIPE["epochs"] = int(round(ev.BASE_RECIPE["epochs"] * args.epochs_scale))
@@ -157,8 +162,10 @@ def main(argv=None) -> None:
             write_outputs(out, runs, scorer, base_cfg, split_report)
             ctls = [c for c in args.controls.split(",") if c] if str(seed) in args.control_seeds.split(",") else []
             for ctl in ctls:
-                ccfg = (dataclasses.replace(cfg, breeding_mode="clone") if ctl == "clone"
-                        else dataclasses.replace(cfg, selection_mode="random"))
+                ccfg = {"clone": dataclasses.replace(cfg, breeding_mode="clone"),
+                        "random": dataclasses.replace(cfg, selection_mode="random"),
+                        "newest": dataclasses.replace(cfg, breeding_mode="clone", selection_mode="newest",
+                                                      offspring_per_generation=1)}[ctl]
                 fac = None if args.no_breeding else TorchFactory(out, f"{ctl}_s{seed}", args.python, args.frames,
                                                                  args.device, args.threads, args.parallel)
                 runs[f"{ctl}_s{seed}"] = run_one(f"{ctl}_s{seed}", ccfg, frames, base, scorer, bb, fac)

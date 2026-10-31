@@ -78,6 +78,9 @@ WRONG_UNITS = "F_RMSE/WRONG_F + |dE_rel|/WRONG_E"
 BASE_RECIPE: dict[str, Any] = {"energy_weight": 10.0, "force_weight": 10.0, "lora_rank": 16,
                                "lora_alpha": 2.0, "lr": 1e-3, "epochs": 40, "batch_size": 16,
                                "label_fraction": 1.0, "min_steps": 160}
+AIMNET_RECIPE: dict[str, Any] = {"lr": 1e-4, "trainable": "head", "force_weight": 1.0, "rel_weight": 1.0,
+                                 "epochs": 60, "batch_size": 16, "label_fraction": 1.0, "min_steps": 200}
+FAMILY_RECIPE: dict[str, dict[str, Any]] = {"mace": BASE_RECIPE, "aimnet2": AIMNET_RECIPE}
 
 
 @dataclass(frozen=True)
@@ -108,6 +111,8 @@ class EvoConfig:
     seed: int = 0
     base_models: tuple[str, ...] = config.HETERO_MODELS
     finetunable: tuple[str, ...] = ("mace_mpa0",)
+    breed_family: str = "mace"
+    """Family the Curator breeds: 'mace' (run A) or 'aimnet2' (run B)."""
     wrong_f: float = config.WRONG_F
     wrong_e: float = config.WRONG_E
     breeding: bool = True
@@ -115,7 +120,8 @@ class EvoConfig:
     breeding_mode: str = "mutate"
     """'mutate' (varied recipes) or 'clone' (control: the parent's recipe, different seeds)."""
     selection_mode: str = "fitness"
-    """'fitness' or 'random' (control: same number of deaths, victims chosen at random)."""
+    """'fitness', 'random' (same number of deaths, random victims) or 'newest' (control: no
+    fitness, no pruning, no gate: the newest child always replaces the previous one)."""
 
     @property
     def total_budget(self) -> int:
@@ -503,7 +509,7 @@ class Evolution:
         for m in cfg.base_models:
             fam = "mace" if m.startswith("mace") else m.split("_")[0]
             self.members[m] = Member(id=m, family=fam, kind="base", generation_born=0,
-                                     recipe=dict(BASE_RECIPE) if m in cfg.finetunable else {})
+                                     recipe=dict(FAMILY_RECIPE[fam]) if m in cfg.finetunable else {})
         self.population: list[str] = list(cfg.base_models)
         self.rng = np.random.default_rng([cfg.seed, 2026])
         self.history: list[dict[str, Any]] = []
@@ -625,7 +631,8 @@ class Evolution:
         for m, c in first.items():
             self.members[m].fitness[g] = c
         current = first
-        while len(self.population) > self.cfg.min_population and self.cfg.selection:
+        while (len(self.population) > self.cfg.min_population and self.cfg.selection
+               and self.cfg.selection_mode != "newest"):
             elig = [m for m in self.population if self._eligible(current[m], self.cfg.prune_fitness_max)]
             over = len(self.population) > self.cfg.max_population
             if not elig and not over:
@@ -650,11 +657,22 @@ class Evolution:
 
     # --- 5. breeding ------------------------------------------------------------------------------
     def mutate(self, parent: Member, k: int, g: int) -> dict[str, Any]:
-        base = dict(parent.recipe or BASE_RECIPE)
+        base = dict(parent.recipe or FAMILY_RECIPE[parent.family])
         r = dict(base)
         if self.cfg.breeding_mode == "clone":
             return r
         rng = np.random.default_rng([self.cfg.seed, g, k, 404])
+        if parent.family == "aimnet2":
+            if k % 3 == 0:  # relative energies weigh more
+                r["rel_weight"] = float(np.clip(base["rel_weight"] * 3.0, 0.1, 30.0))
+            elif k % 3 == 1:  # whole network, smaller step
+                r["trainable"] = "all" if base["trainable"] != "all" else "head"
+                r["lr"] = float(base["lr"] * (1 / 3 if r["trainable"] == "all" else 3.0))
+            else:  # step size + label subsample
+                r["lr"] = float(base["lr"] * rng.choice([1 / 3, 3.0]))
+                r["epochs"] = int(np.clip(base["epochs"] + rng.choice([-20, 30]), 20, 120))
+                r["label_fraction"] = 0.8
+            return r
         ew = lambda x: float(np.clip(x, 1.0, 300.0))  # noqa: E731
         if k % 3 == 0:  # energy-weighted child: rel-E failed the gate last time
             r["energy_weight"] = ew(base["energy_weight"] * 3.0)
@@ -670,7 +688,7 @@ class Evolution:
     def breed(self, g: int) -> dict[str, Any]:
         if not self.cfg.breeding or self.factory is None:
             return {"generation": g, "born": [], "note": "breeding disabled"}
-        fam = [m for m in self.population if self.members[m].family == "mace"
+        fam = [m for m in self.population if self.members[m].family == self.cfg.breed_family
                and (self.members[m].kind == "offspring" or m in self.cfg.finetunable)]
         fam.sort(key=lambda m: -self.members[m].fitness.get(g, {}).get("fitness", 0.0))
         if not fam:  # germline: the foundation checkpoint is always available
@@ -710,7 +728,7 @@ class Evolution:
         return {"generation": g, "born": born}
 
     def _admit(self, req: OffspringRequest, res: OffspringResult, g: int) -> dict[str, Any]:
-        mem = Member(id=req.id, family="mace", kind="offspring", generation_born=g + 1,
+        mem = Member(id=req.id, family=req.parent.family, kind="offspring", generation_born=g + 1,
                      parent=req.parent.id, recipe=req.recipe, train_uids=req.train_uids,
                      train_components={int(self.component[self.store.index[u]]) for u in req.train_uids},
                      ckpt=res.ckpt)
@@ -723,7 +741,13 @@ class Evolution:
         mem.gate = self.gate(mem, res)
         clone = self.clone_check(mem.id)
         mem.gate["clone_check"] = clone
-        if not mem.gate["passed"]:
+        if self.cfg.selection_mode == "newest":  # control: no gate, no clone check, no fitness
+            for old in [m for m in self.population if self.members[m].kind == "offspring"]:
+                self.population.remove(old)
+                o = self.members[old]
+                o.status, o.died_generation, o.death_reason = "dead", g + 1, "replaced by the newest child (control)"
+            self.population.append(mem.id)
+        elif not mem.gate["passed"]:
             mem.status = "stillborn"
         elif clone["is_clone"]:
             mem.status = "clone"
@@ -757,7 +781,7 @@ class Evolution:
                            "limit": self.cfg.toolkit_max_ratio,
                            "passed": bool(ratio <= self.cfg.toolkit_max_ratio),
                            "toolkit_accepted_at_1.0": tk.get("accepted"), "detail": tk.get("detail")})
-        elif "accepted" in tk:
+        elif tk.get("accepted") is not None:
             checks.append({"name": "alchemi_acceptance_report", "value": None, "limit": None,
                            "passed": bool(tk["accepted"]), "detail": tk.get("detail")})
         return {"passed": all(c["passed"] for c in checks), "checks": checks,

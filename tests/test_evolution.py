@@ -219,3 +219,23 @@ def test_random_selection_control_kills_same_number(world):
     evo = Evolution(frames, preds, cfg, SynthFactory(frames, preds), label="random")
     evo.run(None)
     assert CFG.min_population <= len(evo.population) <= CFG.max_population
+
+
+def test_aimnet_family_breeding_and_newest_control(world):
+    frames, preds = world
+    cfg = dataclasses.replace(CFG, breed_family="aimnet2", finetunable=("aimnet2",))
+    fac = SynthFactory(frames, preds)
+    evo = Evolution(frames, preds, cfg, fac, label="runB")
+    evo.run(None)
+    first = [r for r in fac.calls if r.id.startswith("g1_")]
+    assert all(r.parent.id == "aimnet2" for r in first)
+    assert {"lr", "trainable", "rel_weight"} <= set(first[0].recipe)
+    assert first[0].recipe["rel_weight"] == 3.0 and evo.members["g1_a"].family == "aimnet2"
+    # control: no selection — the newest child always replaces the previous one, even if bad
+    ncfg = dataclasses.replace(cfg, breeding_mode="clone", selection_mode="newest", offspring_per_generation=1)
+    fac2 = SynthFactory(frames, preds)
+    ctl = Evolution(frames, preds, ncfg, fac2, label="newest")
+    hist = ctl.run(None)
+    assert all(r.recipe == ctl.members["aimnet2"].recipe for r in fac2.calls)
+    assert hist[-1]["triage"]["population"] == ["mace_mpa0", "aimnet2", "orb", "g2_a"]
+    assert ctl.members["g1_a"].status == "dead"
