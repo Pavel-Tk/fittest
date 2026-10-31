@@ -126,8 +126,13 @@ The tool descriptions, the server instructions and every `check_structures` resp
   version string does not create new ids. The salt is a random file (`/var/lib/fittest-mcp/salt`,
   mode 600, never committed), so ids cannot be reversed. Hosted, the IP comes from Caddy, which
   overwrites X-Forwarded-For. Local HTTP mode ignores X-Forwarded-For.
-- **Raw IPs are never stored.** uvicorn's access log is off. Caddy's access log drops the remote IP,
-  client IP, X-Forwarded-For, X-Real-IP, Forwarded, Cf-Connecting-Ip and True-Client-Ip.
+- **Raw IPs are not stored by the app or written to the access log.** uvicorn's access log is off.
+  Caddy's access log drops the remote IP, client IP, X-Forwarded-For, X-Real-IP, Forwarded,
+  Cf-Connecting-Ip and True-Client-Ip. Since 2026-10-31 19:11 UTC Caddy's error and unmapped-host
+  logs (systemd journal) drop them too, via a filter on Caddy's default logger, and requests for any
+  other host name (e.g. the bare IP) get a 404 and are not logged (`deploy/Caddyfile`). Before that,
+  140 Caddy entries in the journal contained client IPs (9 distinct IPs: 2 error entries from 502s
+  during restarts, 138 bare-IP requests, mostly scanners); they stay there until journal rotation.
 - **Never stored or logged:** structures, coordinates, element lists, structure names, results. The
   server's own log lines (systemd journal) carry only the tool name and an error category or
   exception type. The SDK's protocol logger, which can quote raw input, is silenced. A test scans

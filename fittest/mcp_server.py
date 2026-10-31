@@ -100,9 +100,12 @@ VERDICT_RULE = ("trust only if: every model agent supports all elements, the for
 
 LOGGING_NOTICE = (
     "Logging: every call to this server is logged (UTC time, tool name, an anonymous client id = "
-    "salted hash of client name + IP; raw IPs are not stored), structure and atom counts, "
-    "verdict counts, latency and ok/error category. Structures, coordinates, element lists and names "
-    "are NOT stored. Aggregate counts are public at /stats.")
+    "salted hash of client name + IP), structure and atom counts, verdict counts, latency and "
+    "ok/error category. Raw IPs are not stored by the app or written to the access log; since "
+    "2026-10-31 19:11 UTC Caddy's error/unmapped-host logs drop them too (before that, some Caddy "
+    "error and bare-IP entries in the system journal contained client IPs, kept until journal "
+    "rotation). Structures, coordinates, element lists and names are NOT stored. Aggregate counts "
+    "are public at /stats.")
 
 SYMBOLS = (
     "X H He Li Be B C N O F Ne Na Mg Al Si P S Cl Ar K Ca Sc Ti V Cr Mn Fe Co Ni Cu Zn Ga Ge As Se "

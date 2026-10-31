@@ -711,8 +711,13 @@ Every tool description, the server instructions and every `check_structures` res
   client *version* is deliberately not part of it, so upgrading or forging a version string does not create
   new ids. The salt is a random server-side file (`/var/lib/fittest-mcp/salt`, mode 600, never committed),
   so ids cannot be reversed. Hosted, the IP comes from Caddy, which overwrites X-Forwarded-For.
-* **Raw IPs are never stored**: uvicorn's access log is off and Caddy's access log drops the remote IP,
-  client IP, X-Forwarded-For, X-Real-IP, Forwarded, Cf-Connecting-Ip and True-Client-Ip fields.
+* **Raw IPs are not stored by the app or written to the access log**: uvicorn's access log is off and
+  Caddy's access log drops the remote IP, client IP, X-Forwarded-For, X-Real-IP, Forwarded,
+  Cf-Connecting-Ip and True-Client-Ip fields. Since 2026-10-31 19:11 UTC Caddy's error and
+  unmapped-host logs drop them too, and requests for any other host name (e.g. the bare IP) get a 404
+  and are not logged. Before that, 140 Caddy entries in the system journal contained client IPs (9
+  distinct IPs: 2 error entries from 502s during restarts, 138 bare-IP requests, mostly scanners); they
+  stay there until journal rotation.
 * **Never stored or logged:** structures, coordinates, element lists, structure names, results. The server's
   own journal lines carry only the tool name and an error category or exception type. A test scans the raw
   database bytes for a planted structure name and coordinates; another checks that a failing call leaves
