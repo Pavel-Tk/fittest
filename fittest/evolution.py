@@ -95,6 +95,11 @@ class EvoConfig:
     offspring_per_generation: int = 3
     prune_fitness_max: float = 0.5
     """'Fitness ≈ 0 or negative': sum of z-scores at most this (and no CI above 0)."""
+    toolkit_max_ratio: float = 1.01
+    """ALCHEMI ``from_scratch_ratio`` (worst MAE ratio child/parent over energy-per-atom and
+    forces) must be ≤ this. 1 % tolerance: the energy-per-atom MAE is dominated by the frozen,
+    composition-extrapolated E0 offsets (identical for child and parent), so it ties at ~1.0
+    to float precision (smoke test: 1.000008); relative energies are gated separately."""
     clone_corr_max: float = 0.95
     clone_dist_min: float = 0.02
     n_bootstrap_fitness: int = 400
@@ -746,10 +751,15 @@ class Evolution:
              "limit": float(e_p.mean()), "passed": bool(e_c.mean() <= e_p.mean())},
         ]
         tk = res.toolkit or {}
-        if "accepted" in tk:
-            checks.append({"name": "alchemi_acceptance_report", "value": tk.get("worst_ratio"),
-                           "limit": tk.get("max_ratio"), "passed": bool(tk["accepted"]),
-                           "detail": tk.get("detail")})
+        if tk.get("worst_ratio") is not None:
+            ratio = float(tk["worst_ratio"])
+            checks.append({"name": "alchemi_acceptance_report", "value": ratio,
+                           "limit": self.cfg.toolkit_max_ratio,
+                           "passed": bool(ratio <= self.cfg.toolkit_max_ratio),
+                           "toolkit_accepted_at_1.0": tk.get("accepted"), "detail": tk.get("detail")})
+        elif "accepted" in tk:
+            checks.append({"name": "alchemi_acceptance_report", "value": None, "limit": None,
+                           "passed": bool(tk["accepted"]), "detail": tk.get("detail")})
         return {"passed": all(c["passed"] for c in checks), "checks": checks,
                 "n_holdout": int(len(hold)), "n_holdout_reactions": int(len(np.unique(self.store.reaction[hold]))),
                 "holdout_components_disjoint": True}

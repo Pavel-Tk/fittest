@@ -149,15 +149,18 @@ def main(argv=None) -> None:
         for seed in [int(s) for s in args.seeds.split(",")]:
             cfg = dataclasses.replace(base_cfg, seed=seed)
             runs[f"static_s{seed}"] = run_one(f"static_s{seed}", static_config(cfg), frames, base, scorer, bb)
+            write_outputs(out, runs, scorer, base_cfg, split_report)
             fac = None if args.no_breeding else TorchFactory(out, f"evolved_s{seed}", args.python, args.frames,
                                                              args.device, args.threads, args.parallel)
             runs[f"evolved_s{seed}"] = run_one(f"evolved_s{seed}", cfg, frames, base, scorer, bb, fac)
+            write_outputs(out, runs, scorer, base_cfg, split_report)
             for ctl in [c for c in args.controls.split(",") if c]:
                 ccfg = (dataclasses.replace(cfg, breeding_mode="clone") if ctl == "clone"
                         else dataclasses.replace(cfg, selection_mode="random"))
                 fac = None if args.no_breeding else TorchFactory(out, f"{ctl}_s{seed}", args.python, args.frames,
                                                                  args.device, args.threads, args.parallel)
                 runs[f"{ctl}_s{seed}"] = run_one(f"{ctl}_s{seed}", ccfg, frames, base, scorer, bb, fac)
+                write_outputs(out, runs, scorer, base_cfg, split_report)
     write_outputs(out, runs, scorer, base_cfg, split_report)
 
 
