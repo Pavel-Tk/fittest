@@ -11,6 +11,7 @@ from trustswarm.agents.calibrator import bucket_of, isotonic_threshold
 from trustswarm.blackboard import (BID, FLAG, ORACLE_RESULT, PASS, PREDICTION, REPUTATION,
                                    THRESHOLD, VERDICT, Blackboard, Event)
 from trustswarm.cache import Predictions
+from trustswarm.candidates import candidate_members
 from trustswarm.data import Frame
 from trustswarm.round_driver import QuiescenceError, RoundDriver
 
@@ -25,9 +26,9 @@ def labelled(uid: str, reaction: str = "r1", role: str = "path", n: int = 3) -> 
 # --- Oracle --------------------------------------------------------------------------------
 
 def _bid_round(bb: Blackboard, uids: list[str], bidders: int = 2) -> None:
-    for i, u in enumerate(uids):
-        for b in range(bidders):
-            bb.post(BID, f"bidder{b}", {"uid": u, "value": 1.0 / (1 + i)})
+    for b in range(bidders):
+        rows = [{"uid": u, "value": 1.0 / (1 + i)} for i, u in enumerate(uids)]
+        bb.post(BID, f"bidder{b}", batch_payload(rows))
 
 
 def test_oracle_pays_exactly_k_per_round_and_never_exceeds_budget() -> None:
@@ -64,6 +65,58 @@ def test_oracle_carries_unspent_allowance_and_rejects_unlabelled() -> None:
     assert oracle.rejected_bids == 2
 
 
+def test_oracle_pays_audits_from_the_same_budget() -> None:
+    frames = [labelled(f"u{i:02d}") for i in range(30)]
+    oracle = Oracle(frames, budget_per_round=4, n_bid_rounds=2, audit_quota=1)
+    bb = Blackboard()
+    for _ in range(3):
+        _bid_round(bb, [f.uid for f in frames[:20]])             # regular bids
+        bb.post(BID, "skeptic", batch_payload(                  # three audit requests
+            [{"uid": f.uid, "value": 1.0} for f in frames[25:28]], audit=True))
+        oracle.step(bb)
+        bb.tick()
+    oracle.step(bb)
+    results = bb.read(ORACLE_RESULT)
+    assert oracle.spent_per_round == {0: 4, 1: 4} and oracle.spent == oracle.total_budget
+    assert oracle.audits_per_round == {0: 1, 1: 1}  # quota, not the number requested
+    audits = [e.payload for e in results if e.payload["audit"]]
+    assert [p["uid"] for p in audits] == ["u25", "u26"]  # first unrevealed audit request
+    assert all(p["bidders"] == {"skeptic": 1.0} for p in audits)
+    with pytest.raises(ValueError):
+        Oracle(frames, budget_per_round=2, n_bid_rounds=1, audit_quota=3)
+
+
+def test_candidate_members_names_every_subset() -> None:
+    members = candidate_members(["orb", "aimnet2", "mace_mpa0"])
+    assert list(members) == ["orb", "aimnet2", "mace_mpa0", "mean(aimnet2+mace_mpa0)",
+                             "mean(aimnet2+orb)", "mean(mace_mpa0+orb)", "consensus"]
+    assert members["consensus"] == ("aimnet2", "mace_mpa0", "orb")
+    assert list(candidate_members(["a", "b"])) == ["a", "b", "consensus"]
+    with pytest.raises(ValueError):
+        candidate_members(["a", "consensus"])
+
+
+def test_calibrator_can_serve_a_subset_mean() -> None:
+    bb = Blackboard()
+    cal = Calibrator(["a", "b", "c"])
+    _prediction(bb, "x", "a", np.zeros((1, 3)))
+    _prediction(bb, "x", "b", np.zeros((1, 3)))
+    _prediction(bb, "x", "c", np.zeros((1, 3)))
+    _prediction(bb, "y", "a", np.zeros((1, 3)))
+    _prediction(bb, "y", "b", np.zeros((1, 3)))
+    _prediction(bb, "y", "c", np.zeros((1, 3)))
+    cal.step(bb)
+    wrong = {name: name != "mean(a+b)" for name in candidate_members(["a", "b", "c"])}
+    errors = {n: {"force_rmse": 0.0, "rel_e_err": 0.0, "wrong": w} for n, w in wrong.items()}
+    bb.post(ORACLE_RESULT, "oracle", {"uid": "x", "bidders": {}, "candidate_errors": errors,
+                                      "errors": {m: errors[m] for m in "abc"},
+                                      "consensus_error": errors["consensus"]})
+    cal.step(bb)
+    v = _verdicts(bb)[-1]
+    assert (v["uid"], v["recommended_model"]) == ("y", "mean(a+b)")
+    assert set(v["prediction_events"]) == {"a", "b"}
+
+
 def test_oracle_requires_labels() -> None:
     f = labelled("a")
     f.E = None
@@ -86,9 +139,9 @@ def test_model_agent_bids_on_flags_only_until_revealed() -> None:
     agent.step(bb)
     agent.step(bb)  # at most one bid per system per round
     bids = bb.read(BID)
-    assert len(bids) == 1
+    assert len(bids) == 1 and bids[0].payload["uid"] == ["a"]
     expected = 0.5 * (1 - np.exp(-0.8 / (2 * config.WRONG_F)))  # rep_0 · g(d, σ)
-    assert bids[0].payload["value"] == pytest.approx(expected)
+    assert bids[0].payload["value"][0] == pytest.approx(expected)
     bb.post(ORACLE_RESULT, "oracle", {"uid": "a", "errors": {}})
     bb.tick()
     agent.step(bb)

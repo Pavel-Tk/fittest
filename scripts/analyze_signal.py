@@ -30,6 +30,8 @@ THRESHOLDS = [0.15, 0.25, 0.4]
 
 
 def per_frame(frames, preds, models):
+    if len(models) < 2:  # e.g. no seed-ensemble files: the series is skipped (NaN), not a crash
+        return np.full(len(frames), np.nan)
     sig = np.array([force_spread(np.stack([preds[m].forces[f.uid] for m in models]))[0] for f in frames])
     return sig
 
@@ -37,7 +39,7 @@ def per_frame(frames, preds, models):
 def auroc_ci(score, wrong, groups, n_boot=1000, seed=0):
     from sklearn.metrics import roc_auc_score
 
-    if wrong.all() or not wrong.any():
+    if wrong.all() or not wrong.any() or not np.isfinite(score).all():
         return None
     rng = np.random.default_rng(seed)
     uniq = np.unique(groups)
@@ -76,7 +78,8 @@ def main():
     out = {"n_frames": len(frames), "n_reactions": int(len(np.unique(groups))), "target": a.target,
            "het_models": het, "seed_models": seed,
            "error_by_role": {m: {r: float(np.median(err[m][roles == r])) for r in ROLES} for m in err},
-           "spearman": {"het": float(spearmanr(s_het, y)[0]), "seed": float(spearmanr(s_seed, y)[0])},
+           "spearman": {k: (float(spearmanr(s, y)[0]) if np.isfinite(s).all() else None)
+                        for k, s in (("het", s_het), ("seed", s_seed))},
            "median_spread": {"het": float(np.median(s_het)), "seed": float(np.median(s_seed))},
            "median_error_target": float(np.median(y)),
            "auroc": {str(t): {"het": auroc_ci(s_het, y > t, groups), "seed": auroc_ci(s_seed, y > t, groups),
@@ -112,7 +115,8 @@ def main():
     ax[1].set_xlim(0, lim); ax[1].set_ylim(0, lim)
     ax[1].set_xlabel(f"{a.target} force RMSE vs DFT (eV/Å)")
     ax[1].set_ylabel("committee force spread σ_F (eV/Å)")
-    ax[1].set_title(f"(b) Spearman ρ: het {out['spearman']['het']:.2f}, seed {out['spearman']['seed']:.2f}")
+    rho = {k: ("n/a" if v is None else f"{v:.2f}") for k, v in out["spearman"].items()}
+    ax[1].set_title(f"(b) Spearman ρ: het {rho['het']}, seed {rho['seed']}")
     ax[1].legend(fontsize=7, frameon=False, markerscale=3)
 
     xs = np.arange(len(THRESHOLDS))

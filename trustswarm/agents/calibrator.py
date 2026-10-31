@@ -1,7 +1,10 @@
 """Calibrator: keeps the ledger; posts ``threshold``, ``verdict`` and ``reputation`` (DESIGN.md §4).
 
-* Candidates: every model, plus ``consensus`` (the ensemble-mean prediction), each with its
-  own per-bucket Beta ledger and the same prior. Oracle results carry the consensus error.
+* Candidates: every non-empty subset mean of the models (singletons by model name, pairs as
+  ``mean(a+b)``, the full set as ``consensus``; :mod:`trustswarm.candidates`), each with its
+  own per-bucket Beta ledger and the same prior. Oracle results carry every candidate's error.
+  Exploration audits (``audit`` oracle results) update the ledger like any label but do not
+  settle reputations: an audit is not a claim that the system is wrong.
 * Ledger: per (candidate, context bucket) Beta posterior of correctness from oracle results.
   The bucket is label-free: (σ_F quantile bin [4], mean |F̄| bin [3]); bin edges are fixed
   from the σ distribution the Calibrator sees in round 0 (see :func:`bucket_of`).
@@ -33,9 +36,8 @@ from trustswarm.agents.base import Agent, batch_payload, iter_rows
 from trustswarm.agents.stream import TRIAGE
 from trustswarm.blackboard import (ORACLE_RESULT, PREDICTION, REPUTATION, THRESHOLD, VERDICT,
                                    Blackboard, Event)
+from trustswarm.candidates import CONSENSUS, candidate_members
 from trustswarm.signals import force_spread, mean_abs_force
-
-CONSENSUS = config.CONSENSUS
 
 
 @dataclass
@@ -98,11 +100,12 @@ class Calibrator(Agent):
         super().__init__(name)
         if len(models) < 2:
             raise ValueError("the Calibrator needs at least two models to compare")
-        if CONSENSUS in models:
-            raise ValueError(f"{CONSENSUS!r} is reserved for the ensemble-mean candidate")
         self._models = tuple(models)
-        self.candidates: tuple[str, ...] = (*self._models, CONSENSUS)
-        self._tiebreak = {c: i for i, c in enumerate((CONSENSUS, *self._models))}
+        self.members = candidate_members(self._models)  # raises on reserved/duplicate names
+        self.candidates: tuple[str, ...] = tuple(self.members)
+        # prior ties: the full ensemble mean first, then larger subsets, then single models
+        self._tiebreak = {c: i for i, c in enumerate(
+            sorted(self.candidates, key=lambda c: (-len(self.members[c]), self.candidates.index(c))))}
         self._prior = correctness_prior
         self._rep_prior = reputation_prior
         self._lambda = false_alarm_penalty
@@ -162,6 +165,7 @@ class Calibrator(Agent):
         return {
             "models": list(self._models),
             "candidates": list(self.candidates),
+            "candidate_members": {c: list(m) for c, m in self.members.items()},
             "tau": float(self._tau),
             "sigma_edges": [float(x) for x in self._sigma_edges],
             "fbar_edges": [float(x) for x in self._fbar_edges],
@@ -227,6 +231,9 @@ class Calibrator(Agent):
     # --- ledger + settlement ------------------------------------------------------------------
     @staticmethod
     def _candidate_error(payload: dict[str, Any], candidate: str) -> dict[str, Any] | None:
+        errors = payload.get("candidate_errors")
+        if errors is not None:
+            return errors.get(candidate)
         if candidate == CONSENSUS:
             return payload.get("consensus_error")
         return payload["errors"].get(candidate)
@@ -256,6 +263,8 @@ class Calibrator(Agent):
                 self._global[c].beta += not correct
             if self._phase.get(uid) == TRIAGE:
                 self._labelled_points.append((self._sigma[uid][0], served_wrong))
+        if p.get("audit"):
+            return False  # exploration: no reputation at stake
         total = sum(p["bidders"].values())
         for agent, value in p["bidders"].items():
             share = value / total if total > 0 else 0.0
@@ -298,8 +307,7 @@ class Calibrator(Agent):
         b = self.bucket(uid)
         rec = max(self.candidates, key=lambda c: (self.p_correct(c, b), self._global[c].mean,
                                                   -self._tiebreak[c]))
-        events = {m: self._preds[uid][m][0] for m in self._models}
-        served = events if rec == CONSENSUS else {rec: events[rec]}
+        served = {m: self._preds[uid][m][0] for m in self.members[rec]}
         return Verdict(rec, self.p_correct(rec, b), served, b, self.risk(self._sigma[uid][0]))
 
     def _verdict_row(self, uid: str) -> dict[str, Any] | None:

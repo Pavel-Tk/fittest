@@ -113,10 +113,13 @@ class ModelAgent(Agent):
         return 1.0 - math.exp(-(sigma + deviation) / (2.0 * self._scale))
 
     def _bid(self, bb: Blackboard) -> None:
+        """One bid batch per step: every flagged, unrevealed system not yet bid on this round."""
+        rows = []
         for uid in sorted(self._flagged):
             if self._last_bid_round.get(uid) == bb.round:
                 continue
             sigma, dev = self._flagged[uid]
-            value = self._reputation * self.wrongness_estimate(sigma, dev)
             self._last_bid_round[uid] = bb.round
-            self.post(bb, BID, {"uid": uid, "value": value})
+            rows.append({"uid": uid, "value": self._reputation * self.wrongness_estimate(sigma, dev)})
+        if rows:
+            self.post(bb, BID, batch_payload(rows))

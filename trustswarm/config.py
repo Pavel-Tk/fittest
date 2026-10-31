@@ -13,9 +13,10 @@ WRONG_F: float = 0.25
 """Force RMSE threshold [eV/Å] above which a prediction is wrong."""
 WRONG_E: float = 0.25
 """Relative-energy error threshold [eV] (≈ 5.8 kcal/mol) above which a prediction is wrong."""
-WRONG_THRESHOLDS: tuple[tuple[float, float], ...] = ((0.10, 0.087), (0.25, 0.25), (0.40, 0.40))
-"""(WRONG_F, WRONG_E) pairs at which AUROC/recall are reported (DESIGN.md §10). The primary
-pair is (WRONG_F, WRONG_E); a threshold-free Spearman(score, force RMSE) is reported too."""
+WRONG_THRESHOLDS: tuple[tuple[float, float], ...] = ((0.15, 0.15), (0.25, 0.25), (0.40, 0.40))
+"""(WRONG_F, WRONG_E) pairs at which AUROC/recall are reported: the pre-registered primary
+(WRONG_F, WRONG_E) and the DESIGN.md §2 sensitivity values 0.15 and 0.4; a threshold-free
+Spearman(score, force RMSE) is reported too."""
 
 # --- Section 4/5: oracle budget ---------------------------------------------------------
 BUDGET_PER_ROUND: int = 40
@@ -68,3 +69,9 @@ RISK_MIN_LABELLED: int = 20
 SILENT_F: float = 0.4
 """'Badly wrong' force RMSE [eV/Å] for the silent-failure metric."""
 ECE_BINS: int = 10
+AUDIT_FRACTION: float = 0.25
+"""Share of each round's oracle budget the Skeptic spends on uniform audits of trusted systems."""
+PLANTED_MODEL: str = "aimnet2"
+"""Planted cases are arm-independent: frames where this model (in every arm) is badly wrong."""
+PLANTED_FORCE_RMSE: float = 0.4
+"""'Confidently wrong' = force RMSE above this [eV/Å] for PLANTED_MODEL."""

@@ -50,7 +50,15 @@ class TrustSnapshot:
     counts: dict[str, list[list[int]]] = field(default_factory=dict)
     candidates: list[str] = field(default_factory=list)  # models, subset means, "consensus"
     candidate_members: dict[str, list[str]] = field(default_factory=dict)
+    p_global: dict[str, float] = field(default_factory=dict)  # tie-break 1: global posterior
+    tiebreak_order: list[str] = field(default_factory=list)  # tie-break 2: Calibrator's order
     meta: dict = field(default_factory=dict)
+
+    def rank_key(self, candidate: str, p_bucket: float) -> tuple[float, float, int]:
+        """Same ordering the Calibrator uses: (P(correct | bucket), global P(correct), -tiebreak)."""
+        order = self.tiebreak_order or self.candidates
+        tb = order.index(candidate) if candidate in order else len(order)
+        return (p_bucket, float(self.p_global.get(candidate, 0.0)), -tb)
 
     def members(self, candidate: str, models: Sequence[str]) -> list[str]:
         """Model agents whose mean prediction a candidate stands for."""
@@ -64,13 +72,15 @@ class TrustSnapshot:
     def load(cls, path: str | Path) -> "TrustSnapshot":
         d = json.loads(Path(path).read_text())
         known = {"models", "tau", "sigma_edges", "fbar_edges", "p_correct", "counts", "candidates",
-                 "candidate_members"}
+                 "candidate_members", "p_global", "tiebreak_order"}
         return cls(models=list(d["models"]), tau=float(d["tau"]),
                    sigma_edges=[float(x) for x in d["sigma_edges"]],
                    fbar_edges=[float(x) for x in d["fbar_edges"]],
                    p_correct=d["p_correct"], counts=d.get("counts", {}),
                    candidates=list(d.get("candidates", d["models"])),
                    candidate_members={k: list(v) for k, v in d.get("candidate_members", {}).items()},
+                   p_global={k: float(v) for k, v in d.get("p_global", {}).items()},
+                   tiebreak_order=list(d.get("tiebreak_order", [])),
                    meta={k: v for k, v in d.items() if k not in known})
 
     def bucket(self, sigma_F: float, mean_abs_fbar: float) -> tuple[int, int]:
@@ -99,7 +109,10 @@ def score(systems: Sequence[dict], predictors: dict[str, Predictor],
     """Run every model agent once on the batch and turn disagreement into a verdict."""
     Z, R, batch = _pack(systems)
     outs = {m: p(Z, R, batch) for m, p in predictors.items()}
-    models = [m for m in snapshot.models if m in outs] or list(outs)
+    missing = sorted(set(snapshot.models) - set(outs))
+    if missing:  # sigma and its bins are only meaningful for the committee the snapshot learned
+        raise ValueError(f"model agents missing for this snapshot: {missing}")
+    models = list(snapshot.models)
     results = []
     for k in range(len(systems)):
         idx = np.flatnonzero(batch == k)
@@ -110,7 +123,7 @@ def score(systems: Sequence[dict], predictors: dict[str, Predictor],
         candidates = [c for c in (snapshot.candidates or models) if c in snapshot.p_correct
                       and set(snapshot.members(c, models)) <= set(models)]
         p_ok = {c: float(snapshot.p_correct[c][bkt[0]][bkt[1]]) for c in candidates}
-        rec = max(p_ok, key=p_ok.get) if p_ok else CONSENSUS
+        rec = max(p_ok, key=lambda c: snapshot.rank_key(c, p_ok[c])) if p_ok else CONSENSUS
         energies = {m: float(np.asarray(outs[m]["energy"])[k]) for m in models}
         flagged = bool(s_mean >= snapshot.tau)
         results.append({

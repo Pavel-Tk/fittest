@@ -112,9 +112,10 @@ def assign_splits(frames: Sequence[Frame], seed: int = 0,
                   n_seed_train_reactions: int | None = None) -> list[Frame]:
     """Map official T1x splits onto TrustSwarm splits, by reaction (DESIGN.md §1).
 
-    test → pool / eval (50/50); val → skeptic_ref / planted (50/50); train → seed_train
-    (optionally subsampled to ``n_seed_train_reactions``). Frames already carrying a
-    TrustSwarm split are returned unchanged.
+    test → pool / eval (50/50 by reaction); val → skeptic_ref / planted (50/50 **by formula**,
+    see :func:`split_val_by_formula`); train → seed_train (optionally subsampled to
+    ``n_seed_train_reactions``). Frames already carrying a TrustSwarm split are returned
+    unchanged.
     """
     rng = np.random.default_rng(seed)
     official = by_split(frames)
@@ -123,23 +124,49 @@ def assign_splits(frames: Sequence[Frame], seed: int = 0,
         return sorted({f.reaction for f in official.get(split, [])})
 
     pool, eval_ = split_reactions(reactions_of("test"), 0.5, rng)
-    ref, planted = split_reactions(reactions_of("val"), 0.5, rng)
     train = reactions_of("train")
     if n_seed_train_reactions is not None and n_seed_train_reactions < len(train):
         train, _ = split_reactions(train, n_seed_train_reactions / len(train), rng)
 
     mapping: dict[tuple[str, str], str] = {}
     for source, names, target in (("test", pool, POOL), ("test", eval_, EVAL),
-                                  ("val", ref, SKEPTIC_REF), ("val", planted, PLANTED),
                                   ("train", train, SEED_TRAIN)):
         mapping.update({(source, r): target for r in names})
     out: list[Frame] = []
     for f in frames:
-        if f.split in TRUSTSWARM_SPLITS:
+        if f.split in TRUSTSWARM_SPLITS or f.split == "val":
             out.append(f)
         elif (f.split, f.reaction) in mapping:
             out.append(dataclasses.replace(f, split=mapping[(f.split, f.reaction)]))
-    return out
+    return split_val_by_formula(out, seed)
+
+
+def official_split(frame: Frame) -> str:
+    """The official T1x split a frame came from (uids are ``"{official}:{reaction}:{tag}"``)."""
+    if frame.split in OFFICIAL_SPLITS:
+        return frame.split
+    prefix = frame.uid.split(":", 1)[0]
+    if prefix in OFFICIAL_SPLITS:
+        return prefix
+    if frame.split in (SKEPTIC_REF, PLANTED):
+        return "val"
+    return frame.split
+
+
+def split_val_by_formula(frames: Sequence[Frame], seed: int = 0) -> list[Frame]:
+    """(Re-)derive skeptic_ref / planted from the official ``val`` frames, 50/50 **by formula**.
+
+    T1x val holds a handful of formulas with many reactions each, so a reaction-level split
+    would leave near-duplicate geometries (same formula) on both sides and the Skeptic's kNN
+    would find the planted cases' twins among its references. Deterministic in ``seed``;
+    every other frame is returned unchanged. Predictions are per uid, so they stay valid.
+    """
+    val = [f for f in frames if official_split(f) == "val"]
+    ref_formulas, _ = split_reactions({f.formula for f in val}, 0.5,
+                                      np.random.default_rng([seed, 0xF0]))
+    ref = set(ref_formulas)
+    return [dataclasses.replace(f, split=SKEPTIC_REF if f.formula in ref else PLANTED)
+            if official_split(f) == "val" else f for f in frames]
 
 
 def arrival_rounds(frames: Sequence[Frame], n_rounds: int, seed: int = 0) -> dict[str, int]:

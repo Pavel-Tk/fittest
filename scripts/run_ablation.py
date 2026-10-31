@@ -46,7 +46,7 @@ class RecordingFinetune:
             self.recorded = True
         return self.inner(model_name, labelled_frames)
 
-SUMMARY_KEYS = ("auroc_pool", "auroc_eval", "recall_at_k", "planted_caught",
+SUMMARY_KEYS = ("auroc_pool", "auroc_eval", "recall_at_k", "planted_caught", "audit_hit_rate",
                 "eval_force_rmse_post", "ece_eval", "silent_failures_eval")
 
 
@@ -68,6 +68,8 @@ def main(argv: list[str] | None = None) -> None:
     ap.add_argument("--n-bootstrap", type=int, default=1000)
     ap.add_argument("--max-planted", type=int, default=40, help="cap on planted cases (<=0: all)")
     ap.add_argument("--no-finetune", action="store_true", help="use NullFinetune")
+    ap.add_argument("--audit-fraction", type=float, default=0.25,
+                    help="arm D: share of each round's budget for Skeptic audits of trusted systems")
     ap.add_argument("--budgets", default="",
                     help="comma-separated per-round budgets for a sensitivity sweep, e.g. 20,40,80")
     ap.add_argument("--budget-bootstrap", type=int, default=200,
@@ -78,7 +80,8 @@ def main(argv: list[str] | None = None) -> None:
     out.mkdir(parents=True, exist_ok=True)
     cfg = AblationConfig(budget_per_round=args.budget_per_round, rounds=args.rounds,
                          seed=args.seed, n_bootstrap=args.n_bootstrap,
-                         max_planted=args.max_planted if args.max_planted > 0 else None)
+                         max_planted=args.max_planted if args.max_planted > 0 else None,
+                         audit_fraction=args.audit_fraction)
     inner = NullFinetune() if args.no_finetune else default_finetune(args.preds, cfg)
     finetune = RecordingFinetune(inner, out / "oracle_labels_armD.json")
     frames = load_frames(args.frames)

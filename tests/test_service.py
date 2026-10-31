@@ -69,6 +69,20 @@ def test_subset_mean_candidate(snapshot):
     np.testing.assert_allclose(res["served_forces"], -2.0 * np.asarray(WATER["R"]), atol=1e-12)
 
 
+def test_ties_broken_like_calibrator(snapshot):
+    flat = [[0.67] * 3] * 4  # an unlabelled bucket: every candidate at the prior
+    snapshot.p_correct = {"a": flat, "b": flat, "c": flat}
+    snapshot.p_global = {"a": 0.4, "b": 0.8, "c": 0.8}
+    snapshot.tiebreak_order = ["c", "b", "a"]
+    res = score([WATER], {m: fake(1.0) for m in "abc"}, snapshot)[0]
+    assert res["recommended_model"] == "c"  # equal bucket and global P → earlier in tie-break order
+
+
+def test_missing_model_agent_rejected(snapshot):
+    with pytest.raises(ValueError, match="missing"):
+        score([WATER], {"a": fake(1.0), "b": fake(1.0)}, snapshot)
+
+
 def test_bad_input_rejected(snapshot):
     with pytest.raises(ValueError):
         score([{"Z": [1, 1], "R": [[0, 0, 0]]}], {m: fake(1.0) for m in "abc"}, snapshot)

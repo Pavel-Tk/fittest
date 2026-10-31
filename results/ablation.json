@@ -44,6 +44,7 @@
     ],
     "flag_quantile": 0.7,
     "max_planted": 40,
+    "audit_fraction": 0.25,
     "total_budget": 200
   },
   "arms": {
@@ -55,6 +56,211 @@
       "status": "ok",
       "served": "aimnet2",
       "oracle_calls": 200,
+      "oracle_labels_by_source": {
+        "audit": [],
+        "bid": [
+          "test:C2H3N3O2/rxn10005:path596",
+          "test:C2H5NO2/rxn1961:path181",
+          "test:C2H5NO2/rxn1961:path47",
+          "test:C2H5NO2/rxn1962:path15",
+          "test:C2H5NO2/rxn1962:path93",
+          "test:C2H5NO2/rxn3683:path205",
+          "test:C2H5NO2/rxn3685:path117",
+          "test:C2HNO/rxn4441:path11",
+          "test:C2HNO/rxn4442:path269",
+          "test:C2HNO/rxn4442:path293",
+          "test:C2HNO/rxn4442:path357",
+          "test:C2HNO/rxn4442:ts",
+          "test:C3H5NO2/rxn0100:path253",
+          "test:C3H5NO2/rxn0100:path317",
+          "test:C3H5NO2/rxn0894:path893",
+          "test:C3H5NO2/rxn0896:path502",
+          "test:C3H5NO2/rxn0896:path863",
+          "test:C3H5NO2/rxn0896:path935",
+          "test:C3H5NO2/rxn0896:ts",
+          "test:C3H5NO2/rxn1062:path861",
+          "test:C3H5NO2/rxn1063:path709",
+          "test:C3H5NO2/rxn1063:path773",
+          "test:C3H5NO2/rxn1064:path15",
+          "test:C3H5NO2/rxn1064:path1965",
+          "test:C3H5NO2/rxn1064:path797",
+          "test:C3H5NO2/rxn1064:path885",
+          "test:C3H5NO2/rxn1065:path1127",
+          "test:C3H5NO2/rxn1065:path861",
+          "test:C3H5NO2/rxn1084:path165",
+          "test:C3H5NO2/rxn1084:path326",
+          "test:C3H5NO2/rxn1084:path53",
+          "test:C3H5NO2/rxn1084:ts",
+          "test:C3H5NO2/rxn1087:path23",
+          "test:C3H5NO2/rxn1148:path35",
+          "test:C3H5NO2/rxn1154:path1941",
+          "test:C3H5NO2/rxn1155:path759",
+          "test:C3H5NO2/rxn1158:path445",
+          "test:C3H5NO2/rxn1274:path4",
+          "test:C3H5NO2/rxn1279:path196",
+          "test:C3H5NO2/rxn1279:path324",
+          "test:C3H5NO2/rxn1279:path332",
+          "test:C3H5NO2/rxn1281:path140",
+          "test:C3H5NO2/rxn1281:path252",
+          "test:C3H5NO2/rxn1281:path284",
+          "test:C3H5NO2/rxn1283:path197",
+          "test:C3H5NO2/rxn1283:path23",
+          "test:C3H5NO2/rxn1317:path125",
+          "test:C3H5NO2/rxn1317:path133",
+          "test:C3H5NO2/rxn1317:path3",
+          "test:C3H5NO2/rxn1317:path317",
+          "test:C3H5NO2/rxn1318:path18",
+          "test:C3H5NO2/rxn1319:path205",
+          "test:C3H5NO2/rxn1320:path160",
+          "test:C3H5NO2/rxn1320:path303",
+          "test:C3H5NO2/rxn1321:path116",
+          "test:C3H5NO2/rxn1786:path36",
+          "test:C3H5NO2/rxn1788:path1",
+          "test:C3H5NO2/rxn1788:path165",
+          "test:C3H5NO2/rxn1788:path3",
+          "test:C3H5NO2/rxn1792:path111",
+          "test:C3H5NO2/rxn1792:path5",
+          "test:C3H5NO2/rxn1792:path54",
+          "test:C3H5NO2/rxn1792:path63",
+          "test:C3H5NO2/rxn1792:path92",
+          "test:C3H5NO2/rxn1792:ts",
+          "test:C3H5NO2/rxn1827:path108",
+          "test:C3H5NO2/rxn1827:path111",
+          "test:C3H5NO2/rxn1827:path12",
+          "test:C3H5NO2/rxn1827:path143",
+          "test:C3H5NO2/rxn1827:path45",
+          "test:C3H5NO2/rxn1827:path69",
+          "test:C3H5NO2/rxn1827:ts",
+          "test:C3H5NO2/rxn2549:path525",
+          "test:C3H5NO2/rxn2555:path1277",
+          "test:C3H5NO2/rxn2555:path733",
+          "test:C3H5NO2/rxn2556:path204",
+          "test:C3H5NO2/rxn3103:path381",
+          "test:C3H5NO2/rxn3104:path1127",
+          "test:C3H5NO2/rxn3104:path941",
+          "test:C3H5NO2/rxn3104:ts",
+          "test:C3H5NO2/rxn3105:path757",
+          "test:C3H5NO2/rxn3109:path24",
+          "test:C3H5NO2/rxn4104:path16",
+          "test:C3H5NO2/rxn4106:ts",
+          "test:C3H5NO2/rxn4107:path1917",
+          "test:C3H5NO2/rxn4107:path2020",
+          "test:C3H5NO2/rxn4107:path2477",
+          "test:C3H5NO2/rxn4107:path278",
+          "test:C3H5NO2/rxn4107:path84",
+          "test:C3H5NO2/rxn4107:path877",
+          "test:C3H5NO2/rxn4107:ts",
+          "test:C3H5NO2/rxn4112:path19",
+          "test:C3H5NO2/rxn4112:path357",
+          "test:C3H5NO2/rxn4112:path84",
+          "test:C3H5NO2/rxn4113:path15",
+          "test:C3H5NO2/rxn4113:path19",
+          "test:C3H5NO2/rxn4113:path87",
+          "test:C3H5NO2/rxn4114:path20",
+          "test:C3H5NO2/rxn4114:path85",
+          "test:C3H5NO2/rxn4116:path117",
+          "test:C3H5NO2/rxn4116:path123",
+          "test:C3H5NO2/rxn4116:path18",
+          "test:C3H5NO2/rxn4118:path52",
+          "test:C3H5NO2/rxn4121:path189",
+          "test:C3H5NO2/rxn4121:path221",
+          "test:C3H5NO2/rxn4122:path461",
+          "test:C3H5NO2/rxn4124:path77",
+          "test:C3H5NO2/rxn4124:path85",
+          "test:C3H5NO2/rxn4497:path532",
+          "test:C3H5NO2/rxn4498:path39",
+          "test:C3H5NO2/rxn4511:path174",
+          "test:C3H5NO2/rxn4511:path485",
+          "test:C3H5NO2/rxn4511:path909",
+          "test:C3H5NO2/rxn4511:path927",
+          "test:C3H5NO2/rxn4511:ts",
+          "test:C3H5NO2/rxn4515:path197",
+          "test:C3H5NO2/rxn4518:path12",
+          "test:C3H5NO2/rxn4518:path6",
+          "test:C3H5NO2/rxn4522:path237",
+          "test:C3H5NO2/rxn4522:path429",
+          "test:C3H5NO2/rxn4523:path1",
+          "test:C3H5NO2/rxn4523:path44",
+          "test:C3H5NO2/rxn4523:path53",
+          "test:C3H5NO2/rxn8967:path118",
+          "test:C3H5NO2/rxn8967:path372",
+          "test:C3H5NO2/rxn8967:path940",
+          "test:C3H5NO2/rxn9059:path32",
+          "test:C3H5NO2/rxn9059:path720",
+          "test:C3H5NO2/rxn9080:path381",
+          "test:C3H5NO2/rxn9080:path869",
+          "test:C3H5NO2/rxn9080:path870",
+          "test:C3H5NO2/rxn9080:ts",
+          "test:C3H8N2O/rxn4005:path11",
+          "test:C3HNO2/rxn0108:path863",
+          "test:C5H5NO/rxn10053:path125",
+          "test:C5H5NO/rxn10053:path933",
+          "test:C5H5NO/rxn5689:path1112",
+          "test:C5H5NO/rxn5689:path22",
+          "test:C5H5NO/rxn5694:path1180",
+          "test:C5H5NO/rxn5694:path2021",
+          "test:C5H5NO/rxn5696:path11",
+          "test:C5H5NO/rxn5696:path21",
+          "test:C5H5NO/rxn5696:path477",
+          "test:C5H5NO/rxn5696:path533",
+          "test:C5H5NO/rxn5697:path6",
+          "test:C5H5NO/rxn5967:path2",
+          "test:C5H5NO/rxn5967:path243",
+          "test:C5H5NO/rxn5968:path259",
+          "test:C5H5NO/rxn5969:path8",
+          "test:C5H5NO/rxn6195:path108",
+          "test:C5H5NO/rxn6195:path85",
+          "test:C5H5NO/rxn7060:path533",
+          "test:C5H5NO/rxn7061:path21",
+          "test:C5H5NO/rxn7061:path3",
+          "test:C5H5NO/rxn7061:path31",
+          "test:C5H5NO/rxn7064:path149",
+          "test:C5H5NO/rxn7064:path4",
+          "test:C5H5NO/rxn7064:path44",
+          "test:C5H5NO/rxn7064:path68",
+          "test:C5H5NO/rxn7475:path262",
+          "test:C5H5NO/rxn7475:path70",
+          "test:C5H5NO/rxn7475:ts",
+          "test:C5H5NO/rxn7478:path910",
+          "test:C5H5NO/rxn7478:ts",
+          "test:C5H5NO/rxn7549:path243",
+          "test:C5H5NO/rxn7549:path468",
+          "test:C5H5NO/rxn7549:path476",
+          "test:C5H5NO/rxn7549:path500",
+          "test:C5H5NO/rxn7549:path75",
+          "test:C5H5NO/rxn7942:path237",
+          "test:C5H5NO/rxn7942:ts",
+          "test:C5H5NO/rxn7945:path4",
+          "test:C5H5NO/rxn7952:path18",
+          "test:C5H5NO/rxn7952:path221",
+          "test:C5H5NO/rxn7953:path13",
+          "test:C5H5NO/rxn7953:path20",
+          "test:C5H5NO/rxn7954:path12",
+          "test:C5H5NO/rxn7954:path60",
+          "test:C5H5NO/rxn7956:path165",
+          "test:C5H5NO/rxn7956:path47",
+          "test:C5H5NO/rxn7957:path229",
+          "test:C5H5NO/rxn7957:path84",
+          "test:C5H5NO/rxn7958:path1461",
+          "test:C5H5NO/rxn7958:path526",
+          "test:C5H5NO/rxn7958:ts",
+          "test:C5H5NO/rxn7961:path68",
+          "test:C5H5NO/rxn8827:path3",
+          "test:C5H5NO/rxn8830:path221",
+          "test:C5H5NO/rxn8830:path52",
+          "test:C5H5NO/rxn8837:path1",
+          "test:C5H5NO/rxn8885:path109",
+          "test:C5H5NO/rxn8885:path29",
+          "test:C5H5NO/rxn9661:path222",
+          "test:C5H5NO/rxn9661:path342",
+          "test:C5H5NO/rxn9661:path48",
+          "val:C2H2N2O/rxn2091:path469",
+          "val:C3H6N2O/rxn0629:path7",
+          "val:C3H6N2O/rxn2580:path357",
+          "val:C4H9NO2/rxn5151:path127",
+          "val:C4H9NO2/rxn9725:ts"
+        ]
+      },
       "oracle_calls_per_round": {
         "0": 40,
         "1": 40,
@@ -258,6 +464,211 @@
       "status": "ok",
       "served": "aimnet2",
       "oracle_calls": 200,
+      "oracle_labels_by_source": {
+        "audit": [],
+        "bid": [
+          "test:C2H5NO2/rxn1961:path154",
+          "test:C2H5NO2/rxn1961:path181",
+          "test:C2H5NO2/rxn1961:path264",
+          "test:C2H5NO2/rxn1962:path160",
+          "test:C2H5NO2/rxn1962:reactant",
+          "test:C2H5NO2/rxn3685:path117",
+          "test:C2H5NO2/rxn3685:path57",
+          "test:C3H5NO2/rxn0099:product",
+          "test:C3H5NO2/rxn0107:path23",
+          "test:C3H5NO2/rxn0107:path252",
+          "test:C3H5NO2/rxn0251:path1131",
+          "test:C3H5NO2/rxn0344:path297",
+          "test:C3H5NO2/rxn0344:ts",
+          "test:C3H5NO2/rxn0346:path141",
+          "test:C3H5NO2/rxn0892:path439",
+          "test:C3H5NO2/rxn0892:reactant",
+          "test:C3H5NO2/rxn0893:path1488",
+          "test:C3H5NO2/rxn0893:path2293",
+          "test:C3H5NO2/rxn0893:path722",
+          "test:C3H5NO2/rxn0894:reactant",
+          "test:C3H5NO2/rxn0894:ts",
+          "test:C3H5NO2/rxn0896:path904",
+          "test:C3H5NO2/rxn1063:path709",
+          "test:C3H5NO2/rxn1063:path729",
+          "test:C3H5NO2/rxn1063:product",
+          "test:C3H5NO2/rxn1064:path797",
+          "test:C3H5NO2/rxn1066:path1263",
+          "test:C3H5NO2/rxn1066:path641",
+          "test:C3H5NO2/rxn1083:path10",
+          "test:C3H5NO2/rxn1087:path110",
+          "test:C3H5NO2/rxn1089:path1043",
+          "test:C3H5NO2/rxn1089:path1076",
+          "test:C3H5NO2/rxn1091:path743",
+          "test:C3H5NO2/rxn1144:path194",
+          "test:C3H5NO2/rxn1144:path99",
+          "test:C3H5NO2/rxn1145:path369",
+          "test:C3H5NO2/rxn1147:path591",
+          "test:C3H5NO2/rxn1149:path1250",
+          "test:C3H5NO2/rxn1149:ts",
+          "test:C3H5NO2/rxn1152:path109",
+          "test:C3H5NO2/rxn1152:ts",
+          "test:C3H5NO2/rxn1154:path1941",
+          "test:C3H5NO2/rxn1155:path148",
+          "test:C3H5NO2/rxn1156:path326",
+          "test:C3H5NO2/rxn1156:path74",
+          "test:C3H5NO2/rxn1274:path692",
+          "test:C3H5NO2/rxn1279:path141",
+          "test:C3H5NO2/rxn1281:path239",
+          "test:C3H5NO2/rxn1281:reactant",
+          "test:C3H5NO2/rxn1282:path104",
+          "test:C3H5NO2/rxn1283:path23",
+          "test:C3H5NO2/rxn1283:path343",
+          "test:C3H5NO2/rxn1283:reactant",
+          "test:C3H5NO2/rxn1317:reactant",
+          "test:C3H5NO2/rxn1317:ts",
+          "test:C3H5NO2/rxn1318:path18",
+          "test:C3H5NO2/rxn1318:path511",
+          "test:C3H5NO2/rxn1319:path205",
+          "test:C3H5NO2/rxn1320:path160",
+          "test:C3H5NO2/rxn1320:path248",
+          "test:C3H5NO2/rxn1320:ts",
+          "test:C3H5NO2/rxn1321:path116",
+          "test:C3H5NO2/rxn1321:product",
+          "test:C3H5NO2/rxn1322:path366",
+          "test:C3H5NO2/rxn1786:path385",
+          "test:C3H5NO2/rxn1786:reactant",
+          "test:C3H5NO2/rxn1787:reactant",
+          "test:C3H5NO2/rxn1788:path60",
+          "test:C3H5NO2/rxn1788:reactant",
+          "test:C3H5NO2/rxn1788:ts",
+          "test:C3H5NO2/rxn1792:path54",
+          "test:C3H5NO2/rxn1792:path63",
+          "test:C3H5NO2/rxn1792:path99",
+          "test:C3H5NO2/rxn1827:path108",
+          "test:C3H5NO2/rxn1827:path12",
+          "test:C3H5NO2/rxn1827:reactant",
+          "test:C3H5NO2/rxn1830:path365",
+          "test:C3H5NO2/rxn1830:path848",
+          "test:C3H5NO2/rxn2549:ts",
+          "test:C3H5NO2/rxn2554:path1058",
+          "test:C3H5NO2/rxn2555:path1277",
+          "test:C3H5NO2/rxn2555:path1289",
+          "test:C3H5NO2/rxn2555:reactant",
+          "test:C3H5NO2/rxn2557:path1375",
+          "test:C3H5NO2/rxn3102:path128",
+          "test:C3H5NO2/rxn3102:path834",
+          "test:C3H5NO2/rxn3102:product",
+          "test:C3H5NO2/rxn3102:reactant",
+          "test:C3H5NO2/rxn3103:reactant",
+          "test:C3H5NO2/rxn3104:path1072",
+          "test:C3H5NO2/rxn3104:path275",
+          "test:C3H5NO2/rxn3104:path409",
+          "test:C3H5NO2/rxn3104:path932",
+          "test:C3H5NO2/rxn3105:path436",
+          "test:C3H5NO2/rxn3105:path694",
+          "test:C3H5NO2/rxn3107:path209",
+          "test:C3H5NO2/rxn3107:path626",
+          "test:C3H5NO2/rxn3109:path38",
+          "test:C3H5NO2/rxn4106:path989",
+          "test:C3H5NO2/rxn4106:reactant",
+          "test:C3H5NO2/rxn4107:path877",
+          "test:C3H5NO2/rxn4107:product",
+          "test:C3H5NO2/rxn4107:ts",
+          "test:C3H5NO2/rxn4112:path303",
+          "test:C3H5NO2/rxn4113:path104",
+          "test:C3H5NO2/rxn4113:path19",
+          "test:C3H5NO2/rxn4113:path262",
+          "test:C3H5NO2/rxn4113:product",
+          "test:C3H5NO2/rxn4114:path135",
+          "test:C3H5NO2/rxn4114:path197",
+          "test:C3H5NO2/rxn4114:path202",
+          "test:C3H5NO2/rxn4114:path85",
+          "test:C3H5NO2/rxn4116:path18",
+          "test:C3H5NO2/rxn4121:path297",
+          "test:C3H5NO2/rxn4122:path343",
+          "test:C3H5NO2/rxn4124:path59",
+          "test:C3H5NO2/rxn4497:path131",
+          "test:C3H5NO2/rxn4497:reactant",
+          "test:C3H5NO2/rxn4516:path287",
+          "test:C3H5NO2/rxn4517:path196",
+          "test:C3H5NO2/rxn4517:path49",
+          "test:C3H5NO2/rxn4520:path541",
+          "test:C3H5NO2/rxn4520:path880",
+          "test:C3H5NO2/rxn8967:path372",
+          "test:C3H5NO2/rxn9059:product",
+          "test:C3H5NO2/rxn9080:path506",
+          "test:C3H8N2O/rxn4005:path133",
+          "test:C3H8N2O/rxn4005:path180",
+          "test:C3H8N2O/rxn4005:path287",
+          "test:C3HNO2/rxn8946:reactant",
+          "test:C5H5NO/rxn10053:path664",
+          "test:C5H5NO/rxn10053:ts",
+          "test:C5H5NO/rxn5687:path237",
+          "test:C5H5NO/rxn5689:path414",
+          "test:C5H5NO/rxn5689:path474",
+          "test:C5H5NO/rxn5690:path519",
+          "test:C5H5NO/rxn5690:path534",
+          "test:C5H5NO/rxn5691:reactant",
+          "test:C5H5NO/rxn5694:ts",
+          "test:C5H5NO/rxn5695:product",
+          "test:C5H5NO/rxn5967:path37",
+          "test:C5H5NO/rxn5968:path194",
+          "test:C5H5NO/rxn5969:ts",
+          "test:C5H5NO/rxn5970:path93",
+          "test:C5H5NO/rxn6195:reactant",
+          "test:C5H5NO/rxn6195:ts",
+          "test:C5H5NO/rxn6196:reactant",
+          "test:C5H5NO/rxn7060:path1020",
+          "test:C5H5NO/rxn7060:path700",
+          "test:C5H5NO/rxn7060:path731",
+          "test:C5H5NO/rxn7061:product",
+          "test:C5H5NO/rxn7061:ts",
+          "test:C5H5NO/rxn7064:path79",
+          "test:C5H5NO/rxn7476:path82",
+          "test:C5H5NO/rxn7478:path910",
+          "test:C5H5NO/rxn7549:path500",
+          "test:C5H5NO/rxn7550:path132",
+          "test:C5H5NO/rxn7550:path219",
+          "test:C5H5NO/rxn7936:path170",
+          "test:C5H5NO/rxn7936:path512",
+          "test:C5H5NO/rxn7939:path247",
+          "test:C5H5NO/rxn7939:path301",
+          "test:C5H5NO/rxn7942:path1050",
+          "test:C5H5NO/rxn7942:path237",
+          "test:C5H5NO/rxn7942:path593",
+          "test:C5H5NO/rxn7945:path4",
+          "test:C5H5NO/rxn7952:path221",
+          "test:C5H5NO/rxn7952:path274",
+          "test:C5H5NO/rxn7953:path14",
+          "test:C5H5NO/rxn7953:path163",
+          "test:C5H5NO/rxn7954:path150",
+          "test:C5H5NO/rxn7954:path60",
+          "test:C5H5NO/rxn7954:ts",
+          "test:C5H5NO/rxn7956:path165",
+          "test:C5H5NO/rxn7958:path575",
+          "test:C5H5NO/rxn7959:path268",
+          "test:C5H5NO/rxn7959:path71",
+          "test:C5H5NO/rxn8827:path3",
+          "test:C5H5NO/rxn8827:ts",
+          "test:C5H5NO/rxn8830:ts",
+          "test:C5H5NO/rxn8840:ts",
+          "test:C5H5NO/rxn8841:path1217",
+          "test:C5H5NO/rxn8844:path626",
+          "test:C5H5NO/rxn8884:path203",
+          "test:C5H5NO/rxn8885:path172",
+          "test:C5H5NO/rxn8885:path238",
+          "test:C5H5NO/rxn9592:path1941",
+          "test:C5H5NO/rxn9592:path1971",
+          "test:C5H5NO/rxn9592:path1988",
+          "test:C5H5NO/rxn9592:reactant",
+          "test:C5H5NO/rxn9593:path421",
+          "val:C3H6N2O/rxn4436:path2297",
+          "val:C3H6N2O/rxn4438:path144",
+          "val:C3H6N2O/rxn9128:path1343",
+          "val:C3N2O/rxn2923:path56",
+          "val:C3N2O/rxn2923:reactant",
+          "val:C4H9NO2/rxn4941:reactant",
+          "val:C4H9NO2/rxn5151:reactant",
+          "val:C4H9NO2/rxn7544:reactant",
+          "val:C4H9NO2/rxn7545:path59"
+        ]
+      },
       "oracle_calls_per_round": {
         "0": 40,
         "1": 40,
@@ -464,6 +875,211 @@
       "status": "ok",
       "served": "ensemble mean",
       "oracle_calls": 200,
+      "oracle_labels_by_source": {
+        "audit": [],
+        "bid": [
+          "test:C2H3N3O2/rxn10005:path1637",
+          "test:C2H3N3O2/rxn10005:ts",
+          "test:C2HNO/rxn4441:path174",
+          "test:C2HNO/rxn4441:path182",
+          "test:C2HNO/rxn4441:path37",
+          "test:C2HNO/rxn4441:ts",
+          "test:C2HNO/rxn4442:path269",
+          "test:C2HNO/rxn4442:path293",
+          "test:C2HNO/rxn4442:path357",
+          "test:C2HNO/rxn4442:ts",
+          "test:C3H5NO2/rxn0099:ts",
+          "test:C3H5NO2/rxn0100:path190",
+          "test:C3H5NO2/rxn0100:path253",
+          "test:C3H5NO2/rxn0100:path317",
+          "test:C3H5NO2/rxn0100:ts",
+          "test:C3H5NO2/rxn0107:ts",
+          "test:C3H5NO2/rxn0251:path1117",
+          "test:C3H5NO2/rxn0251:ts",
+          "test:C3H5NO2/rxn0344:path478",
+          "test:C3H5NO2/rxn0344:ts",
+          "test:C3H5NO2/rxn0346:path141",
+          "test:C3H5NO2/rxn0892:path694",
+          "test:C3H5NO2/rxn0892:path878",
+          "test:C3H5NO2/rxn0892:ts",
+          "test:C3H5NO2/rxn0896:path502",
+          "test:C3H5NO2/rxn0896:ts",
+          "test:C3H5NO2/rxn1064:path15",
+          "test:C3H5NO2/rxn1064:ts",
+          "test:C3H5NO2/rxn1065:path1062",
+          "test:C3H5NO2/rxn1065:path1422",
+          "test:C3H5NO2/rxn1065:ts",
+          "test:C3H5NO2/rxn1083:path310",
+          "test:C3H5NO2/rxn1083:path86",
+          "test:C3H5NO2/rxn1083:ts",
+          "test:C3H5NO2/rxn1084:path326",
+          "test:C3H5NO2/rxn1084:ts",
+          "test:C3H5NO2/rxn1145:path14",
+          "test:C3H5NO2/rxn1145:ts",
+          "test:C3H5NO2/rxn1147:path133",
+          "test:C3H5NO2/rxn1147:path685",
+          "test:C3H5NO2/rxn1147:ts",
+          "test:C3H5NO2/rxn1154:path1590",
+          "test:C3H5NO2/rxn1154:ts",
+          "test:C3H5NO2/rxn1155:ts",
+          "test:C3H5NO2/rxn1156:path237",
+          "test:C3H5NO2/rxn1156:ts",
+          "test:C3H5NO2/rxn1158:path286",
+          "test:C3H5NO2/rxn1158:path46",
+          "test:C3H5NO2/rxn1158:ts",
+          "test:C3H5NO2/rxn1279:path141",
+          "test:C3H5NO2/rxn1279:path334",
+          "test:C3H5NO2/rxn1282:path310",
+          "test:C3H5NO2/rxn1282:ts",
+          "test:C3H5NO2/rxn1283:ts",
+          "test:C3H5NO2/rxn1318:path429",
+          "test:C3H5NO2/rxn1318:path485",
+          "test:C3H5NO2/rxn1318:ts",
+          "test:C3H5NO2/rxn1320:path437",
+          "test:C3H5NO2/rxn1322:path366",
+          "test:C3H5NO2/rxn1322:path438",
+          "test:C3H5NO2/rxn1322:ts",
+          "test:C3H5NO2/rxn1788:ts",
+          "test:C3H5NO2/rxn1792:path111",
+          "test:C3H5NO2/rxn1792:path5",
+          "test:C3H5NO2/rxn1792:path54",
+          "test:C3H5NO2/rxn1792:path63",
+          "test:C3H5NO2/rxn1792:ts",
+          "test:C3H5NO2/rxn1827:path45",
+          "test:C3H5NO2/rxn1827:path69",
+          "test:C3H5NO2/rxn1827:ts",
+          "test:C3H5NO2/rxn1830:ts",
+          "test:C3H5NO2/rxn2549:path302",
+          "test:C3H5NO2/rxn2557:path478",
+          "test:C3H5NO2/rxn2557:path94",
+          "test:C3H5NO2/rxn2557:ts",
+          "test:C3H5NO2/rxn3102:path406",
+          "test:C3H5NO2/rxn3102:ts",
+          "test:C3H5NO2/rxn3104:path1127",
+          "test:C3H5NO2/rxn3104:ts",
+          "test:C3H5NO2/rxn4107:path278",
+          "test:C3H5NO2/rxn4107:ts",
+          "test:C3H5NO2/rxn4112:ts",
+          "test:C3H5NO2/rxn4113:path262",
+          "test:C3H5NO2/rxn4113:ts",
+          "test:C3H5NO2/rxn4116:path206",
+          "test:C3H5NO2/rxn4116:path486",
+          "test:C3H5NO2/rxn4116:ts",
+          "test:C3H5NO2/rxn4122:path326",
+          "test:C3H5NO2/rxn4122:path37",
+          "test:C3H5NO2/rxn4122:ts",
+          "test:C3H5NO2/rxn4123:path278",
+          "test:C3H5NO2/rxn4123:ts",
+          "test:C3H5NO2/rxn4124:ts",
+          "test:C3H5NO2/rxn4497:path294",
+          "test:C3H5NO2/rxn4497:ts",
+          "test:C3H5NO2/rxn4511:path174",
+          "test:C3H5NO2/rxn4511:ts",
+          "test:C3H5NO2/rxn4516:path165",
+          "test:C3H5NO2/rxn4518:path12",
+          "test:C3H5NO2/rxn4518:path142",
+          "test:C3H5NO2/rxn4518:path230",
+          "test:C3H5NO2/rxn4518:path6",
+          "test:C3H5NO2/rxn4518:ts",
+          "test:C3H5NO2/rxn4522:ts",
+          "test:C3H5NO2/rxn8967:path118",
+          "test:C3H5NO2/rxn8967:path372",
+          "test:C3H5NO2/rxn8967:path509",
+          "test:C3H5NO2/rxn8967:path940",
+          "test:C3H5NO2/rxn8967:ts",
+          "test:C3H5NO2/rxn9059:ts",
+          "test:C3H5NO2/rxn9080:path870",
+          "test:C3H5NO2/rxn9080:ts",
+          "test:C3HNO2/rxn0108:path863",
+          "test:C3HNO2/rxn0108:ts",
+          "test:C3HNO2/rxn8946:path1566",
+          "test:C3HNO2/rxn8946:path2030",
+          "test:C3HNO2/rxn8946:path2102",
+          "test:C3HNO2/rxn8946:ts",
+          "test:C5H5NO/rxn10053:path302",
+          "test:C5H5NO/rxn10053:path559",
+          "test:C5H5NO/rxn10053:path582",
+          "test:C5H5NO/rxn10053:path664",
+          "test:C5H5NO/rxn10053:ts",
+          "test:C5H5NO/rxn5687:ts",
+          "test:C5H5NO/rxn5689:path22",
+          "test:C5H5NO/rxn5689:path246",
+          "test:C5H5NO/rxn5689:path414",
+          "test:C5H5NO/rxn5689:ts",
+          "test:C5H5NO/rxn5690:path1270",
+          "test:C5H5NO/rxn5690:path534",
+          "test:C5H5NO/rxn5690:ts",
+          "test:C5H5NO/rxn5695:path478",
+          "test:C5H5NO/rxn5695:ts",
+          "test:C5H5NO/rxn5696:path78",
+          "test:C5H5NO/rxn5696:ts",
+          "test:C5H5NO/rxn5967:path108",
+          "test:C5H5NO/rxn5967:path124",
+          "test:C5H5NO/rxn5967:path2",
+          "test:C5H5NO/rxn5967:path37",
+          "test:C5H5NO/rxn5967:ts",
+          "test:C5H5NO/rxn5968:path30",
+          "test:C5H5NO/rxn5968:ts",
+          "test:C5H5NO/rxn5969:path142",
+          "test:C5H5NO/rxn5969:ts",
+          "test:C5H5NO/rxn5970:path166",
+          "test:C5H5NO/rxn5970:ts",
+          "test:C5H5NO/rxn6195:path262",
+          "test:C5H5NO/rxn6195:path94",
+          "test:C5H5NO/rxn6195:ts",
+          "test:C5H5NO/rxn6196:path61",
+          "test:C5H5NO/rxn7060:ts",
+          "test:C5H5NO/rxn7064:path4",
+          "test:C5H5NO/rxn7064:product",
+          "test:C5H5NO/rxn7064:ts",
+          "test:C5H5NO/rxn7475:path262",
+          "test:C5H5NO/rxn7475:path70",
+          "test:C5H5NO/rxn7475:ts",
+          "test:C5H5NO/rxn7476:path326",
+          "test:C5H5NO/rxn7476:path406",
+          "test:C5H5NO/rxn7476:ts",
+          "test:C5H5NO/rxn7478:path78",
+          "test:C5H5NO/rxn7549:ts",
+          "test:C5H5NO/rxn7550:path132",
+          "test:C5H5NO/rxn7550:path77",
+          "test:C5H5NO/rxn7550:ts",
+          "test:C5H5NO/rxn7942:ts",
+          "test:C5H5NO/rxn7945:path254",
+          "test:C5H5NO/rxn7945:path366",
+          "test:C5H5NO/rxn7945:path4",
+          "test:C5H5NO/rxn7945:ts",
+          "test:C5H5NO/rxn7952:path134",
+          "test:C5H5NO/rxn7952:ts",
+          "test:C5H5NO/rxn7956:ts",
+          "test:C5H5NO/rxn7957:path22",
+          "test:C5H5NO/rxn7957:path229",
+          "test:C5H5NO/rxn7957:path38",
+          "test:C5H5NO/rxn7958:path526",
+          "test:C5H5NO/rxn7958:ts",
+          "test:C5H5NO/rxn7959:path14",
+          "test:C5H5NO/rxn7959:path62",
+          "test:C5H5NO/rxn7959:ts",
+          "test:C5H5NO/rxn8827:path198",
+          "test:C5H5NO/rxn8827:path3",
+          "test:C5H5NO/rxn8827:ts",
+          "test:C5H5NO/rxn8830:path110",
+          "test:C5H5NO/rxn8830:path221",
+          "test:C5H5NO/rxn8830:path78",
+          "test:C5H5NO/rxn8830:ts",
+          "test:C5H5NO/rxn8840:ts",
+          "test:C5H5NO/rxn8841:ts",
+          "test:C5H5NO/rxn8844:ts",
+          "test:C5H5NO/rxn9592:ts",
+          "test:C5H5NO/rxn9593:path700",
+          "test:C5H5NO/rxn9593:ts",
+          "test:C5H5NO/rxn9661:path222",
+          "test:C5H5NO/rxn9661:path342",
+          "test:C5H5NO/rxn9661:ts",
+          "val:C2H2N2O/rxn2091:path469",
+          "val:C3H6N2O/rxn2751:ts",
+          "val:C4H9NO2/rxn9725:ts"
+        ]
+      },
       "oracle_calls_per_round": {
         "0": 40,
         "1": 40,
@@ -668,7 +1284,7 @@
       ],
       "score": "sigma_F",
       "status": "skipped",
-      "reason": "missing prediction file(s): data/preds/mace_seed0.npz, data/preds/mace_seed1.npz, data/preds/mace_seed2.npz, data/preds/mace_seed3.npz"
+      "reason": "missing prediction file(s): data\\preds\\mace_seed0.npz, data\\preds\\mace_seed1.npz, data\\preds\\mace_seed2.npz, data\\preds\\mace_seed3.npz"
     },
     "C_collective": {
       "models": [
@@ -680,6 +1296,211 @@
       "status": "ok",
       "served": "ensemble mean",
       "oracle_calls": 200,
+      "oracle_labels_by_source": {
+        "audit": [],
+        "bid": [
+          "test:C2H3N3O2/rxn10005:path1637",
+          "test:C2H3N3O2/rxn10005:ts",
+          "test:C2HNO/rxn4441:path11",
+          "test:C2HNO/rxn4441:path174",
+          "test:C2HNO/rxn4441:path182",
+          "test:C2HNO/rxn4441:path187",
+          "test:C2HNO/rxn4441:path2",
+          "test:C2HNO/rxn4441:path37",
+          "test:C2HNO/rxn4441:path88",
+          "test:C2HNO/rxn4441:path90",
+          "test:C2HNO/rxn4441:product",
+          "test:C2HNO/rxn4441:reactant",
+          "test:C2HNO/rxn4441:ts",
+          "test:C2HNO/rxn4442:path155",
+          "test:C2HNO/rxn4442:path219",
+          "test:C2HNO/rxn4442:path269",
+          "test:C2HNO/rxn4442:path274",
+          "test:C2HNO/rxn4442:path293",
+          "test:C2HNO/rxn4442:path323",
+          "test:C2HNO/rxn4442:path332",
+          "test:C2HNO/rxn4442:path357",
+          "test:C2HNO/rxn4442:product",
+          "test:C2HNO/rxn4442:reactant",
+          "test:C2HNO/rxn4442:ts",
+          "test:C3H5NO2/rxn0344:path478",
+          "test:C3H5NO2/rxn0344:ts",
+          "test:C3H5NO2/rxn0346:path141",
+          "test:C3H5NO2/rxn0346:path63",
+          "test:C3H5NO2/rxn0346:ts",
+          "test:C3H5NO2/rxn0896:path863",
+          "test:C3H5NO2/rxn0896:path935",
+          "test:C3H5NO2/rxn1147:path685",
+          "test:C3H5NO2/rxn1147:ts",
+          "test:C3H5NO2/rxn1279:path141",
+          "test:C3H5NO2/rxn1283:path197",
+          "test:C3H5NO2/rxn1283:path23",
+          "test:C3H5NO2/rxn1318:path485",
+          "test:C3H5NO2/rxn1320:path167",
+          "test:C3H5NO2/rxn1320:path303",
+          "test:C3H5NO2/rxn1321:product",
+          "test:C3H5NO2/rxn1827:path45",
+          "test:C3H5NO2/rxn1827:path69",
+          "test:C3H5NO2/rxn3103:ts",
+          "test:C3H5NO2/rxn3104:path1127",
+          "test:C3H5NO2/rxn3104:ts",
+          "test:C3H5NO2/rxn4107:path278",
+          "test:C3H5NO2/rxn4107:ts",
+          "test:C3H5NO2/rxn4113:path15",
+          "test:C3H5NO2/rxn4116:path206",
+          "test:C3H5NO2/rxn4116:path486",
+          "test:C3H5NO2/rxn4116:ts",
+          "test:C3H5NO2/rxn4122:path326",
+          "test:C3H5NO2/rxn4122:ts",
+          "test:C3H5NO2/rxn4124:path54",
+          "test:C3H5NO2/rxn4124:ts",
+          "test:C3H5NO2/rxn4497:path294",
+          "test:C3H5NO2/rxn4497:ts",
+          "test:C3H5NO2/rxn4511:path174",
+          "test:C3H5NO2/rxn4518:path142",
+          "test:C3H5NO2/rxn4518:path6",
+          "test:C3H5NO2/rxn4518:ts",
+          "test:C3H5NO2/rxn8967:path118",
+          "test:C3H5NO2/rxn8967:path372",
+          "test:C3H5NO2/rxn8967:path457",
+          "test:C3H5NO2/rxn8967:path509",
+          "test:C3H5NO2/rxn8967:path784",
+          "test:C3H5NO2/rxn8967:path913",
+          "test:C3H5NO2/rxn8967:path937",
+          "test:C3H5NO2/rxn8967:path940",
+          "test:C3H5NO2/rxn8967:product",
+          "test:C3H5NO2/rxn8967:ts",
+          "test:C3HNO2/rxn0108:path1291",
+          "test:C3HNO2/rxn0108:path240",
+          "test:C3HNO2/rxn0108:path280",
+          "test:C3HNO2/rxn0108:path41",
+          "test:C3HNO2/rxn0108:path491",
+          "test:C3HNO2/rxn0108:path712",
+          "test:C3HNO2/rxn0108:path863",
+          "test:C3HNO2/rxn0108:path940",
+          "test:C3HNO2/rxn0108:product",
+          "test:C3HNO2/rxn0108:reactant",
+          "test:C3HNO2/rxn0108:ts",
+          "test:C3HNO2/rxn8946:path1012",
+          "test:C3HNO2/rxn8946:path1566",
+          "test:C3HNO2/rxn8946:path1596",
+          "test:C3HNO2/rxn8946:path1625",
+          "test:C3HNO2/rxn8946:path2030",
+          "test:C3HNO2/rxn8946:path2102",
+          "test:C3HNO2/rxn8946:path2413",
+          "test:C3HNO2/rxn8946:path26",
+          "test:C3HNO2/rxn8946:product",
+          "test:C3HNO2/rxn8946:reactant",
+          "test:C3HNO2/rxn8946:ts",
+          "test:C5H5NO/rxn10053:path125",
+          "test:C5H5NO/rxn10053:path302",
+          "test:C5H5NO/rxn10053:path582",
+          "test:C5H5NO/rxn10053:ts",
+          "test:C5H5NO/rxn5689:path1112",
+          "test:C5H5NO/rxn5689:path22",
+          "test:C5H5NO/rxn5689:path246",
+          "test:C5H5NO/rxn5689:path414",
+          "test:C5H5NO/rxn5689:ts",
+          "test:C5H5NO/rxn5690:ts",
+          "test:C5H5NO/rxn5694:path1180",
+          "test:C5H5NO/rxn5694:path902",
+          "test:C5H5NO/rxn5694:path910",
+          "test:C5H5NO/rxn5694:ts",
+          "test:C5H5NO/rxn5696:path21",
+          "test:C5H5NO/rxn5696:path477",
+          "test:C5H5NO/rxn5696:path533",
+          "test:C5H5NO/rxn5696:path78",
+          "test:C5H5NO/rxn5697:path134",
+          "test:C5H5NO/rxn5697:path6",
+          "test:C5H5NO/rxn5697:ts",
+          "test:C5H5NO/rxn6196:path61",
+          "test:C5H5NO/rxn6196:path925",
+          "test:C5H5NO/rxn6196:path941",
+          "test:C5H5NO/rxn6196:ts",
+          "test:C5H5NO/rxn7064:path149",
+          "test:C5H5NO/rxn7064:path4",
+          "test:C5H5NO/rxn7475:path104",
+          "test:C5H5NO/rxn7475:path203",
+          "test:C5H5NO/rxn7475:path248",
+          "test:C5H5NO/rxn7475:path262",
+          "test:C5H5NO/rxn7475:path271",
+          "test:C5H5NO/rxn7475:path293",
+          "test:C5H5NO/rxn7475:path322",
+          "test:C5H5NO/rxn7475:path70",
+          "test:C5H5NO/rxn7475:product",
+          "test:C5H5NO/rxn7475:reactant",
+          "test:C5H5NO/rxn7475:ts",
+          "test:C5H5NO/rxn7476:path322",
+          "test:C5H5NO/rxn7476:path326",
+          "test:C5H5NO/rxn7476:path327",
+          "test:C5H5NO/rxn7476:path340",
+          "test:C5H5NO/rxn7476:path406",
+          "test:C5H5NO/rxn7476:path82",
+          "test:C5H5NO/rxn7476:reactant",
+          "test:C5H5NO/rxn7476:ts",
+          "test:C5H5NO/rxn7478:path227",
+          "test:C5H5NO/rxn7478:reactant",
+          "test:C5H5NO/rxn7550:path263",
+          "test:C5H5NO/rxn7936:path168",
+          "test:C5H5NO/rxn7936:path193",
+          "test:C5H5NO/rxn7936:path512",
+          "test:C5H5NO/rxn7936:path576",
+          "test:C5H5NO/rxn7936:product",
+          "test:C5H5NO/rxn7942:ts",
+          "test:C5H5NO/rxn7945:path365",
+          "test:C5H5NO/rxn7945:path580",
+          "test:C5H5NO/rxn7952:path134",
+          "test:C5H5NO/rxn7952:path221",
+          "test:C5H5NO/rxn7952:ts",
+          "test:C5H5NO/rxn7953:path13",
+          "test:C5H5NO/rxn7954:path12",
+          "test:C5H5NO/rxn7954:path60",
+          "test:C5H5NO/rxn7956:path165",
+          "test:C5H5NO/rxn7957:path166",
+          "test:C5H5NO/rxn7957:path190",
+          "test:C5H5NO/rxn7957:path229",
+          "test:C5H5NO/rxn7957:ts",
+          "test:C5H5NO/rxn7958:path1161",
+          "test:C5H5NO/rxn7958:path135",
+          "test:C5H5NO/rxn7958:path526",
+          "test:C5H5NO/rxn7958:path575",
+          "test:C5H5NO/rxn7958:path729",
+          "test:C5H5NO/rxn7958:product",
+          "test:C5H5NO/rxn7958:ts",
+          "test:C5H5NO/rxn7959:path14",
+          "test:C5H5NO/rxn7959:path62",
+          "test:C5H5NO/rxn7959:path71",
+          "test:C5H5NO/rxn7959:ts",
+          "test:C5H5NO/rxn7961:path134",
+          "test:C5H5NO/rxn7961:path68",
+          "test:C5H5NO/rxn7961:ts",
+          "test:C5H5NO/rxn8827:path127",
+          "test:C5H5NO/rxn8827:path136",
+          "test:C5H5NO/rxn8827:path160",
+          "test:C5H5NO/rxn8827:path224",
+          "test:C5H5NO/rxn8827:path56",
+          "test:C5H5NO/rxn8827:product",
+          "test:C5H5NO/rxn8830:path221",
+          "test:C5H5NO/rxn8830:path78",
+          "test:C5H5NO/rxn8830:ts",
+          "test:C5H5NO/rxn8832:path127",
+          "test:C5H5NO/rxn8832:path204",
+          "test:C5H5NO/rxn8832:path52",
+          "test:C5H5NO/rxn8832:product",
+          "test:C5H5NO/rxn8841:ts",
+          "test:C5H5NO/rxn8844:ts",
+          "test:C5H5NO/rxn8885:path109",
+          "test:C5H5NO/rxn9592:ts",
+          "test:C5H5NO/rxn9593:path700",
+          "test:C5H5NO/rxn9661:path222",
+          "test:C5H5NO/rxn9661:path342",
+          "val:C2H2N2O/rxn2091:path469",
+          "val:C3N2O/rxn2923:path56",
+          "val:C3N2O/rxn2923:reactant",
+          "val:CN2O3/rxn1929:path218",
+          "val:CN2O3/rxn1929:reactant"
+        ]
+      },
       "oracle_calls_per_round": {
         "0": 40,
         "1": 40,
@@ -883,12 +1704,218 @@
       ],
       "score": "max(isotonic P(wrong | \u03c3_F), Skeptic p_S); ties by \u03c3_F",
       "blackboard": {
-        "n_events": 17345,
-        "path": "results/blackboard_armD.jsonl"
+        "n_events": 6217,
+        "path": "results\\blackboard_armD.jsonl"
       },
       "status": "ok",
       "served": "Calibrator recommendation (a model or the consensus)",
       "oracle_calls": 200,
+      "oracle_labels_by_source": {
+        "audit": [
+          "test:C2H5NO2/rxn1961:path154",
+          "test:C3H5NO2/rxn0107:path252",
+          "test:C3H5NO2/rxn0251:path361",
+          "test:C3H5NO2/rxn0251:path858",
+          "test:C3H5NO2/rxn0346:reactant",
+          "test:C3H5NO2/rxn0894:path893",
+          "test:C3H5NO2/rxn0894:ts",
+          "test:C3H5NO2/rxn1066:product",
+          "test:C3H5NO2/rxn1083:path296",
+          "test:C3H5NO2/rxn1083:path310",
+          "test:C3H5NO2/rxn1091:reactant",
+          "test:C3H5NO2/rxn1147:path227",
+          "test:C3H5NO2/rxn1154:product",
+          "test:C3H5NO2/rxn1156:path74",
+          "test:C3H5NO2/rxn1158:product",
+          "test:C3H5NO2/rxn1319:reactant",
+          "test:C3H5NO2/rxn1787:path275",
+          "test:C3H5NO2/rxn1787:path40",
+          "test:C3H5NO2/rxn4114:path112",
+          "test:C3H5NO2/rxn4497:path303",
+          "test:C3H5NO2/rxn4498:path105",
+          "test:C3H5NO2/rxn4498:product",
+          "test:C3H5NO2/rxn4511:path909",
+          "test:C3H5NO2/rxn4516:path46",
+          "test:C3H5NO2/rxn4517:path187",
+          "test:C3H5NO2/rxn4517:ts",
+          "test:C5H5NO/rxn5695:path79",
+          "test:C5H5NO/rxn5695:reactant",
+          "test:C5H5NO/rxn5967:reactant",
+          "test:C5H5NO/rxn5968:path259",
+          "test:C5H5NO/rxn7061:path111",
+          "test:C5H5NO/rxn7945:path366",
+          "test:C5H5NO/rxn7956:path65",
+          "test:C5H5NO/rxn8827:path34",
+          "test:C5H5NO/rxn8837:path15",
+          "test:C5H5NO/rxn8837:path171",
+          "test:C5H5NO/rxn8841:path1644",
+          "test:C5H5NO/rxn8844:path387",
+          "test:C5H5NO/rxn8844:path530",
+          "test:C5H5NO/rxn8884:path163",
+          "test:C5H5NO/rxn9593:product",
+          "test:C5H5NO/rxn9661:reactant",
+          "val:C3H6N2O/rxn0033:path107",
+          "val:C3H6N2O/rxn1303:path211",
+          "val:C3H6N2O/rxn2578:reactant",
+          "val:C3H6N2O/rxn2580:reactant",
+          "val:C3H6N2O/rxn2751:reactant",
+          "val:C3H6N2O/rxn4433:reactant",
+          "val:C3H6N2O/rxn4436:reactant",
+          "val:C4H9NO2/rxn7545:reactant"
+        ],
+        "bid": [
+          "test:C2H3N3O2/rxn10005:path1888",
+          "test:C2H3N3O2/rxn10005:product",
+          "test:C2H5NO2/rxn1961:ts",
+          "test:C2H5NO2/rxn1962:path286",
+          "test:C2H5NO2/rxn1962:path310",
+          "test:C2H5NO2/rxn1962:ts",
+          "test:C2HNO/rxn4441:path11",
+          "test:C2HNO/rxn4441:path174",
+          "test:C2HNO/rxn4441:path182",
+          "test:C2HNO/rxn4441:path187",
+          "test:C2HNO/rxn4441:path2",
+          "test:C2HNO/rxn4441:path37",
+          "test:C2HNO/rxn4441:path88",
+          "test:C2HNO/rxn4441:path90",
+          "test:C2HNO/rxn4441:product",
+          "test:C2HNO/rxn4441:reactant",
+          "test:C2HNO/rxn4441:ts",
+          "test:C3H5NO2/rxn0251:path1974",
+          "test:C3H5NO2/rxn0346:path136",
+          "test:C3H5NO2/rxn0346:path141",
+          "test:C3H5NO2/rxn0346:path24",
+          "test:C3H5NO2/rxn0346:path240",
+          "test:C3H5NO2/rxn0346:path48",
+          "test:C3H5NO2/rxn0346:path63",
+          "test:C3H5NO2/rxn0346:path80",
+          "test:C3H5NO2/rxn0346:ts",
+          "test:C3H5NO2/rxn1084:path336",
+          "test:C3H5NO2/rxn1091:ts",
+          "test:C3H5NO2/rxn1144:path240",
+          "test:C3H5NO2/rxn1154:path1590",
+          "test:C3H5NO2/rxn1154:ts",
+          "test:C3H5NO2/rxn1158:path46",
+          "test:C3H5NO2/rxn1279:path141",
+          "test:C3H5NO2/rxn1279:path196",
+          "test:C3H5NO2/rxn1279:path334",
+          "test:C3H5NO2/rxn1279:path368",
+          "test:C3H5NO2/rxn1279:ts",
+          "test:C3H5NO2/rxn1283:path197",
+          "test:C3H5NO2/rxn1283:path23",
+          "test:C3H5NO2/rxn1283:path343",
+          "test:C3H5NO2/rxn1283:ts",
+          "test:C3H5NO2/rxn1318:path198",
+          "test:C3H5NO2/rxn1318:path278",
+          "test:C3H5NO2/rxn1322:path15",
+          "test:C3H5NO2/rxn1322:path366",
+          "test:C3H5NO2/rxn1322:path438",
+          "test:C3H5NO2/rxn1322:ts",
+          "test:C3H5NO2/rxn1792:path111",
+          "test:C3H5NO2/rxn1792:path63",
+          "test:C3H5NO2/rxn3103:path577",
+          "test:C3H5NO2/rxn3103:product",
+          "test:C3H5NO2/rxn3109:path38",
+          "test:C3H5NO2/rxn3109:path712",
+          "test:C3H5NO2/rxn3109:ts",
+          "test:C3H5NO2/rxn4116:path311",
+          "test:C3H5NO2/rxn4498:path254",
+          "test:C3H5NO2/rxn4498:ts",
+          "test:C3H5NO2/rxn9080:path870",
+          "test:C3H5NO2/rxn9080:ts",
+          "test:C5H5NO/rxn5687:path402",
+          "test:C5H5NO/rxn5687:path636",
+          "test:C5H5NO/rxn5687:reactant",
+          "test:C5H5NO/rxn5689:path434",
+          "test:C5H5NO/rxn5689:path474",
+          "test:C5H5NO/rxn5689:product",
+          "test:C5H5NO/rxn5689:reactant",
+          "test:C5H5NO/rxn5690:path1322",
+          "test:C5H5NO/rxn5690:path355",
+          "test:C5H5NO/rxn5691:path251",
+          "test:C5H5NO/rxn5691:path368",
+          "test:C5H5NO/rxn5691:path371",
+          "test:C5H5NO/rxn5691:path433",
+          "test:C5H5NO/rxn5691:reactant",
+          "test:C5H5NO/rxn5694:reactant",
+          "test:C5H5NO/rxn5695:path124",
+          "test:C5H5NO/rxn5695:path1301",
+          "test:C5H5NO/rxn5695:path1445",
+          "test:C5H5NO/rxn5695:path1498",
+          "test:C5H5NO/rxn5695:path1667",
+          "test:C5H5NO/rxn5695:path478",
+          "test:C5H5NO/rxn5695:path626",
+          "test:C5H5NO/rxn5695:product",
+          "test:C5H5NO/rxn5695:ts",
+          "test:C5H5NO/rxn5967:path2",
+          "test:C5H5NO/rxn5969:path142",
+          "test:C5H5NO/rxn6195:path108",
+          "test:C5H5NO/rxn6195:path85",
+          "test:C5H5NO/rxn6196:product",
+          "test:C5H5NO/rxn7061:ts",
+          "test:C5H5NO/rxn7936:path168",
+          "test:C5H5NO/rxn7945:path254",
+          "test:C5H5NO/rxn7945:path365",
+          "test:C5H5NO/rxn7945:product",
+          "test:C5H5NO/rxn7952:path154",
+          "test:C5H5NO/rxn7952:path227",
+          "test:C5H5NO/rxn7952:path274",
+          "test:C5H5NO/rxn7952:path331",
+          "test:C5H5NO/rxn7952:reactant",
+          "test:C5H5NO/rxn7953:path14",
+          "test:C5H5NO/rxn7953:path163",
+          "test:C5H5NO/rxn7953:path94",
+          "test:C5H5NO/rxn7953:reactant",
+          "test:C5H5NO/rxn7953:ts",
+          "test:C5H5NO/rxn7954:path150",
+          "test:C5H5NO/rxn7954:path210",
+          "test:C5H5NO/rxn7954:path219",
+          "test:C5H5NO/rxn7954:path222",
+          "test:C5H5NO/rxn7954:path315",
+          "test:C5H5NO/rxn7954:reactant",
+          "test:C5H5NO/rxn7954:ts",
+          "test:C5H5NO/rxn7958:path1161",
+          "test:C5H5NO/rxn7958:path135",
+          "test:C5H5NO/rxn7958:path1461",
+          "test:C5H5NO/rxn7958:path526",
+          "test:C5H5NO/rxn7958:path575",
+          "test:C5H5NO/rxn7958:path729",
+          "test:C5H5NO/rxn7958:path883",
+          "test:C5H5NO/rxn7958:path932",
+          "test:C5H5NO/rxn7958:product",
+          "test:C5H5NO/rxn7958:ts",
+          "test:C5H5NO/rxn7961:path134",
+          "test:C5H5NO/rxn7961:path195",
+          "test:C5H5NO/rxn7961:path219",
+          "test:C5H5NO/rxn7961:path243",
+          "test:C5H5NO/rxn7961:product",
+          "test:C5H5NO/rxn7961:ts",
+          "test:C5H5NO/rxn8841:path1160",
+          "test:C5H5NO/rxn8841:path1217",
+          "test:C5H5NO/rxn8841:path312",
+          "test:C5H5NO/rxn8841:path657",
+          "test:C5H5NO/rxn8841:product",
+          "test:C5H5NO/rxn8841:ts",
+          "test:C5H5NO/rxn8844:path613",
+          "test:C5H5NO/rxn9592:path1605",
+          "test:C5H5NO/rxn9592:path1941",
+          "test:C5H5NO/rxn9592:path1988",
+          "test:C5H5NO/rxn9592:path771",
+          "test:C5H5NO/rxn9592:path915",
+          "test:C5H5NO/rxn9593:path700",
+          "test:C5H5NO/rxn9593:reactant",
+          "test:C5H5NO/rxn9593:ts",
+          "val:C2H2N2O/rxn2091:path469",
+          "val:C2H2N2O/rxn2091:reactant",
+          "val:C3H6N2O/rxn2751:ts",
+          "val:C3H6N2O/rxn4438:path144",
+          "val:C3H6N2O/rxn4438:ts",
+          "val:C3N2O/rxn2923:path56",
+          "val:C3N2O/rxn2923:reactant",
+          "val:CN2O3/rxn1929:path218",
+          "val:CN2O3/rxn1929:reactant"
+        ]
+      },
       "oracle_calls_per_round": {
         "0": 40,
         "1": 40,
@@ -898,10 +1925,10 @@
       },
       "metrics": {
         "auroc_pool": {
-          "value": 0.641239168470793,
+          "value": 0.6676453213132532,
           "ci": [
-            0.5953497532856007,
-            0.6858173420871437
+            0.6260315192229512,
+            0.7102445941101987
           ],
           "n": 1584
         },
@@ -911,58 +1938,66 @@
           "n": 1584
         },
         "spearman_pool": {
-          "value": 0.3895775833265246,
+          "value": 0.3708941698018262,
           "ci": [
-            0.31471965838532584,
-            0.46720735304297845
+            0.28933917425090677,
+            0.44599631653058847
           ],
           "n": 1584
         },
         "recall_at_k": {
-          "value": 0.15428033866415805,
+          "value": 0.13237410071942446,
           "ci": [
-            0.10652427437960527,
-            0.20172390321699518
+            0.0856002706790861,
+            0.18340172720959025
           ],
-          "n": 1063
+          "n": 695
         },
         "served_wrong_rate_pool": {
-          "value": 0.6710858585858586,
+          "value": 0.43876262626262624,
           "ci": [
-            0.6275252525252525,
-            0.7127683080808082
+            0.3952020202020202,
+            0.4804450757575757
           ],
           "n": 1584
         },
+        "audit_hit_rate": {
+          "value": 0.4523809523809524,
+          "ci": [
+            0.2893796992481204,
+            0.6046664626682986
+          ],
+          "n": 42
+        },
         "silent_failures_pool": {
-          "value": 0.0,
+          "value": 0.008,
           "ci": [
             0.0,
-            0.0
+            0.028368794326241134
           ],
-          "n": 265
+          "n": 125
         },
         "auroc_eval": {
-          "value": 0.6775712536855355,
+          "value": 0.689278583986412,
           "ci": [
-            0.6310769340071569,
-            0.7196133577954099
+            0.6460856701857692,
+            0.7279309070406532
           ],
           "n": 1573
         },
         "spearman_eval": {
-          "value": 0.3987356792186665,
+          "value": 0.38867090405932464,
           "ci": [
-            0.30600446899739664,
-            0.4823577216202217
+            0.3146841217874164,
+            0.46075642072370404
           ],
           "n": 1573
         },
         "ece_eval": {
-          "value": 0.09040979876460176,
+          "value": 0.09016083035217032,
           "ci": [
-            0.059772496550192455,
-            0.12595019751442268
+            0.07085615454847567,
+            0.12519329948905572
           ],
           "n": 1573
         },
@@ -975,74 +2010,74 @@
           "n": 1573
         },
         "brier_eval": {
-          "value": 0.17114349449294283,
+          "value": 0.20306790102204775,
           "ci": [
-            0.1555605380337073,
-            0.18706714228462626
+            0.18486576108391378,
+            0.21918657448922388
           ],
           "n": 1573
         },
         "silent_failures_eval": {
-          "value": 0.02181818181818182,
+          "value": 0.03260869565217391,
           "ci": [
-            0.0040768681013261384,
-            0.04453112975219331
+            0.0,
+            0.10591386554621846
           ],
-          "n": 275
+          "n": 92
         },
         "eval_force_rmse_pre": {
-          "value": 0.3068000661807312,
+          "value": 0.22058749212302656,
           "ci": [
-            0.295237775001997,
-            0.31941890028893316
+            0.2115486399938065,
+            0.22937177641769121
           ],
           "n": 1573
         },
         "eval_rel_e_mae_pre": {
-          "value": 0.17757314509147581,
+          "value": 0.15870590953944538,
           "ci": [
-            0.1630804165263711,
-            0.19387055468319273
+            0.14577126154981315,
+            0.1731803302484988
           ],
           "n": 1573
         },
         "eval_wrong_rate_pre": {
-          "value": 0.6249205340114431,
+          "value": 0.4233947870311507,
           "ci": [
-            0.5810553083280356,
-            0.6687857596948507
+            0.38397965670692946,
+            0.45902733630006354
           ],
           "n": 1573
         },
         "eval_force_rmse_post": {
-          "value": 0.3068000661807312,
+          "value": 0.22058749212302656,
           "ci": [
-            0.295237775001997,
-            0.31941890028893316
+            0.2115486399938065,
+            0.22937177641769121
           ],
           "n": 1573
         },
         "eval_rel_e_mae_post": {
-          "value": 0.17757314509147581,
+          "value": 0.15870590953944538,
           "ci": [
-            0.1630804165263711,
-            0.19387055468319273
+            0.14577126154981315,
+            0.1731803302484988
           ],
           "n": 1573
         },
         "eval_wrong_rate_post": {
-          "value": 0.6249205340114431,
+          "value": 0.4233947870311507,
           "ci": [
-            0.5810553083280356,
-            0.6687857596948507
+            0.38397965670692946,
+            0.45902733630006354
           ],
           "n": 1573
         },
         "planted_caught": {
-          "value": 0.4,
+          "value": 0.45,
           "ci": [
-            0.24390243902439024,
-            0.575
+            0.3,
+            0.6191119691119691
           ],
           "n": 40
         },
@@ -1057,45 +2092,45 @@
         "F0.1_E0.087": {
           "wrong_f": 0.1,
           "wrong_e": 0.087,
-          "auroc_pool": null,
+          "auroc_pool": 0.8121251196686399,
           "auroc_common": null,
-          "auroc_eval": null,
-          "recall_at_k": 0.11931818181818182,
-          "served_wrong_rate_pool": 1.0
+          "auroc_eval": 0.8053479741751818,
+          "recall_at_k": 0.11669890393294649,
+          "served_wrong_rate_pool": 0.9791666666666666
         },
         "F0.25_E0.25": {
           "wrong_f": 0.25,
           "wrong_e": 0.25,
-          "auroc_pool": 0.641239168470793,
+          "auroc_pool": 0.6676453213132532,
           "auroc_common": null,
-          "auroc_eval": 0.6775712536855355,
-          "recall_at_k": 0.15428033866415805,
-          "served_wrong_rate_pool": 0.6710858585858586
+          "auroc_eval": 0.689278583986412,
+          "recall_at_k": 0.13237410071942446,
+          "served_wrong_rate_pool": 0.43876262626262624
         },
         "F0.4_E0.4": {
           "wrong_f": 0.4,
           "wrong_e": 0.4,
-          "auroc_pool": 0.6371448147998872,
-          "auroc_common": 0.7010215262804425,
-          "auroc_eval": 0.657614362117509,
-          "recall_at_k": 0.1697674418604651,
-          "served_wrong_rate_pool": 0.27146464646464646
+          "auroc_pool": 0.6913847937014996,
+          "auroc_common": 0.7099148138984129,
+          "auroc_eval": 0.6538098385421585,
+          "recall_at_k": 0.1524163568773234,
+          "served_wrong_rate_pool": 0.16982323232323232
         }
       },
       "finetune": {
         "model": "mace_mpa0",
         "shipped": false,
-        "n_labels": 189,
+        "n_labels": 183,
         "ledger_force_rmse": {
-          "aimnet2": 0.399198344802486,
-          "mace_mpa0": 0.8250492455948042,
-          "orb": 0.5116114027971823
+          "aimnet2": 0.3615522571046916,
+          "mace_mpa0": 0.6675698684728412,
+          "orb": 0.4621978689651979
         },
         "report": {
           "mode": "replay",
-          "n_labelled": 189,
-          "train_digest_requested": "caf5a135b7ef4c0b",
-          "predictions_path": "data/preds/mace_lora_curated.npz",
+          "n_labelled": 183,
+          "train_digest_requested": "92831b66327a3026",
+          "predictions_path": "data\\preds\\mace_lora_curated.npz",
           "acceptance_report": {
             "verdict": "fail",
             "accepted": false,
@@ -1139,7 +2174,7 @@
             "n_holdout": 21
           },
           "weights": "data/ckpt/mace_lora_curated",
-          "train_overlap": 0.8888888888888888,
+          "train_overlap": 0.5956284153005464,
           "train_digest_replayed": "17d905fbebcdbfaf",
           "reason": "acceptance verdict 'fail' != 'pass'"
         },
@@ -1152,337 +2187,151 @@
     "A_single: auroc_common undefined (single-class target or empty set)",
     "A_random: auroc_common undefined (single-class target or empty set)",
     "B_seed: auroc_common undefined (single-class target or empty set)",
-    "B_mace_seeds skipped: missing prediction file(s): data/preds/mace_seed0.npz, data/preds/mace_seed1.npz, data/preds/mace_seed2.npz, data/preds/mace_seed3.npz",
+    "B_mace_seeds skipped: missing prediction file(s): data\\preds\\mace_seed0.npz, data\\preds\\mace_seed1.npz, data\\preds\\mace_seed2.npz, data\\preds\\mace_seed3.npz",
     "C_collective: auroc_common undefined (single-class target or empty set)",
     "D_trustswarm: fine-tune not shipped (acceptance verdict 'fail' != 'pass')",
     "D_trustswarm: auroc_common undefined (single-class target or empty set)",
-    "D vs A_single: auroc_pool significantly WORSE (diff -0.183, paired 95% CI [-0.243, -0.126])",
-    "D vs A_single: auroc_eval significantly WORSE (diff -0.129, paired 95% CI [-0.186, -0.070])",
-    "D vs A_single: recall_at_k not significantly better (diff -0.006, paired 95% CI [-0.066, +0.050])",
-    "D vs A_single: planted_caught not significantly better (diff +0.125, paired 95% CI [-0.073, +0.317])",
-    "D vs A_single: ece_eval not significantly better (diff -0.051, paired 95% CI [-0.115, +0.019])",
-    "D vs A_single: silent_failures_pool not significantly better (diff +0.000, paired 95% CI [+0.000, +0.000])",
-    "D vs A_single: silent_failures_eval significantly WORSE (diff +0.022, paired 95% CI [+0.004, +0.045])",
-    "D vs A_random: recall_at_k not significantly better (diff +0.039, paired 95% CI [-0.015, +0.089])",
-    "D vs A_random: planted_caught not significantly better (diff +0.150, paired 95% CI [-0.050, +0.357])",
-    "D vs A_random: ece_eval not significantly better (diff -0.038, paired 95% CI [-0.090, +0.015])",
-    "D vs B_seed: auroc_pool significantly WORSE (diff -0.144, paired 95% CI [-0.199, -0.088])",
-    "D vs B_seed: auroc_eval significantly WORSE (diff -0.104, paired 95% CI [-0.165, -0.050])",
-    "D vs B_seed: recall_at_k not significantly better (diff -0.054, paired 95% CI [-0.113, +0.004])",
-    "D vs B_seed: planted_caught not significantly better (diff +0.050, paired 95% CI [-0.098, +0.216])",
-    "D vs B_seed: eval_force_rmse_post significantly WORSE (diff +0.015, paired 95% CI [+0.005, +0.024])",
-    "D vs B_seed: silent_failures_pool not significantly better (diff +0.000, paired 95% CI [+0.000, +0.000])",
-    "D vs B_seed: silent_failures_eval significantly WORSE (diff +0.022, paired 95% CI [+0.004, +0.045])",
-    "D vs C_collective: auroc_pool significantly WORSE (diff -0.117, paired 95% CI [-0.175, -0.063])",
-    "D vs C_collective: auroc_eval significantly WORSE (diff -0.091, paired 95% CI [-0.153, -0.033])",
-    "D vs C_collective: recall_at_k not significantly better (diff -0.028, paired 95% CI [-0.089, +0.024])",
-    "D vs C_collective: eval_force_rmse_post significantly WORSE (diff +0.009, paired 95% CI [+0.001, +0.016])",
-    "D vs C_collective: silent_failures_pool not significantly better (diff +0.000, paired 95% CI [+0.000, +0.000])",
-    "D vs C_collective: silent_failures_eval significantly WORSE (diff +0.022, paired 95% CI [+0.004, +0.045])"
+    "D vs A_single: auroc_pool significantly WORSE (diff -0.156, paired 95% CI [-0.210, -0.107])",
+    "D vs A_single: auroc_eval significantly WORSE (diff -0.117, paired 95% CI [-0.168, -0.067])",
+    "D vs A_single: recall_at_k not significantly better (diff -0.028, paired 95% CI [-0.095, +0.035])",
+    "D vs A_single: planted_caught not significantly better (diff +0.175, paired 95% CI [-0.026, +0.372])",
+    "D vs A_single: ece_eval not significantly better (diff -0.051, paired 95% CI [-0.100, +0.016])",
+    "D vs A_single: silent_failures_pool not significantly better (diff +0.008, paired 95% CI [+0.000, +0.028])",
+    "D vs A_single: silent_failures_eval not significantly better (diff +0.033, paired 95% CI [+0.000, +0.106])",
+    "D vs A_random: recall_at_k not significantly better (diff +0.017, paired 95% CI [-0.037, +0.075])",
+    "D vs A_random: planted_caught not significantly better (diff +0.200, paired 95% CI [+0.000, +0.405])",
+    "D vs A_random: ece_eval not significantly better (diff -0.039, paired 95% CI [-0.087, +0.027])",
+    "D vs B_seed: auroc_pool significantly WORSE (diff -0.117, paired 95% CI [-0.171, -0.064])",
+    "D vs B_seed: auroc_eval significantly WORSE (diff -0.093, paired 95% CI [-0.146, -0.047])",
+    "D vs B_seed: recall_at_k significantly WORSE (diff -0.076, paired 95% CI [-0.141, -0.016])",
+    "D vs B_seed: planted_caught not significantly better (diff +0.100, paired 95% CI [-0.054, +0.268])",
+    "D vs B_seed: silent_failures_pool not significantly better (diff +0.008, paired 95% CI [+0.000, +0.028])",
+    "D vs B_seed: silent_failures_eval not significantly better (diff +0.033, paired 95% CI [+0.000, +0.106])",
+    "D vs C_collective: auroc_pool significantly WORSE (diff -0.091, paired 95% CI [-0.143, -0.044])",
+    "D vs C_collective: auroc_eval significantly WORSE (diff -0.080, paired 95% CI [-0.131, -0.030])",
+    "D vs C_collective: recall_at_k not significantly better (diff -0.050, paired 95% CI [-0.121, +0.018])",
+    "D vs C_collective: silent_failures_pool not significantly better (diff +0.008, paired 95% CI [+0.000, +0.028])",
+    "D vs C_collective: silent_failures_eval not significantly better (diff +0.033, paired 95% CI [+0.000, +0.106])"
   ],
   "comparisons": {
     "D_vs_A_single": {
       "auroc_pool": {
-        "diff": -0.18269226870220434,
+        "diff": -0.15628611585974417,
         "ci": [
-          -0.24336666645497,
-          -0.12645565735599312
+          -0.21038084737721918,
+          -0.10682157328201591
         ],
         "higher_is_better": true,
         "d_significantly_better": false,
         "d_significantly_worse": true
       },
       "auroc_eval": {
-        "diff": -0.12920709294108157,
+        "diff": -0.11749976264020512,
         "ci": [
-          -0.1862135286046384,
-          -0.07002774212435785
+          -0.16824936870679055,
+          -0.0674098587617868
         ],
         "higher_is_better": true,
         "d_significantly_better": false,
         "d_significantly_worse": true
       },
       "recall_at_k": {
-        "diff": -0.005994980903196917,
+        "diff": -0.02790121884793051,
         "ci": [
-          -0.06563192564077468,
-          0.05036241554323366
+          -0.09484072508109946,
+          0.03477370996983376
         ],
         "higher_is_better": true,
         "d_significantly_better": false,
         "d_significantly_worse": false
       },
       "planted_caught": {
-        "diff": 0.125,
+        "diff": 0.175,
         "ci": [
-          -0.07317073170731708,
-          0.3170731707317073
+          -0.025641025641025605,
+          0.37216569767441854
         ],
         "higher_is_better": true,
         "d_significantly_better": false,
         "d_significantly_worse": false
       },
       "eval_force_rmse_post": {
-        "diff": -0.012161054928746196,
+        "diff": -0.09837362898645083,
         "ci": [
-          -0.021958902345866477,
-          -0.003592276589869582
+          -0.10996584812946278,
+          -0.08669403112669848
         ],
         "higher_is_better": false,
         "d_significantly_better": true,
         "d_significantly_worse": false
       },
       "ece_eval": {
-        "diff": -0.05068254414423015,
+        "diff": -0.05093151255666159,
         "ci": [
-          -0.11468120011228468,
-          0.018944918783899936
+          -0.10009360447276766,
+          0.015630757203255886
         ],
         "higher_is_better": false,
         "d_significantly_better": false,
         "d_significantly_worse": false
       },
       "brier_eval": {
-        "diff": -0.07678545453912308,
+        "diff": -0.04486104801001817,
         "ci": [
-          -0.10362040802551228,
-          -0.04923523766336429
+          -0.07979388571509488,
+          -0.010875980860070118
         ],
         "higher_is_better": false,
         "d_significantly_better": true,
         "d_significantly_worse": false
       },
       "silent_failures_pool": {
-        "diff": 0.0,
+        "diff": 0.008,
         "ci": [
           0.0,
-          0.0
+          0.028368794326241134
         ],
         "higher_is_better": false,
         "d_significantly_better": false,
         "d_significantly_worse": false
       },
       "silent_failures_eval": {
-        "diff": 0.02181818181818182,
+        "diff": 0.03260869565217391,
         "ci": [
-          0.0040768681013261384,
-          0.04453112975219331
+          0.0,
+          0.10591386554621846
         ],
         "higher_is_better": false,
         "d_significantly_better": false,
-        "d_significantly_worse": true
+        "d_significantly_worse": false
       }
     },
     "D_vs_A_random": {
       "auroc_pool": {
-        "diff": 0.14600384793229315,
+        "diff": 0.17241000077475332,
         "ci": [
-          0.09427033353700269,
-          0.19735151501247972
+          0.11954557611454614,
+          0.22337510486666015
         ],
         "higher_is_better": true,
         "d_significantly_better": true,
         "d_significantly_worse": false
       },
       "auroc_eval": {
-        "diff": 0.2036186042106582,
+        "diff": 0.21532593451153464,
         "ci": [
-          0.1477967849532407,
-          0.25634765382509084
+          0.15874365012357333,
+          0.26439354571983004
         ],
         "higher_is_better": true,
         "d_significantly_better": true,
         "d_significantly_worse": false
       },
       "recall_at_k": {
-        "diff": 0.03923609087654743,
+        "diff": 0.01732985293181384,
         "ci": [
-          -0.015156923455484486,
-          0.08906020267365516
-        ],
-        "higher_is_better": true,
-        "d_significantly_better": false,
-        "d_significantly_worse": false
-      },
-      "planted_caught": {
-        "diff": 0.15000000000000002,
-        "ci": [
-          -0.04999999999999999,
-          0.35714285714285715
-        ],
-        "higher_is_better": true,
-        "d_significantly_better": false,
-        "d_significantly_worse": false
-      },
-      "eval_force_rmse_post": {
-        "diff": -0.012161054928746196,
-        "ci": [
-          -0.021958902345866477,
-          -0.003592276589869582
-        ],
-        "higher_is_better": false,
-        "d_significantly_better": true,
-        "d_significantly_worse": false
-      },
-      "ece_eval": {
-        "diff": -0.03827924989244766,
-        "ci": [
-          -0.09024414391612144,
-          0.014808095076161288
-        ],
-        "higher_is_better": false,
-        "d_significantly_better": false,
-        "d_significantly_worse": false
-      },
-      "brier_eval": {
-        "diff": -0.07732580481692844,
-        "ci": [
-          -0.09317776427744923,
-          -0.061433157966217164
-        ],
-        "higher_is_better": false,
-        "d_significantly_better": true,
-        "d_significantly_worse": false
-      },
-      "silent_failures_pool": {
-        "diff": -0.7111801242236024,
-        "ci": [
-          -0.7601386060718252,
-          -0.6601665931156223
-        ],
-        "higher_is_better": false,
-        "d_significantly_better": true,
-        "d_significantly_worse": false
-      },
-      "silent_failures_eval": {
-        "diff": -0.6937506804572673,
-        "ci": [
-          -0.7466175887346032,
-          -0.6361386827211933
-        ],
-        "higher_is_better": false,
-        "d_significantly_better": true,
-        "d_significantly_worse": false
-      }
-    },
-    "D_vs_B_seed": {
-      "auroc_pool": {
-        "diff": -0.1436957397280042,
-        "ci": [
-          -0.19867079177773214,
-          -0.08809254756608736
-        ],
-        "higher_is_better": true,
-        "d_significantly_better": false,
-        "d_significantly_worse": true
-      },
-      "auroc_eval": {
-        "diff": -0.10435654251635984,
-        "ci": [
-          -0.16527293251593356,
-          -0.04992007257573943
-        ],
-        "higher_is_better": true,
-        "d_significantly_better": false,
-        "d_significantly_worse": true
-      },
-      "recall_at_k": {
-        "diff": -0.05405299466917529,
-        "ci": [
-          -0.11333117917656522,
-          0.004225041915926859
-        ],
-        "higher_is_better": true,
-        "d_significantly_better": false,
-        "d_significantly_worse": false
-      },
-      "planted_caught": {
-        "diff": 0.050000000000000044,
-        "ci": [
-          -0.09756097560975607,
-          0.21621621621621623
-        ],
-        "higher_is_better": true,
-        "d_significantly_better": false,
-        "d_significantly_worse": false
-      },
-      "eval_force_rmse_post": {
-        "diff": 0.014790177739420818,
-        "ci": [
-          0.004590993892639949,
-          0.02419999605957267
-        ],
-        "higher_is_better": false,
-        "d_significantly_better": false,
-        "d_significantly_worse": true
-      },
-      "ece_eval": {
-        "diff": -0.1350542911483292,
-        "ci": [
-          -0.19933815157361348,
-          -0.0646332641532769
-        ],
-        "higher_is_better": false,
-        "d_significantly_better": true,
-        "d_significantly_worse": false
-      },
-      "brier_eval": {
-        "diff": -0.10323082385609259,
-        "ci": [
-          -0.1327923197678879,
-          -0.07190811282245729
-        ],
-        "higher_is_better": false,
-        "d_significantly_better": true,
-        "d_significantly_worse": false
-      },
-      "silent_failures_pool": {
-        "diff": 0.0,
-        "ci": [
-          0.0,
-          0.0
-        ],
-        "higher_is_better": false,
-        "d_significantly_better": false,
-        "d_significantly_worse": false
-      },
-      "silent_failures_eval": {
-        "diff": 0.02181818181818182,
-        "ci": [
-          0.0040768681013261384,
-          0.04453112975219331
-        ],
-        "higher_is_better": false,
-        "d_significantly_better": false,
-        "d_significantly_worse": true
-      }
-    },
-    "D_vs_C_collective": {
-      "auroc_pool": {
-        "diff": -0.11723134803473778,
-        "ci": [
-          -0.1750505953466834,
-          -0.06293379362999107
-        ],
-        "higher_is_better": true,
-        "d_significantly_better": false,
-        "d_significantly_worse": true
-      },
-      "auroc_eval": {
-        "diff": -0.09138978305515966,
-        "ci": [
-          -0.15275166138627813,
-          -0.033301769645053436
-        ],
-        "higher_is_better": true,
-        "d_significantly_better": false,
-        "d_significantly_worse": true
-      },
-      "recall_at_k": {
-        "diff": -0.0283039309987633,
-        "ci": [
-          -0.08893179655938205,
-          0.024414282356228556
+          -0.036512415882531485,
+          0.0747218881796909
         ],
         "higher_is_better": true,
         "d_significantly_better": false,
@@ -1491,62 +2340,246 @@
       "planted_caught": {
         "diff": 0.2,
         "ci": [
-          0.07692307692307693,
-          0.3421052631578947
+          0.0,
+          0.40489926739926735
         ],
         "higher_is_better": true,
-        "d_significantly_better": true,
+        "d_significantly_better": false,
         "d_significantly_worse": false
       },
       "eval_force_rmse_post": {
-        "diff": 0.00897409770244939,
+        "diff": -0.09837362898645083,
         "ci": [
-          0.0011012713772419877,
-          0.01637378769758556
-        ],
-        "higher_is_better": false,
-        "d_significantly_better": false,
-        "d_significantly_worse": true
-      },
-      "ece_eval": {
-        "diff": -0.2929341300338725,
-        "ci": [
-          -0.36511909143488097,
-          -0.21968300868558513
+          -0.10996584812946278,
+          -0.08669403112669848
         ],
         "higher_is_better": false,
         "d_significantly_better": true,
         "d_significantly_worse": false
       },
-      "brier_eval": {
-        "diff": -0.2122004343055314,
+      "ece_eval": {
+        "diff": -0.0385282183048791,
         "ci": [
-          -0.26448796799446767,
-          -0.16089165916995218
+          -0.08730219556889027,
+          0.02669635981329991
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": false,
+        "d_significantly_worse": false
+      },
+      "brier_eval": {
+        "diff": -0.045401398287823524,
+        "ci": [
+          -0.06299304433035958,
+          -0.028322197921324267
         ],
         "higher_is_better": false,
         "d_significantly_better": true,
         "d_significantly_worse": false
       },
       "silent_failures_pool": {
-        "diff": 0.0,
+        "diff": -0.7031801242236024,
+        "ci": [
+          -0.7552823644413448,
+          -0.6488739212651463
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": true,
+        "d_significantly_worse": false
+      },
+      "silent_failures_eval": {
+        "diff": -0.6829601666232752,
+        "ci": [
+          -0.7541123612666734,
+          -0.5971620505620074
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": true,
+        "d_significantly_worse": false
+      }
+    },
+    "D_vs_B_seed": {
+      "auroc_pool": {
+        "diff": -0.11728958688554403,
+        "ci": [
+          -0.17070367723095364,
+          -0.06412202097954725
+        ],
+        "higher_is_better": true,
+        "d_significantly_better": false,
+        "d_significantly_worse": true
+      },
+      "auroc_eval": {
+        "diff": -0.09264921221548339,
+        "ci": [
+          -0.14621542264071274,
+          -0.04719343038038895
+        ],
+        "higher_is_better": true,
+        "d_significantly_better": false,
+        "d_significantly_worse": true
+      },
+      "recall_at_k": {
+        "diff": -0.07595923261390888,
+        "ci": [
+          -0.14142302228103396,
+          -0.015776025340923174
+        ],
+        "higher_is_better": true,
+        "d_significantly_better": false,
+        "d_significantly_worse": true
+      },
+      "planted_caught": {
+        "diff": 0.10000000000000003,
+        "ci": [
+          -0.054488416988416596,
+          0.26829268292682923
+        ],
+        "higher_is_better": true,
+        "d_significantly_better": false,
+        "d_significantly_worse": false
+      },
+      "eval_force_rmse_post": {
+        "diff": -0.07142239631828382,
+        "ci": [
+          -0.08360845215706084,
+          -0.05965123595480007
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": true,
+        "d_significantly_worse": false
+      },
+      "ece_eval": {
+        "diff": -0.13530325956076064,
+        "ci": [
+          -0.18626115314220715,
+          -0.0652975984502895
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": true,
+        "d_significantly_worse": false
+      },
+      "brier_eval": {
+        "diff": -0.07130641732698767,
+        "ci": [
+          -0.10984888777135803,
+          -0.03270021120287212
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": true,
+        "d_significantly_worse": false
+      },
+      "silent_failures_pool": {
+        "diff": 0.008,
         "ci": [
           0.0,
-          0.0
+          0.028368794326241134
         ],
         "higher_is_better": false,
         "d_significantly_better": false,
         "d_significantly_worse": false
       },
       "silent_failures_eval": {
-        "diff": 0.02181818181818182,
+        "diff": 0.03260869565217391,
         "ci": [
-          0.0040768681013261384,
-          0.04453112975219331
+          0.0,
+          0.10591386554621846
         ],
         "higher_is_better": false,
         "d_significantly_better": false,
+        "d_significantly_worse": false
+      }
+    },
+    "D_vs_C_collective": {
+      "auroc_pool": {
+        "diff": -0.09082519519227761,
+        "ci": [
+          -0.1430312554636581,
+          -0.04388793755162414
+        ],
+        "higher_is_better": true,
+        "d_significantly_better": false,
         "d_significantly_worse": true
+      },
+      "auroc_eval": {
+        "diff": -0.0796824527542832,
+        "ci": [
+          -0.13111736378703245,
+          -0.029744082187094335
+        ],
+        "higher_is_better": true,
+        "d_significantly_better": false,
+        "d_significantly_worse": true
+      },
+      "recall_at_k": {
+        "diff": -0.05021016894349689,
+        "ci": [
+          -0.12090348275208847,
+          0.01795862309272666
+        ],
+        "higher_is_better": true,
+        "d_significantly_better": false,
+        "d_significantly_worse": false
+      },
+      "planted_caught": {
+        "diff": 0.25,
+        "ci": [
+          0.12820512820512825,
+          0.39035622593068026
+        ],
+        "higher_is_better": true,
+        "d_significantly_better": true,
+        "d_significantly_worse": false
+      },
+      "eval_force_rmse_post": {
+        "diff": -0.07723847635525524,
+        "ci": [
+          -0.08577693273582541,
+          -0.06879026528173224
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": true,
+        "d_significantly_worse": false
+      },
+      "ece_eval": {
+        "diff": -0.2931830984463039,
+        "ci": [
+          -0.347007267852196,
+          -0.23091157241890448
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": true,
+        "d_significantly_worse": false
+      },
+      "brier_eval": {
+        "diff": -0.18027602777642648,
+        "ci": [
+          -0.23376514355393752,
+          -0.12887940166072306
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": true,
+        "d_significantly_worse": false
+      },
+      "silent_failures_pool": {
+        "diff": 0.008,
+        "ci": [
+          0.0,
+          0.028368794326241134
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": false,
+        "d_significantly_worse": false
+      },
+      "silent_failures_eval": {
+        "diff": 0.03260869565217391,
+        "ci": [
+          0.0,
+          0.10591386554621846
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": false,
+        "d_significantly_worse": false
       }
     }
   },
@@ -1561,5 +2594,5 @@
     "pool_eval_shared_formulas": 7,
     "planted_filter": "mace_mpa0 wrong (F>0.25, E>0.25)"
   },
-  "runtime_s": 27.6
+  "runtime_s": 12.0
 }

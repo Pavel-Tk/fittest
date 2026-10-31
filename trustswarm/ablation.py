@@ -58,7 +58,7 @@ from trustswarm.agents.stream import TRIAGE
 from trustswarm.blackboard import Blackboard
 from trustswarm.cache import Predictions, load_models, load_predictions, prediction_path
 from trustswarm.data import (EVAL, PLANTED, POOL, SKEPTIC_REF, Frame, arrival_rounds, by_split,
-                             reactant_index, strip_all)
+                             reactant_index, split_val_by_formula, strip_all)
 from trustswarm.round_driver import RoundDriver
 from trustswarm.signals import force_rmse, force_spread, max_abs_force
 
@@ -83,11 +83,19 @@ class AblationConfig:
     wrong_thresholds: tuple[tuple[float, float], ...] = config.WRONG_THRESHOLDS
     flag_quantile: float = config.TAU_FLOOR_QUANTILE
     max_planted: int | None = 40
+    audit_fraction: float = config.AUDIT_FRACTION
+    planted_model: str = config.PLANTED_MODEL
+    planted_force_rmse: float = config.PLANTED_FORCE_RMSE
+    """Arm D: share of each round's budget spent on Skeptic audits of trusted systems."""
     """Cap on planted cases (seeded subsample of the filtered set); None = all."""
 
     @property
     def total_budget(self) -> int:
         return self.budget_per_round * self.rounds
+
+    @property
+    def audit_quota(self) -> int:
+        return int(round(self.audit_fraction * self.budget_per_round))
 
 
 # --- data ---------------------------------------------------------------------------------------
@@ -119,23 +127,17 @@ def _model_rel(p: Predictions, uid: str, reactant_uid: str | None) -> float | No
     return p.energy[uid] - p.energy[reactant_uid]
 
 
-def select_planted(planted_split: Sequence[Frame], target: Predictions, cfg: AblationConfig
+def select_planted(planted_split: Sequence[Frame], model: Predictions, cfg: AblationConfig
                    ) -> tuple[list[Frame], list[Frame]]:
-    """Planted cases = frames of the ``planted`` split on which the common-target model is
-    wrong (known failures); context = the reactant frames of those reactions."""
+    """Planted cases = planted-split frames on which ``cfg.planted_model`` — a model present in
+    every arm (A serves it, B's members are it, C and D include it) — is *badly* wrong
+    (force RMSE > ``cfg.planted_force_rmse``): the "confidently wrong" class. Arm-independent
+    by construction. Context = the reactant frames of those reactions."""
     reactants = reactant_index(planted_split)
-    cases = []
-    for f in planted_split:
-        r = reactants.get(f.reaction)
-        if f.F is None or f.uid not in target or f.role == "reactant":
-            continue
-        rel_true = None if r is None or r.E is None or f.E is None else f.E - r.E
-        err = force_rmse(target.forces[f.uid], f.F)
-        rel = _model_rel(target, f.uid, r.uid if r else None)
-        rel_err = None if rel is None or rel_true is None else abs(rel - rel_true)
-        if err > cfg.wrong_f or (rel_err is not None and rel_err > cfg.wrong_e):
-            cases.append(f)
-    cases.sort(key=lambda f: f.uid)
+    cases = sorted((f for f in planted_split
+                    if f.F is not None and f.uid in model and f.role != "reactant"
+                    and force_rmse(model.forces[f.uid], f.F) > cfg.planted_force_rmse),
+                   key=lambda f: f.uid)
     if cfg.max_planted is not None and len(cases) > cfg.max_planted:
         rng = np.random.default_rng([cfg.seed, 17])
         keep = np.sort(rng.choice(len(cases), size=cfg.max_planted, replace=False))
@@ -145,12 +147,15 @@ def select_planted(planted_split: Sequence[Frame], target: Predictions, cfg: Abl
     return cases, context
 
 
-def prepare_data(frames: Sequence[Frame], target: Predictions, cfg: AblationConfig) -> AblationData:
+def prepare_data(frames: Sequence[Frame], planted_model: Predictions,
+                 cfg: AblationConfig) -> AblationData:
+    """Splits (skeptic_ref / planted re-derived by formula), planted cases, relative energies."""
+    frames = split_val_by_formula(frames, cfg.seed)
     splits = by_split(frames)
     pool, eval_, refs = (sorted(splits.get(s, []), key=lambda f: f.uid) for s in (POOL, EVAL, SKEPTIC_REF))
     if not pool or not eval_:
         raise ValueError(f"need non-empty pool and eval splits, got {sorted(splits)}")
-    cases, context = select_planted(splits.get(PLANTED, []), target, cfg)
+    cases, context = select_planted(splits.get(PLANTED, []), planted_model, cfg)
     reactants = reactant_index(frames)
     rel_true: dict[str, float | None] = {}
     for f in frames:
@@ -254,6 +259,8 @@ class ArmOutcome:
     flagged: set[str]
     eval_flagged: set[str] = field(default_factory=set)
     vetoed: set[str] = field(default_factory=set)
+    audited: set[str] = field(default_factory=set)
+    """Oracle labels spent on exploration audits (the rest were won by bids)."""
     p_wrong_pool: dict[str, float] | None = None
     """The arm's own P(served answer wrong) on pool; None → isotonic map of its score."""
     p_wrong_eval: dict[str, float] | None = None
@@ -339,11 +346,13 @@ def build_trustswarm(data: AblationData, preds: Mapping[str, Predictions],
     models = list(cfg.hetero_models)
     streamed = [f.uid for f in [*data.candidates, *data.eval]]
     agents: dict[str, Any] = {
-        "oracle": Oracle(data.candidates, cfg.budget_per_round, cfg.rounds),
+        "oracle": Oracle(data.candidates, cfg.budget_per_round, cfg.rounds, models=models,
+                         audit_quota=cfg.audit_quota),
         "stream": PoolStream(strip_all(data.pool), arrival, strip_all(data.eval),
                              serve_round=cfg.rounds),
         "skeptic": Skeptic(data.refs, {m: preds[m].subset(f.uid for f in data.refs) for m in models},
-                           data.planted_cases, data.planted_context),
+                           data.planted_cases, data.planted_context,
+                           audit_per_round=cfg.audit_quota, audit_rounds=cfg.rounds, seed=cfg.seed),
         **{m: ModelAgent(preds[m].subset(streamed)) for m in models},
         "calibrator": Calibrator(models),
         "hook": DisagreementMonitor(models),
@@ -428,6 +437,8 @@ def run_trustswarm_arm(data: AblationData, preds: Mapping[str, Predictions],
         served_eval_post=served_from(last_verdicts(pre_update=False, triage=False)),
         checked={e.payload["uid"]: int(e.payload["bid_round"]) for e in events
                  if e.kind == bbk.ORACLE_RESULT},
+        audited={e.payload["uid"] for e in events
+                 if e.kind == bbk.ORACLE_RESULT and e.payload.get("audit")},
         flagged=flagged, eval_flagged=eval_flagged, vetoed=set(p_skeptic),
         p_wrong_pool={u: 1.0 - float(v["trust"]) for u, v in pre_pool.items()},
         p_wrong_eval={u: 1.0 - float(v["trust"]) for u, v in pre_eval.items()},
@@ -544,6 +555,11 @@ class ArmScorer:
         add("recall_at_k", lambda i: float(checked[i][y[i]].mean()) if y[i].any() else None, g,
             int(y.sum()))
         add("served_wrong_rate_pool", lambda i: float(y[i].mean()), g, len(y))
+        if o.audited:
+            audited = np.array([u in o.audited for u in self.pool_uids])
+            add("audit_hit_rate",
+                lambda i: float(y[i][audited[i]].mean()) if audited[i].any() else None, g,
+                int(audited.sum()))
 
         # The arm's P(served wrong): its own (D) or an isotonic map of its score fitted on the
         # arm's own oracle labels (A-C) — the same fit for everyone, no eval labels involved.
@@ -695,12 +711,12 @@ def run_ablation(frames: Sequence[Frame], preds_dir: str | Path, cfg: AblationCo
         "config": {**dataclasses.asdict(cfg), "total_budget": cfg.total_budget},
         "arms": {}, "failures": failures, "comparisons": {}}
     try:
-        (common,) = load([cfg.common_target]).values()
+        common, planted_model = load([cfg.common_target, cfg.planted_model]).values()
     except FileNotFoundError as exc:
         results["status"] = "failed"
-        failures.append(f"cannot run ablation: common target unavailable ({exc})")
+        failures.append(f"cannot run ablation: common-target/planted model unavailable ({exc})")
         return results
-    data = prepare_data(frames, common, cfg)
+    data = prepare_data(frames, planted_model, cfg)
     arrival = arrival_rounds(data.pool, cfg.rounds, cfg.seed)
     arrival.update({f.uid: 0 for f in data.injected})
     results["data"] = {
@@ -709,10 +725,12 @@ def run_ablation(frames: Sequence[Frame], preds_dir: str | Path, cfg: AblationCo
         "n_pool_reactions": len({f.reaction for f in data.pool}),
         "n_eval_reactions": len({f.reaction for f in data.eval}),
         "pool_eval_shared_formulas": len({f.formula for f in data.pool} & {f.formula for f in data.eval}),
-        "planted_filter": f"{cfg.common_target} wrong (F>{cfg.wrong_f}, E>{cfg.wrong_e})",
+        "planted_filter": f"{cfg.planted_model} force RMSE > {cfg.planted_force_rmse} eV/Å",
+        "skeptic_ref_formulas": sorted({f.formula for f in data.refs}),
+        "planted_formulas": sorted({f.formula for f in data.injected}),
     }
     if not data.planted_cases:
-        failures.append("no planted cases: the common-target model is never wrong on the planted split")
+        failures.append(f"no planted cases: {cfg.planted_model} is never badly wrong on the planted split")
     scorer = ArmScorer(data, cfg, common)
     needed = [f.uid for f in [*data.candidates, *data.eval]]
     finetune_fn = finetune_fn or default_finetune(preds_dir, cfg)
@@ -760,6 +778,9 @@ def _run_arm(name: str, score: str, preds: Mapping[str, Predictions], data: Abla
         outcome = run_baseline_arm(name, preds, score, data, arrival, cfg)
     entry.update(status="ok", served=outcome.served, score=outcome.score,
                  oracle_calls=len(outcome.checked),
+                 oracle_labels_by_source={
+                     "audit": sorted(outcome.audited),
+                     "bid": sorted(set(outcome.checked) - outcome.audited)},
                  oracle_calls_per_round={str(k): v for k, v in sorted(outcome.oracle_calls_per_round.items())},
                  **scorer.score(outcome))
     if outcome.finetune is not None:
@@ -962,16 +983,43 @@ def plot_ablation(results: Mapping[str, Any], path: str | Path) -> None:
             ax.set_ylim(*ylim)
 
     legend_kw = {"frameon": False, "fontsize": 7.5, "loc": "upper left"}
+    cfg_r = results["config"]
+    alt = [(wf, we) for wf, we in cfg_r.get("wrong_thresholds", [])
+           if (wf, we) != (cfg_r["wrong_f"], cfg_r["wrong_e"])]
+    alt_pair = max(alt) if alt else None  # the looser threshold, e.g. 0.4 eV/Å
+
+    def alt_markers(ax: Any, key: str, offset: float) -> Line2D | None:
+        """Point estimates at the alternative wrongness threshold (no CI), as open diamonds."""
+        if alt_pair is None:
+            return None
+        tag = f"F{alt_pair[0]:g}_E{alt_pair[1]:g}"
+        handle = None
+        for i, e in enumerate(entries):
+            v = e.get("by_threshold", {}).get(tag, {}).get(key) if e.get("status") == "ok" else None
+            if v is not None:
+                (handle,) = ax.plot(i + offset, v, marker="D", markersize=5, markerfacecolor="white",
+                                    markeredgecolor=INK, linestyle="none", zorder=4)
+        return handle
     bars(axes[0], "auroc_pool", -0.2, 0.38, light=False)
     bars(axes[0], "auroc_eval", 0.2, 0.38, light=True)
     axes[0].axhline(0.5, color=INK_MUTED, linestyle=(0, (3, 3)), linewidth=0.9, zorder=1)
     style(axes[0], "1  AUROC (score → served wrong)", "AUROC", (0.0, 1.22))
-    axes[0].legend(handles=[Patch(color=NEUTRAL, label="pool (triage score)"),
-                            Patch(color=NEUTRAL_LIGHT, label="eval (held-out)"),
-                            Line2D([], [], color=INK_MUTED, linestyle=(0, (3, 3)), label="chance")],
-                   **legend_kw)
+    alt_label = f"at wrong ⇔ F > {alt_pair[0]:g} eV/Å (no CI)" if alt_pair else ""
+    h_alt = alt_markers(axes[0], "auroc_pool", -0.2)
+    alt_markers(axes[0], "auroc_eval", 0.2)
+    handles = [Patch(color=NEUTRAL, label="pool (triage score)"),
+               Patch(color=NEUTRAL_LIGHT, label="eval (held-out)"),
+               Line2D([], [], color=INK_MUTED, linestyle=(0, (3, 3)), label="chance")]
+    if h_alt is not None:
+        handles.append(Line2D([], [], marker="D", markersize=5, markerfacecolor="white",
+                              markeredgecolor=INK, linestyle="none", label=alt_label))
+    axes[0].legend(handles=handles, **legend_kw)
 
     bars(axes[1], "recall_at_k", 0.0, 0.6, light=False)
+    if alt_markers(axes[1], "recall_at_k", 0.0) is not None:
+        axes[1].legend(handles=[Line2D([], [], marker="D", markersize=5, markerfacecolor="white",
+                                       markeredgecolor=INK, linestyle="none", label=alt_label)],
+                       **legend_kw)
     k = results["config"]
     style(axes[1], f"2  Recall@K (K = {k['total_budget']})", "fraction of wrong served answers checked", (0, 1.08))
 
@@ -1010,7 +1058,14 @@ def plot_ablation(results: Mapping[str, Any], path: str | Path) -> None:
     style(axes[5], f"6  Silent failures (F-RMSE > {config.SILENT_F})",
           "badly wrong, unflagged and trusted (lower is better)", (0, 1.22))
     axes[5].legend(handles=[Patch(color=NEUTRAL, label="pool"),
-                            Patch(color=NEUTRAL_LIGHT, label="eval")], **legend_kw)
+                            Patch(color=NEUTRAL_LIGHT, label="eval"),
+                            Patch(color="none", label="T = share of eval answers trusted")],
+                   **legend_kw)
+    for i, e in enumerate(entries):  # 0 silent failures means little if nothing is trusted
+        v, _ = val(e, "trusted_fraction_eval")
+        if np.isfinite(v):
+            axes[5].text(i, 0.80, f"T={v:.0%}", ha="center", va="bottom", fontsize=7.5,
+                         color=INK_MUTED, transform=axes[5].get_xaxis_transform())
 
     ax_f = fig.add_subplot(gs[2, :])
     ax_f.axis("off")

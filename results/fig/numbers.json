@@ -1,0 +1,189 @@
+{
+  "fig1": {
+    "n_frames": 3157,
+    "n_reactions": 287,
+    "n_by_role": {
+      "reactant": 287,
+      "product": 287,
+      "path": 2296,
+      "ts": 287
+    },
+    "median_force_rmse_by_role": {
+      "MACE-MPA-0": {
+        "reactant": 0.52,
+        "product": 0.533,
+        "path": 0.569,
+        "ts": 0.681
+      },
+      "AIMNet2": {
+        "reactant": 0.22,
+        "product": 0.251,
+        "path": 0.287,
+        "ts": 0.461
+      },
+      "Orb": {
+        "reactant": 0.351,
+        "product": 0.363,
+        "path": 0.392,
+        "ts": 0.468
+      }
+    },
+    "iqr_by_role": {
+      "MACE-MPA-0": {
+        "reactant": [
+          0.437,
+          0.539
+        ],
+        "product": [
+          0.449,
+          0.633
+        ],
+        "path": [
+          0.477,
+          0.696
+        ],
+        "ts": [
+          0.566,
+          0.796
+        ]
+      },
+      "AIMNet2": {
+        "reactant": [
+          0.17,
+          0.285
+        ],
+        "product": [
+          0.202,
+          0.317
+        ],
+        "path": [
+          0.217,
+          0.366
+        ],
+        "ts": [
+          0.361,
+          0.59
+        ]
+      },
+      "Orb": {
+        "reactant": [
+          0.291,
+          0.404
+        ],
+        "product": [
+          0.297,
+          0.436
+        ],
+        "path": [
+          0.32,
+          0.457
+        ],
+        "ts": [
+          0.395,
+          0.553
+        ]
+      }
+    },
+    "ts_over_reactant": {
+      "MACE-MPA-0": 1.31,
+      "AIMNet2": 2.1,
+      "Orb": 1.33
+    }
+  },
+  "fig2": {
+    "het": {
+      "median_spread_over_error": 1.756,
+      "ratio_of_medians": 1.761,
+      "spearman": 0.727,
+      "median_spread": 0.505
+    },
+    "seed": {
+      "median_spread_over_error": 0.437,
+      "ratio_of_medians": 0.406,
+      "spearman": 0.677,
+      "median_spread": 0.116
+    },
+    "median_aimnet2_force_rmse": 0.286,
+    "n_frames": 3157
+  },
+  "fig3": {
+    "picks": {
+      "C3HNO2/rxn0109": {
+        "spearman": 0.988,
+        "dft_ts_index": 5,
+        "argmax_sigma": 5,
+        "argmax_error": 5
+      },
+      "C2H2N2O/rxn3122": {
+        "spearman": 0.115,
+        "dft_ts_index": 4,
+        "argmax_sigma": 5,
+        "argmax_error": 4
+      }
+    },
+    "n_reactions": 8,
+    "median_spearman": 0.958,
+    "per_reaction_spearman": {
+      "C2H2N2O/rxn2093": 0.976,
+      "C2H2N2O/rxn3122": 0.115,
+      "C2H3NO/rxn3840": 0.964,
+      "C2H4O/rxn0722": 0.976,
+      "C2HNO3/rxn1883": 0.164,
+      "C3H2N2/rxn1185": 0.927,
+      "C3HNO2/rxn0109": 0.988,
+      "C4HNO/rxn3726": 0.952
+    },
+    "sigma_peak_within_1_of_ts": 6,
+    "sigma_peak_at_ts": 3,
+    "sigma_peak_eq_error_peak": 5,
+    "pooled_spearman": 0.847,
+    "n_converged": 8
+  },
+  "fig4": {
+    "n_frames": 1573,
+    "n_reactions": 143,
+    "wrong_f": 0.25,
+    "rows_best_first": [
+      {
+        "name": "AIMNet2 + Orb",
+        "frac_wrong": 0.278,
+        "median_force_rmse": 0.184
+      },
+      {
+        "name": "MACE + AIMNet2",
+        "frac_wrong": 0.536,
+        "median_force_rmse": 0.262
+      },
+      {
+        "name": "AIMNet2 seeds ×4",
+        "frac_wrong": 0.565,
+        "median_force_rmse": 0.287
+      },
+      {
+        "name": "MACE + AIMNet2 + Orb",
+        "frac_wrong": 0.573,
+        "median_force_rmse": 0.266
+      },
+      {
+        "name": "AIMNet2",
+        "frac_wrong": 0.609,
+        "median_force_rmse": 0.29
+      },
+      {
+        "name": "Orb",
+        "frac_wrong": 0.935,
+        "median_force_rmse": 0.394
+      },
+      {
+        "name": "MACE + Orb",
+        "frac_wrong": 0.975,
+        "median_force_rmse": 0.441
+      },
+      {
+        "name": "MACE-MPA-0",
+        "frac_wrong": 0.997,
+        "median_force_rmse": 0.554
+      }
+    ]
+  }
+}

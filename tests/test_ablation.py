@@ -15,8 +15,10 @@ from trustswarm.ablation import (AblationConfig, arm_specs, auroc_mann_whitney, 
                                  expected_calibration_error, plot_ablation, prepare_data,
                                  run_ablation, trustswarm_score)
 from trustswarm.agents import Calibrator, ModelAgent, NullFinetune, ReplayFinetune
+from trustswarm.agents.base import iter_rows
 from trustswarm.blackboard import ORACLE_RESULT, Blackboard, Event, load_jsonl
 from trustswarm.cache import load_models, load_predictions
+from trustswarm.candidates import candidate_members
 from trustswarm.data import Frame, arrival_rounds
 from trustswarm.round_driver import RoundDriver
 from trustswarm.signals import frame_error
@@ -59,10 +61,16 @@ def test_artifacts_written(ablation_run: dict[str, Any], tmp_path: Path) -> None
     assert len(log) == ablation_run["results"]["arms"]["D_trustswarm"]["blackboard"]["n_events"]
     assert [e.id for e in log] == list(range(len(log)))
     snap = json.loads((out / "trust_snapshot.json").read_text())
-    assert set(snap) == {"models", "candidates", "tau", "sigma_edges", "fbar_edges", "p_correct",
-                         "counts", "reputation", "wrong_thresholds", "budget", "created"}
+    assert set(snap) == {"models", "candidates", "candidate_members", "tau", "sigma_edges",
+                         "fbar_edges", "p_correct", "counts", "reputation", "wrong_thresholds",
+                         "budget", "created"}
     assert snap["models"] == list(SMALL_CFG.hetero_models)
-    assert snap["candidates"] == [*SMALL_CFG.hetero_models, "consensus"]
+    assert snap["candidates"] == list(candidate_members(SMALL_CFG.hetero_models))
+    assert len(snap["candidates"]) == 7 and snap["candidates"][-1] == "consensus"
+    assert snap["candidate_members"]["mean(aimnet2+orb)"] == ["aimnet2", "orb"]
+    assert set(snap["p_correct"]) == set(snap["counts"]) == set(snap["candidates"])
+    # exploration audits give the ledger labels in the low-σ buckets too
+    assert sum(snap["counts"]["consensus"][0]) + sum(snap["counts"]["consensus"][1]) > 0
     # the audit log never carries arrays: forces, labels and coordinates are summarised
     for e in log:
         for key in ("forces", "F", "R"):
@@ -70,6 +78,35 @@ def test_artifacts_written(ablation_run: dict[str, Any], tmp_path: Path) -> None
                 assert set(e.payload[key]) == {"omitted", "shape"}, (e.kind, key)
     plot_ablation(ablation_run["results"], tmp_path / "ablation.png")
     assert (tmp_path / "ablation.png").stat().st_size > 10_000
+
+
+def test_audits_target_only_trusted_systems_within_budget(ablation_run: dict[str, Any]) -> None:
+    log = load_jsonl(ablation_run["out"] / "blackboard_armD.jsonl")
+    k, quota = SMALL_CFG.budget_per_round, SMALL_CFG.audit_quota
+    assert quota > 0
+    audit_bids = [(e, uid) for e in log if e.kind == "bid" and e.payload.get("audit")
+                  for uid in e.payload["uid"]]
+    assert audit_bids and all(e.author == "skeptic" for e, _ in audit_bids)
+    for bid, uid in audit_bids:
+        before = [e for e in log if e.id < bid.id]
+        assert not any(e.kind == "flag" and e.payload["uid"] == uid for e in before), uid
+        assert not any(e.kind == "oracle_result" and e.payload["uid"] == uid for e in before), uid
+        tau = [e.payload["tau"] for e in before if e.kind == "threshold"][-1]
+        sigma = [row["sigma_F"] for e in before if e.kind == "verdict"
+                 for _, row in iter_rows(e.payload, ("uid", "sigma_F")) if row["uid"] == uid][-1]
+        assert sigma < tau
+    results = [e.payload for e in log if e.kind == ORACLE_RESULT]
+    for r in range(SMALL_CFG.rounds):
+        this_round = [p for p in results if p["bid_round"] == r]
+        assert len(this_round) == k  # audits come out of the same budget
+        assert sum(p["audit"] for p in this_round) <= quota
+    d = ablation_run["results"]["arms"]["D_trustswarm"]
+    by_source = d["oracle_labels_by_source"]
+    assert len(by_source["audit"]) + len(by_source["bid"]) == k * SMALL_CFG.rounds
+    assert d["metrics"]["audit_hit_rate"]["value"] is not None
+    # every oracle result reports the error of every subset candidate
+    assert all(set(p["candidate_errors"]) == set(candidate_members(SMALL_CFG.hetero_models))
+               for p in results)
 
 
 def test_calibration_and_silent_failure_metrics(ablation_run: dict[str, Any]) -> None:
@@ -203,7 +240,7 @@ def test_labels_reach_agents_only_through_oracle_results(synthetic_dir: Path,
                                                          frames: list[Frame]) -> None:
     cfg = SMALL_CFG
     preds = load_models(synthetic_dir / "preds", cfg.hetero_models)
-    data = prepare_data(frames, load_predictions(synthetic_dir / "preds" / f"{cfg.common_target}.npz"), cfg)
+    data = prepare_data(frames, load_predictions(synthetic_dir / "preds" / f"{cfg.planted_model}.npz"), cfg)
     arrival = arrival_rounds(data.pool, cfg.rounds, cfg.seed)
     arrival.update({f.uid: 0 for f in data.injected})
     bb = Blackboard()
@@ -237,18 +274,16 @@ def test_labels_reach_agents_only_through_oracle_results(synthetic_dir: Path,
     assert isinstance(driver, RoundDriver)
 
 
-def test_planted_and_reference_reactions_are_disjoint(synthetic_dir: Path,
-                                                      frames: list[Frame]) -> None:
-    target = load_predictions(synthetic_dir / "preds" / f"{SMALL_CFG.common_target}.npz")
-    data = prepare_data(frames, target, SMALL_CFG)
+def test_planted_and_reference_are_disjoint_by_formula(synthetic_dir: Path,
+                                                        frames: list[Frame]) -> None:
+    model = load_predictions(synthetic_dir / "preds" / f"{SMALL_CFG.planted_model}.npz")
+    data = prepare_data(frames, model, SMALL_CFG)
     planted = {f.reaction for f in data.injected}
     assert planted and not planted & {f.reaction for f in data.refs}
+    assert not {f.formula for f in data.injected} & {f.formula for f in data.refs}
     assert not planted & {f.reaction for f in [*data.pool, *data.eval]}
     assert not {f.reaction for f in data.pool} & {f.reaction for f in data.eval}
     assert 0 < len(data.planted_cases) <= SMALL_CFG.max_planted
-    # planted cases are, by construction, known failures of the common-target model
+    # planted cases are, by construction, confidently-wrong cases of a model every arm uses
     for f in data.planted_cases:
-        r = data.by_uid[data.reactant_uid[f.reaction]]
-        err = frame_error(target.forces[f.uid], f.F,
-                          target.energy[f.uid] - target.energy[r.uid], data.rel_true[f.uid])
-        assert err.wrong(SMALL_CFG.wrong_f, SMALL_CFG.wrong_e)
+        assert np.sqrt(np.mean((model.forces[f.uid] - f.F) ** 2)) > SMALL_CFG.planted_force_rmse

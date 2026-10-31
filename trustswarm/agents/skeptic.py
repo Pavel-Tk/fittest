@@ -10,6 +10,12 @@ which it knows where the consensus was wrong), and the ``planted`` cases with la
   ``p_S > 0.5`` it posts ``veto``. For triage systems it also bids ``rep_S · p_S`` every
   round until the system is revealed; vetoes on served (eval) systems are advisory only.
 * Oracle results become new references (the reference set grows online).
+* Exploration audits: once per triage round, when it has nothing new to read (the round has
+  settled), it bids ``{"audit": true}`` on a seeded uniform sample of ``audit_per_round``
+  currently *trusted* systems (not flagged, σ < τ, not yet revealed; a veto does not
+  remove a system from the trusted set — the Calibrator still trusts it). The Oracle pays
+  these out of the same per-round budget. Without them the oracle only ever labels high-σ
+  systems and the Calibrator never learns anything about the region it trusts.
 
 The Skeptic deliberately does **not** use its knowledge of which systems are planted when
 vetoing or bidding — otherwise "planted failures caught" would be true by construction.
@@ -24,10 +30,10 @@ from typing import Any, ClassVar
 import numpy as np
 
 from trustswarm import config
-from trustswarm.agents.base import Agent, iter_rows
+from trustswarm.agents.base import Agent, batch_payload, iter_rows
 from trustswarm.agents.stream import TRIAGE, structure_payload
-from trustswarm.blackboard import (BID, ORACLE_RESULT, PLANT, REPUTATION, SYSTEM, VERDICT, VETO,
-                                   Blackboard, Event)
+from trustswarm.blackboard import (BID, FLAG, ORACLE_RESULT, PLANT, REPUTATION, SYSTEM, THRESHOLD,
+                                   VERDICT, VETO, Blackboard, Event)
 from trustswarm.cache import Predictions
 from trustswarm.data import Frame, reactant_index, skeptic_descriptor, strip_labels
 from trustswarm.signals import force_spread, frame_error, mean_abs_force
@@ -59,7 +65,9 @@ def reference_table(refs: Sequence[Frame], predictions: Mapping[str, Predictions
         uids.append(f.uid)
         X.append(skeptic_descriptor(f.Z, f.R, mean_abs_force(fbar), sigma))
         y.append(wrong)
-    return uids, np.array(X, dtype=float).reshape(len(uids), -1), np.array(y, dtype=bool)
+    if not uids:
+        return [], np.zeros((0, 0)), np.zeros(0, dtype=bool)
+    return uids, np.array(X, dtype=float), np.array(y, dtype=bool)
 
 
 VERDICT_KEYS = ("uid", "phase", "trust", "sigma_F", "mean_abs_fbar")
@@ -67,12 +75,20 @@ VERDICT_KEYS = ("uid", "phase", "trust", "sigma_F", "mean_abs_fbar")
 
 class Skeptic(Agent):
     subscriptions: ClassVar[frozenset[str]] = frozenset(
-        {SYSTEM, PLANT, VERDICT, ORACLE_RESULT, REPUTATION})
+        {SYSTEM, PLANT, VERDICT, ORACLE_RESULT, REPUTATION, FLAG, THRESHOLD})
 
     def __init__(self, refs: Sequence[Frame], ref_predictions: Mapping[str, Predictions],
                  planted_cases: Sequence[Frame], planted_context: Sequence[Frame] = (),
-                 k: int = config.KNN_K, name: str = "skeptic") -> None:
+                 k: int = config.KNN_K, audit_per_round: int = 0, audit_rounds: int = 0,
+                 seed: int = 0, name: str = "skeptic") -> None:
         super().__init__(name)
+        self.audit_per_round = int(audit_per_round)
+        self.audit_rounds = int(audit_rounds)
+        self._rng = np.random.default_rng([seed, 0x5CE9])
+        self._audited_round: int | None = None
+        self.audited: dict[str, int] = {}  # uid -> round of its exploration audit bid
+        self._flagged: set[str] = set()
+        self._tau: float | None = None
         ref_reactions = {f.reaction for f in refs}
         planted_reactions = {f.reaction for f in [*planted_cases, *planted_context]}
         overlap = ref_reactions & planted_reactions
@@ -82,7 +98,9 @@ class Skeptic(Agent):
         self.planted_reactions: frozenset[str] = frozenset(planted_reactions)
         self._ref_uids, X, self._ref_wrong = reference_table(refs, ref_predictions)
         if len(self._ref_uids) == 0:
-            raise ValueError("Skeptic needs at least one usable reference frame")
+            raise ValueError(f"Skeptic needs at least one usable reference frame: got {len(refs)} "
+                             f"skeptic_ref frames, none labelled and predicted by all of "
+                             f"{sorted(ref_predictions)}")
         self._mu = X.mean(axis=0)
         self._sd = np.where(X.std(axis=0) > 1e-9, X.std(axis=0), 1.0)
         self._X = (X - self._mu) / self._sd
@@ -125,12 +143,44 @@ class Skeptic(Agent):
                 self._learn(p)
             elif e.kind == REPUTATION and self.name in p["reputation"]:
                 self._reputation = float(p["reputation"][self.name])
+            elif e.kind == FLAG:
+                self._flagged.add(p["uid"])
+            elif e.kind == THRESHOLD:
+                self._tau = float(p["tau"])
+        if not events:  # nothing new to read: this round has settled
+            self._exploration_audit(bb)
+        rows = []
         for uid in sorted(self._vetoed):
             if self._phase.get(uid) != TRIAGE or uid in self._revealed \
                     or self._last_bid_round.get(uid) == bb.round:
                 continue
             self._last_bid_round[uid] = bb.round
-            self.post(bb, BID, {"uid": uid, "value": self._reputation * self._vetoed[uid]})
+            rows.append({"uid": uid, "value": self._reputation * self._vetoed[uid]})
+        if rows:
+            self.post(bb, BID, batch_payload(rows))
+
+    def trusted(self) -> list[str]:
+        """Triage systems the collective currently trusts (label-free criterion)."""
+        if self._tau is None:
+            return []
+        return sorted(u for u, ph in self._phase.items()
+                      if ph == TRIAGE and u not in self._flagged
+                      and u not in self._revealed and u not in self.audited
+                      and self._features[u][0] < self._tau)
+
+    def _exploration_audit(self, bb: Blackboard) -> None:
+        if self.audit_per_round <= 0 or bb.round >= self.audit_rounds \
+                or self._audited_round == bb.round:
+            return
+        pool = self.trusted()
+        if not pool:
+            return  # try again later in this round (e.g. before the first verdicts)
+        self._audited_round = bb.round
+        pick = self._rng.choice(len(pool), size=min(self.audit_per_round, len(pool)), replace=False)
+        rows = [{"uid": pool[i], "value": 1.0} for i in sorted(pick)]
+        for r in rows:
+            self.audited[r["uid"]] = bb.round
+        self.post(bb, BID, batch_payload(rows, audit=True))
 
     def _descriptor(self, uid: str) -> np.ndarray:
         Z, R = self._geometry[uid]
@@ -148,7 +198,7 @@ class Skeptic(Agent):
         if p_s > config.VETO_P:
             self._vetoed[uid] = p_s
             self.post(bb, VETO, {"uid": uid, "phase": p["phase"], "p_S": p_s, "trust": p["trust"],
-                                 "neighbours": [self._ref_uids[i] for i in nn]})
+                                 "nearest_refs": [self._ref_uids[i] for i in nn[:3]]})
 
     def _learn(self, p: dict[str, Any]) -> None:
         uid = p["uid"]
