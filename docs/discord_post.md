@@ -58,3 +58,30 @@ voice: pavel-v1-gemma4 · gemma-4-E4B-it + pavel LoRA (SFT epoch 2 + anti-AI DPO
 
 ---
 Fact-check notes (lead): every fact matches docs/MCP.md. Variant 2 was rejected: it said "trust score out of 100" (the score is 0–1) and that out-of-domain molecules get "a warning instead of a recommendation" (they get both).
+
+---
+
+# Discord post v3: use case first (Saturday PM, replaces the update above) — pavel-voice, variant 1 of 3 (second round), unedited
+
+Hey folks,
+If you are doing ML interatomic potentials for molecules / reactions, now you can also ask the model to decide if it should trust the result or send to DFT.
+For each molecule you will get:
+- Which model to use (MACE-MPA-0, AIMNet2, Orb-v3)
+- A trust score
+- Flag to send to DFT if models disagree
+This way you can use your limited budget on DFT only where needed, and avoid silent failures (e.g. at transition states).
+On held out Transition1x reactions it showed 28% lower force error than the best baseline & trusted none of the 96 badly wrong answers.
+I've built this during this hackathon, it's called Fittest
+You can try it:
+In Claude Code: `claude mcp add --transport http fittest https://fittest-mcp.westus2.cloudapp.azure.com/mcp`
+On Claude Desktop / Cursor: https://fittest-mcp.westus2.cloudapp.azure.com/
+
+It is calibrated on C/H/N/O reaction chemistry and warns you if you are outside of this.
+Privacy: yes, we log anonymously all info about the calls (which tool was called, the counts, timing) and no molecules themselves are stored.
+
+Send me your molecules & tell me where it breaks 
+https://github.com/Pavel-Tk/fittest
+
+voice: pavel-v1-gemma4 · gemma-4-E4B-it + pavel LoRA (SFT epoch 2 + anti-AI DPO) · Q6_K + f16 LoRA
+
+Fact-check notes (lead): 28% = served force RMSE 0.206 vs 0.286 eV/Å (RESULTS.md); 0/96 = silent failures on eval. Rejected: round-1 variants (invented "trained it specifically", said calls are not logged, invented "calls to OpenAI"); round-2 v2 ("since the beginning of the hackathon"), v3 ("download the app").
