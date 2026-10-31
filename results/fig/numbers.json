@@ -219,7 +219,7 @@
     ]
   },
   "fig5": {
-    "source_schema": "trustswarm.ablation/v2",
+    "source_schema": "fittest.ablation/v2",
     "n_eval": 1485,
     "verdict_vs_other_arms": {
       "eval_force_rmse_post": "better",
@@ -449,7 +449,7 @@
           ]
         }
       },
-      "D_trustswarm": {
+      "D_fittest": {
         "eval_force_rmse_post": {
           "value": 0.206,
           "ci": [
@@ -512,7 +512,7 @@
       },
       {
         "name": "holdout_force_rmse_not_worse",
-        "source": "trustswarm",
+        "source": "fittest",
         "value": 0.6917768567266076,
         "limit": 1.3549763973049527,
         "comparison": "<=",
@@ -521,7 +521,7 @@
       },
       {
         "name": "holdout_rel_energy_mae_not_worse",
-        "source": "trustswarm",
+        "source": "fittest",
         "value": 0.36364658802588,
         "limit": 0.3139502423892693,
         "comparison": "<=",
