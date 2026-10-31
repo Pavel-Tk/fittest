@@ -126,6 +126,7 @@ def main(argv=None) -> None:
     ap.add_argument("--offspring", type=int, default=3)
     ap.add_argument("--seeds", default="0")
     ap.add_argument("--controls", default="", help="comma list: clone,random")
+    ap.add_argument("--control-seeds", default="0", help="seeds that also run the controls")
     ap.add_argument("--no-breeding", action="store_true")
     ap.add_argument("--python", default=sys.executable)
     ap.add_argument("--device", default="cpu")
@@ -154,7 +155,8 @@ def main(argv=None) -> None:
                                                              args.device, args.threads, args.parallel)
             runs[f"evolved_s{seed}"] = run_one(f"evolved_s{seed}", cfg, frames, base, scorer, bb, fac)
             write_outputs(out, runs, scorer, base_cfg, split_report)
-            for ctl in [c for c in args.controls.split(",") if c]:
+            ctls = [c for c in args.controls.split(",") if c] if str(seed) in args.control_seeds.split(",") else []
+            for ctl in ctls:
                 ccfg = (dataclasses.replace(cfg, breeding_mode="clone") if ctl == "clone"
                         else dataclasses.replace(cfg, selection_mode="random"))
                 fac = None if args.no_breeding else TorchFactory(out, f"{ctl}_s{seed}", args.python, args.frames,
