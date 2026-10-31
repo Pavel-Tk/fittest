@@ -129,6 +129,19 @@ def main(argv=None) -> None:
             return MACEWrapper(module, train=True)
 
         ft.load_base = load_parent_for_training  # finetune() builds its model through load_base
+        # A wrapped merged module has no BaseSpec, so the PEFT strategy checkpoint cannot be
+        # written; the merged model.pt (write_checkpoint below) is the shipped artefact anyway.
+        from nvalchemi.training import FineTuningStrategy
+
+        _save = FineTuningStrategy.save_checkpoint
+
+        def _save_or_skip(self, *a, **k):
+            try:
+                return _save(self, *a, **k)
+            except ValueError as exc:
+                print(f"  (PEFT strategy checkpoint skipped for an inherited model: {exc})", flush=True)
+
+        FineTuningStrategy.save_checkpoint = _save_or_skip
 
     base_acc = ft.alchemi_accuracy(parent_model, ft.holdout_batches(hold, parent_model.model_config.neighbor_config, device))
     del parent_model
