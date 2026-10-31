@@ -555,8 +555,16 @@ def test_defect_14_no_user_data_in_server_logs(tmp_path, caplog):
         call(srv, "check_structures", {"structures": "Zq9 0 0 0"})
     assert "secret" not in caplog.text and "Zq9" not in caplog.text and "Traceback" not in caplog.text
     caddy = (REPO / "deploy" / "Caddyfile").read_text()
-    for h in ("X-Forwarded-For", "X-Real-IP", "Forwarded", "remote_ip", "client_ip"):
-        assert h in caddy
+    # header keys must be in Go's canonical form (X-Real-Ip, not X-Real-IP) or the filter never matches
+    assert "X-Real-IP" not in caddy
+    # every field is deleted twice: in the global default logger (journal: error logs, unmapped hosts)
+    # and in the site's access log
+    for h in ("X-Forwarded-For", "X-Real-Ip", "Forwarded", "Cf-Connecting-Ip", "True-Client-Ip",
+              "remote_ip", "client_ip"):
+        assert caddy.count(f"request>{h if h.endswith('_ip') else 'headers>' + h} delete") == 2, h
+    assert "log default" in caddy
+    # unmapped hosts (bare IP, unknown Host) are refused without logging
+    assert "http:// {" in caddy and "https:// {" in caddy and caddy.count("log_skip") == 2
 
 
 def test_defect_15_links_versions_ports(tmp_path, monkeypatch):
