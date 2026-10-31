@@ -1,0 +1,1 @@
+cd /content/trustswarm && mkdir -p results data /content/logs/alc_screen && python3 scripts/screen_alchemi.py --split pool --max-frames 200 --every 10 --n-steps 50 --score-labels --log-dir /content/logs/alc_screen 2>&1

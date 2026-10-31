@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "trustswarm"
+version = "0.1.0"
+description = "A collective of agents that decides which MLIP to trust, where, and repairs it where none can be."
+readme = "docs/DESIGN.md"
+license = { text = "MIT" }
+authors = [{ name = "Pavel Tkachyk" }]
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.24",
+    "scipy>=1.10",
+    "scikit-learn>=1.3",
+    "h5py>=3.8",
+    "matplotlib>=3.7",
+]
+
+[project.optional-dependencies]
+service = ["fastapi>=0.110", "uvicorn>=0.27", "httpx>=0.27", "ase>=3.22"]
+dev = ["pytest>=7.4"]
+
+[tool.setuptools.packages.find]
+include = ["trustswarm*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
