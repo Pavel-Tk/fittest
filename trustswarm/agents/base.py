@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Iterator
 from typing import Any, ClassVar
 
 import numpy as np
@@ -39,3 +40,18 @@ class Agent(ABC):
 def to_list(a: np.ndarray, decimals: int = 6) -> list[Any]:
     """Arrays → rounded nested lists for JSON payloads."""
     return np.round(np.asarray(a, dtype=float), decimals).tolist()
+
+
+def batch_payload(rows: list[dict[str, Any]], **shared: Any) -> dict[str, Any]:
+    """Column-wise batch: ``{"uid": [...], "<key>": [...], **shared}``.
+
+    High-volume kinds (``prediction``, ``pass``, ``verdict``) are posted one batch per agent
+    step — a model predicts a batch, not a molecule — which keeps the audit log compact."""
+    keys = list(rows[0]) if rows else ["uid"]
+    return {**shared, **{k: [r[k] for r in rows] for k in keys}}
+
+
+def iter_rows(payload: dict[str, Any], keys: tuple[str, ...]) -> Iterator[tuple[int, dict[str, Any]]]:
+    """Inverse of :func:`batch_payload`: yields ``(index, row)`` for the requested keys."""
+    for i in range(len(payload["uid"])):
+        yield i, {k: payload[k][i] for k in keys}

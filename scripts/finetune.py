@@ -25,9 +25,9 @@ Pipeline
    what LoRA adds and energies are on one scale. The fit uses training frames only.
 4. LoRA fine-tune (e3nn layout, recipe of ALCHEMI example intermediate/08) on energy + forces.
 5. Acceptance: ``evaluate_accuracy`` for base(+E0) and fine-tuned on the held-out labelled
-   slice, ``build_acceptance_report`` with
-   ``max_from_scratch_ratio = 1.0`` (fine-tuned must not regress energy/atom MAE or force MAE
-   versus base) and ``max_forces_mae = WRONG_F``. ``report.accepted`` -> ``shipped``.
+   slice, ``build_acceptance_report`` with ``max_from_scratch_ratio = --max-ratio`` (1.0) and
+   the base model as baseline: fine-tuned must not regress energy/atom MAE *or* force MAE.
+   ``report.accepted`` -> ``shipped``.
 6. Predict E/F for ``--predict-uids`` (default all frames) with the *reloaded* checkpoint and
    write ``trustswarm.cache.save_predictions(--out, model=...)``.
 
@@ -64,6 +64,7 @@ import json
 import math
 import os
 import random
+import shutil
 import sys
 import time
 from collections import defaultdict
@@ -103,7 +104,7 @@ LORA_EXTRA_TRAINABLE = (
     "main.model.interactions.*.density_fn.layer0.weight",
 )
 LAST_LAYERS_TRAINABLE = ("main.model.products.*", "main.model.readouts.*")
-ENERGY_WEIGHT, FORCE_WEIGHT, HUBER_DELTA = 1.0, 10.0, 0.01  # defaults of --energy/--force-weight
+ENERGY_WEIGHT, FORCE_WEIGHT, HUBER_DELTA = 10.0, 10.0, 0.01  # defaults of --energy/--force-weight
 WEIGHT_DECAY = 1e-4
 LR_FLOOR_FRACTION = 0.05  # cosine decay to 5 % of the peak learning rate
 
@@ -432,11 +433,16 @@ def finetune(checkpoint: str, e0: dict[int, float], train: Sequence[Frame], args
     return tuned, info
 
 
-def acceptance(base_acc, tuned_acc, name: str) -> tuple[bool, dict]:
+def acceptance(base_acc, tuned_acc, name: str, max_ratio: float) -> tuple[bool, dict]:
+    """ALCHEMI acceptance report. The bar is the toolkit's ``max_from_scratch_ratio`` with the
+    *base model* (same refitted E0s, same hold-out batches) as the baseline: the worst of
+    MAE_tuned / MAE_base over energy-per-atom and forces must be <= ``max_ratio``, i.e. the
+    repair must not trade energies for forces or vice versa. No absolute bar: the Curator
+    replaces the worst model, so "better than what it replaces" is the shipping criterion."""
     from nvalchemi.training.distillation.evaluation import (AcceptanceThresholds, StudentEvaluation,
                                                             build_acceptance_report)
 
-    thresholds = AcceptanceThresholds(max_forces_mae=WRONG_F, max_from_scratch_ratio=1.0)
+    thresholds = AcceptanceThresholds(max_from_scratch_ratio=max_ratio)
     report = build_acceptance_report(
         [StudentEvaluation(name=name, accuracy=tuned_acc, baseline_accuracy=base_acc, weights="raw")],
         thresholds)
@@ -445,7 +451,7 @@ def acceptance(base_acc, tuned_acc, name: str) -> tuple[bool, dict]:
                "passed": bool(c.passed), "detail": c.detail} for c in report.verdicts[0].checks]
     return accepted, {"verdict": "pass" if accepted else "fail", "accepted": accepted,
                       "checks": checks,
-                      "thresholds": {"max_forces_mae": WRONG_F, "max_from_scratch_ratio": 1.0},
+                      "thresholds": {"max_from_scratch_ratio": max_ratio},
                       "baseline": "base MACE-MPA-0 with the same refitted E0s",
                       "alchemi_report": report.to_dict()}
 
@@ -473,6 +479,10 @@ def run_one(*, name: str, seed: int, frames: list[Frame], train: list[Frame], ho
     device = torch.device(args.device)
     t_start = time.perf_counter()
     print(f"\n=== {name}: seed {seed}, {len(train)} train / {len(hold)} hold-out frames ===", flush=True)
+    if ckpt.exists():
+        if not (ckpt / mace_lora.MANIFEST_FILE).exists() and any(ckpt.iterdir()):
+            raise FileExistsError(f"{ckpt} exists and is not a {mace_lora.FORMAT} checkpoint; refusing to overwrite")
+        shutil.rmtree(ckpt)  # a previous run of ours: start clean (no stale PEFT checkpoint indices)
     tuned, info = finetune(BASE_CHECKPOINTS[args.model], e0, train, args, seed, ckpt)
 
     manifest = {"base_model": args.model, "base_checkpoint": BASE_CHECKPOINTS[args.model],
@@ -486,7 +496,7 @@ def run_one(*, name: str, seed: int, frames: list[Frame], train: list[Frame], ho
     # Everything downstream uses the checkpoint as shipped (reload == what BatchedMACE serves).
     shipped_model = mace_lora.load_mace_lora(ckpt, device=device, enable_cueq=use_cueq(args.cueq, device))
     tuned_acc = alchemi_accuracy(shipped_model, holdout_batches(hold, shipped_model.model_config.neighbor_config, device))
-    accepted, report = acceptance(base_eval["alchemi"], tuned_acc, name)
+    accepted, report = acceptance(base_eval["alchemi"], tuned_acc, name, args.max_ratio)
     E_h, F_h, _ = predict(shipped_model, hold, device)
     E_t, F_t, _ = predict(shipped_model, train, device)
     after = {"holdout": error_metrics(hold, E_h, F_h), "train": error_metrics(train, E_t, F_t),
@@ -567,7 +577,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     ap.add_argument("--out", default=f"data/preds/{CURATED_MODEL}.npz")
     ap.add_argument("--ckpt", default=f"data/ckpt/{CURATED_MODEL}")
     ap.add_argument("--name", default=CURATED_MODEL, help="model name stored in the predictions file")
-    ap.add_argument("--epochs", type=int, default=60)
+    ap.add_argument("--epochs", type=int, default=40)
     ap.add_argument("--lr", type=float, default=1e-3)
     ap.add_argument("--batch-size", type=int, default=16)
     ap.add_argument("--energy-weight", type=float, default=ENERGY_WEIGHT,
@@ -579,6 +589,8 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     ap.add_argument("--seed", type=int, default=0, help="training seed (LoRA init, shuffling)")
     ap.add_argument("--split-seed", type=int, default=0, help="seed of the by-reaction hold-out split")
     ap.add_argument("--holdout-fraction", type=float, default=0.15)
+    ap.add_argument("--max-ratio", type=float, default=1.0,
+                    help="acceptance: worst MAE ratio fine-tuned/base over energy/atom and forces")
     ap.add_argument("--predict-uids", default="all", help="'all', 'labelled', or a JSON uid list")
     ap.add_argument("--predict-max-atoms", type=int, default=4096, help="atoms per inference batch")
     ap.add_argument("--seeds", default=None,

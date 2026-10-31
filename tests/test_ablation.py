@@ -7,9 +7,13 @@ import shutil
 from pathlib import Path
 from typing import Any
 
+import numpy as np
+import pytest
 from conftest import SMALL_CFG
-from trustswarm.ablation import (AblationConfig, arm_specs, build_trustswarm, plot_ablation,
-                                 prepare_data, run_ablation)
+
+from trustswarm.ablation import (AblationConfig, arm_specs, auroc_mann_whitney, brier, build_trustswarm,
+                                 expected_calibration_error, plot_ablation, prepare_data,
+                                 run_ablation, trustswarm_score)
 from trustswarm.agents import Calibrator, ModelAgent, NullFinetune, ReplayFinetune
 from trustswarm.blackboard import ORACLE_RESULT, Blackboard, Event, load_jsonl
 from trustswarm.cache import load_models, load_predictions
@@ -55,11 +59,57 @@ def test_artifacts_written(ablation_run: dict[str, Any], tmp_path: Path) -> None
     assert len(log) == ablation_run["results"]["arms"]["D_trustswarm"]["blackboard"]["n_events"]
     assert [e.id for e in log] == list(range(len(log)))
     snap = json.loads((out / "trust_snapshot.json").read_text())
-    assert set(snap) == {"models", "tau", "sigma_edges", "fbar_edges", "p_correct", "counts",
-                         "reputation", "wrong_thresholds", "budget", "created"}
+    assert set(snap) == {"models", "candidates", "tau", "sigma_edges", "fbar_edges", "p_correct",
+                         "counts", "reputation", "wrong_thresholds", "budget", "created"}
     assert snap["models"] == list(SMALL_CFG.hetero_models)
+    assert snap["candidates"] == [*SMALL_CFG.hetero_models, "consensus"]
+    # the audit log never carries arrays: forces, labels and coordinates are summarised
+    for e in log:
+        for key in ("forces", "F", "R"):
+            if key in e.payload:
+                assert set(e.payload[key]) == {"omitted", "shape"}, (e.kind, key)
     plot_ablation(ablation_run["results"], tmp_path / "ablation.png")
     assert (tmp_path / "ablation.png").stat().st_size > 10_000
+
+
+def test_calibration_and_silent_failure_metrics(ablation_run: dict[str, Any]) -> None:
+    for name, arm in ablation_run["results"]["arms"].items():
+        m = arm["metrics"]
+        for key in ("ece_eval", "brier_eval", "silent_failures_pool", "silent_failures_eval"):
+            assert m[key]["value"] is not None and 0.0 <= m[key]["value"] <= 1.0, (name, key)
+
+
+def test_expected_calibration_error_and_brier() -> None:
+    y = np.array([0, 0, 1, 1], dtype=bool)
+    assert expected_calibration_error(np.array([0.0, 0.0, 1.0, 1.0]), y) == 0.0
+    assert expected_calibration_error(np.full(4, 0.5), y) == pytest.approx(0.0)  # one bin, 0.5 vs 0.5
+    assert expected_calibration_error(np.array([0.9, 0.9, 0.9, 0.9]), y) == pytest.approx(0.4)
+    assert brier(np.array([1.0, 0.0]), np.array([1, 1])) == pytest.approx(0.5)
+
+
+def test_fast_auroc_matches_sklearn() -> None:
+    from sklearn.metrics import roc_auc_score
+    rng = np.random.default_rng(0)
+    for _ in range(20):
+        y = rng.random(200) < 0.3
+        s = np.round(rng.normal(size=200) + y, 1)  # rounding creates ties
+        assert auroc_mann_whitney(y, s) == pytest.approx(roc_auc_score(y, s), abs=1e-12)
+    assert auroc_mann_whitney(np.zeros(5, bool), np.arange(5.0)) is None
+
+
+def test_trustswarm_score_is_sigma_order_unless_skeptic_speaks() -> None:
+    uids = ["a", "b", "c", "d"]
+    sigma = {"a": 0.1, "b": 0.2, "c": 0.3, "d": 0.4}
+
+    def plateau(s: float) -> float:  # an isotonic fit with a flat step
+        return 0.2 if s < 0.35 else 0.8
+
+    plain = trustswarm_score(uids, sigma, {}, plateau)
+    assert sorted(uids, key=plain.get) == ["a", "b", "c", "d"]  # ties broken by σ
+    vetoed = trustswarm_score(uids, sigma, {"a": 0.9}, plateau)
+    assert max(uids, key=vetoed.get) == "a"  # the Skeptic's p_S lifts a vetoed system
+    fallback = trustswarm_score(uids, sigma, {}, lambda s: None)
+    assert sorted(uids, key=fallback.get) == ["a", "b", "c", "d"]
 
 
 def test_finetune_replay_shipped_and_scored(ablation_run: dict[str, Any]) -> None:

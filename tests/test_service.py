@@ -50,6 +50,15 @@ def test_disagreement_flags_and_lowers_trust(snapshot):
     assert res["bucket"][0] == 3 and res["trust"] < 0.5
 
 
+def test_consensus_candidate_serves_ensemble_mean(snapshot):
+    snapshot.candidates = ["a", "b", "c", "consensus"]
+    snapshot.p_correct["consensus"] = [[0.99] * 3] * 4
+    preds = {"a": fake(1.0), "b": fake(1.2), "c": fake(0.8)}
+    res = score([WATER], preds, snapshot)[0]
+    assert res["recommended_model"] == "consensus" and res["trust"] == pytest.approx(0.99)
+    np.testing.assert_allclose(res["served_forces"], -np.asarray(WATER["R"]), atol=1e-12)
+
+
 def test_bad_input_rejected(snapshot):
     with pytest.raises(ValueError):
         score([{"Z": [1, 1], "R": [[0, 0, 0]]}], {m: fake(1.0) for m in "abc"}, snapshot)

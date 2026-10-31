@@ -15,7 +15,7 @@ TrustSwarm run (``results/trust_snapshot.json``). Nothing here needs labels.
 Response per system::
 
     {"sigma_F": 0.12, "sigma_F_max": 0.40, "flagged": false, "trust": 0.83,
-     "recommended_model": "aimnet2", "bucket": [1, 0],
+     "recommended_model": "aimnet2" | "consensus", "bucket": [1, 0], "served_forces": [[...]],
      "per_model": {"aimnet2": {"energy": -2081.2, "max_force": 0.31}, ...}}
 """
 
@@ -32,6 +32,8 @@ import numpy as np
 
 from trustswarm.signals import force_spread
 
+CONSENSUS = "consensus"  # the ensemble-mean candidate the Calibrator can recommend
+
 # A predictor maps (Z, R, batch) -> {"energy": (S,), "forces": (N,3)}; ModelClient fits.
 Predictor = Callable[[np.ndarray, np.ndarray, np.ndarray], dict]
 
@@ -46,16 +48,18 @@ class TrustSnapshot:
     fbar_edges: list[float]
     p_correct: dict[str, list[list[float]]]
     counts: dict[str, list[list[int]]] = field(default_factory=dict)
+    candidates: list[str] = field(default_factory=list)  # models + "consensus" (ensemble mean)
     meta: dict = field(default_factory=dict)
 
     @classmethod
     def load(cls, path: str | Path) -> "TrustSnapshot":
         d = json.loads(Path(path).read_text())
-        known = {"models", "tau", "sigma_edges", "fbar_edges", "p_correct", "counts"}
+        known = {"models", "tau", "sigma_edges", "fbar_edges", "p_correct", "counts", "candidates"}
         return cls(models=list(d["models"]), tau=float(d["tau"]),
                    sigma_edges=[float(x) for x in d["sigma_edges"]],
                    fbar_edges=[float(x) for x in d["fbar_edges"]],
                    p_correct=d["p_correct"], counts=d.get("counts", {}),
+                   candidates=list(d.get("candidates", d["models"])),
                    meta={k: v for k, v in d.items() if k not in known})
 
     def bucket(self, sigma_F: float, mean_abs_fbar: float) -> tuple[int, int]:
@@ -92,16 +96,20 @@ def score(systems: Sequence[dict], predictors: dict[str, Predictor],
         s_mean, s_max = force_spread(F)
         fbar = float(np.linalg.norm(F.mean(axis=0), axis=-1).mean())
         bkt = snapshot.bucket(float(s_mean), fbar)
-        p_ok = {m: float(snapshot.p_correct[m][bkt[0]][bkt[1]]) for m in models
-                if m in snapshot.p_correct}
-        rec = max(p_ok, key=p_ok.get) if p_ok else models[0]
+        candidates = [c for c in (snapshot.candidates or models)
+                      if c in snapshot.p_correct and (c in models or c == CONSENSUS)]
+        p_ok = {c: float(snapshot.p_correct[c][bkt[0]][bkt[1]]) for c in candidates}
+        rec = max(p_ok, key=p_ok.get) if p_ok else CONSENSUS
+        energies = {m: float(np.asarray(outs[m]["energy"])[k]) for m in models}
         flagged = bool(s_mean >= snapshot.tau)
         results.append({
             "sigma_F": float(s_mean), "sigma_F_max": float(s_max), "mean_abs_fbar": fbar,
             "flagged": flagged, "trust": round(p_ok.get(rec, float("nan")), 4),
             "recommended_model": rec, "bucket": list(bkt),
             "action": "send to oracle / DFT" if flagged else f"use {rec}",
-            "per_model": {m: {"energy": float(np.asarray(outs[m]["energy"])[k]),
+            # the served answer: the recommended model's prediction, or the ensemble mean
+            "served_forces": (F.mean(axis=0) if rec == CONSENSUS else F[models.index(rec)]).tolist(),
+            "per_model": {m: {"energy": energies[m],
                               "max_force": float(np.linalg.norm(F[i], axis=-1).max())}
                           for i, m in enumerate(models)},
         })
@@ -141,8 +149,7 @@ def connect_models(models: Sequence[str], base_port: int, orb_python: str | None
     return clients
 
 
-def create_app(snapshot: TrustSnapshot, predictors: dict[str, Predictor]):
-    from fastapi import FastAPI, HTTPException
+try:  # request schema at module level so FastAPI can resolve the annotations
     from pydantic import BaseModel
 
     class System(BaseModel):
@@ -152,6 +159,12 @@ def create_app(snapshot: TrustSnapshot, predictors: dict[str, Predictor]):
 
     class TrustRequest(BaseModel):
         systems: list[System]
+except ImportError:  # the service extra is optional; score()/CLI work without it
+    TrustRequest = None
+
+
+def create_app(snapshot: TrustSnapshot, predictors: dict[str, Predictor]):
+    from fastapi import FastAPI, HTTPException
 
     app = FastAPI(title="TrustSwarm trust service", version="0.1.0")
 

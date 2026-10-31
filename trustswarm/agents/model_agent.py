@@ -7,7 +7,7 @@ from typing import ClassVar
 
 import numpy as np
 
-from trustswarm.agents.base import Agent, to_list
+from trustswarm.agents.base import Agent, batch_payload, to_list
 from trustswarm.agents.stream import TRIAGE
 from trustswarm.blackboard import (BID, FLAG, MODEL_UPDATE, ORACLE_RESULT, PLANT, PREDICTION,
                                    REPUTATION, SYSTEM, Blackboard, Event)
@@ -52,8 +52,7 @@ class ModelAgent(Agent):
             self._phase_of[p["uid"]] = p["phase"]
             if p["role"] == "reactant":
                 self._reactant_uid[p["reaction"]] = p["uid"]
-        for e in arrivals:
-            self._predict(bb, e.payload["uid"])
+        self._predict(bb, [e.payload["uid"] for e in arrivals])
 
         for e in events:
             if e.kind == FLAG:
@@ -66,18 +65,21 @@ class ModelAgent(Agent):
                 self._on_update(bb, e)
         self._bid(bb)
 
-    def _predict(self, bb: Blackboard, uid: str) -> None:
-        if uid not in self._preds:
-            self.missing.append(uid)
-            return
-        energy = self._preds.energy[uid]
-        r_uid = self._reactant_uid.get(self._reaction_of[uid])
-        rel = energy - self._preds.energy[r_uid] if r_uid in self._preds else None
-        self.post(bb, PREDICTION, {
-            "uid": uid, "model": self.name, "weights": self._weights, "version": self._version,
-            "phase": self._phase_of[uid], "energy": energy, "rel_energy": rel,
-            "forces": to_list(self._preds.forces[uid]),
-        })
+    def _predict(self, bb: Blackboard, uids: list[str]) -> None:
+        """Post one ``prediction`` batch (column-wise) for the structures it can predict."""
+        rows = []
+        for uid in uids:
+            if uid not in self._preds:
+                self.missing.append(uid)
+                continue
+            energy = self._preds.energy[uid]
+            r_uid = self._reactant_uid.get(self._reaction_of[uid])
+            rel = energy - self._preds.energy[r_uid] if r_uid in self._preds else None
+            rows.append({"uid": uid, "phase": self._phase_of[uid], "energy": energy,
+                         "rel_energy": rel, "forces": to_list(self._preds.forces[uid])})
+        if rows:
+            self.post(bb, PREDICTION, batch_payload(rows, model=self.name, weights=self._weights,
+                                                    version=self._version))
 
     def _on_flag(self, e: Event) -> None:
         p = e.payload
@@ -103,8 +105,7 @@ class ModelAgent(Agent):
         self._preds = load_predictions(e.payload["predictions_path"])
         self._weights = str(e.payload["weights"])
         self._version += 1
-        for uid in sorted(self._reaction_of):
-            self._predict(bb, uid)
+        self._predict(bb, sorted(self._reaction_of))
 
     # --- bidding -------------------------------------------------------------------------
     def wrongness_estimate(self, sigma: float, deviation: float) -> float:

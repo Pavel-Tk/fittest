@@ -108,6 +108,25 @@ systems. LoRA fine-tune it (ALCHEMI 0.3.0-rc `FineTuningStrategy` + `LoRAConfig`
 oracle labels collected (pool frames only); acceptance report vs the base model on a held-out
 slice of oracle labels (NOT `eval`). Ship ⇔ report verdict passes; then re-predict.
 
+### CPU implementation additions (agents + event kinds)
+* `PoolStream` (`agents/stream.py`, author `stream`): passive source, no decisions. Posts
+  label-free `system` events {uid, reaction, formula, role, phase, Z, R}: pool reactions in one
+  chunk per triage round (`phase="triage"`), eval frames once after triage (`phase="serve"`;
+  served and scored, never labelled). Skeptic injects planted structures as `plant` (same
+  payload); agents treat `system` and `plant` identically.
+* `DisagreementMonitor` (`agents/monitor.py`, author `hook`): CPU twin of the hook; reads
+  `prediction` + `threshold`, posts `flag` per system (σ stats + per-model deviation d_m) and
+  batched `pass`. Holds systems until the first `threshold`.
+* `tick` (author `clock`): posted by `Blackboard.tick()`.
+* Batched kinds: `prediction` (one batch per ModelAgent step), `pass`, `verdict` are
+  column-wise `{uid: [...], key: [...], ...}`; verdicts reference prediction rows as
+  `[event_id, row]`. Calibrator candidates = models + `consensus` (ensemble mean); verdict
+  carries `trust` (bucket Beta), `risk` (isotonic P(served wrong | σ_F)), `recommended_model`.
+* Auction: bids sealed per round; Oracle pays top-k when the clock leaves the round; unused
+  allowance carries over (reported); `oracle_result` is the only label channel.
+* JSONL audit log: arrays (`forces`, `F`, `R`) are replaced by `{"omitted","shape"}` and floats
+  rounded; in-memory events keep the arrays.
+
 ## 5. Ablation (same oracle budget K = rounds × k)
 
 | Arm | Models | Uncertainty score | Skeptic | Bidding | Fine-tune |

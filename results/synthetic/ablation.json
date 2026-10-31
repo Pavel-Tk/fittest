@@ -1,5 +1,5 @@
 {
-  "schema": "trustswarm.ablation/v1",
+  "schema": "trustswarm.ablation/v2",
   "config": {
     "budget_per_round": 40,
     "rounds": 5,
@@ -66,7 +66,7 @@
         "auroc_pool": {
           "value": 0.6338050536420101,
           "ci": [
-            0.5601388464402787,
+            0.5601388464402788,
             0.7063038585048622
           ],
           "n": 800
@@ -75,7 +75,7 @@
           "value": 0.6529146419375449,
           "ci": [
             0.5778916626660412,
-            0.7217878979786525
+            0.7217878979786526
           ],
           "n": 800
         },
@@ -103,11 +103,19 @@
           ],
           "n": 800
         },
+        "silent_failures_pool": {
+          "value": 0.569620253164557,
+          "ci": [
+            0.3720168881506091,
+            0.7346938775510204
+          ],
+          "n": 79
+        },
         "auroc_eval": {
           "value": 0.5207707802820114,
           "ci": [
             0.43235800897808857,
-            0.6085895845448084
+            0.6085895845448085
           ],
           "n": 800
         },
@@ -118,6 +126,38 @@
             0.1756770890974739
           ],
           "n": 800
+        },
+        "ece_eval": {
+          "value": 0.017843641902258185,
+          "ci": [
+            0.005826743049803588,
+            0.08222247132672235
+          ],
+          "n": 800
+        },
+        "trusted_fraction_eval": {
+          "value": 1.0,
+          "ci": [
+            1.0,
+            1.0
+          ],
+          "n": 800
+        },
+        "brier_eval": {
+          "value": 0.16555999285956205,
+          "ci": [
+            0.13110643505119265,
+            0.199009725491708
+          ],
+          "n": 800
+        },
+        "silent_failures_eval": {
+          "value": 0.8333333333333334,
+          "ci": [
+            0.6664062500000002,
+            0.9423214285714285
+          ],
+          "n": 42
         },
         "eval_force_rmse_pre": {
           "value": 0.1605408144109255,
@@ -232,7 +272,7 @@
         "auroc_pool": {
           "value": 0.49061264822134387,
           "ci": [
-            0.45215176660407946,
+            0.4521517666040794,
             0.5313943143471573
           ],
           "n": 800
@@ -269,10 +309,18 @@
           ],
           "n": 800
         },
+        "silent_failures_pool": {
+          "value": 0.7088607594936709,
+          "ci": [
+            0.5824498014121801,
+            0.8028222364489971
+          ],
+          "n": 79
+        },
         "auroc_eval": {
           "value": 0.5151362547983733,
           "ci": [
-            0.4709567946360396,
+            0.47095679463603973,
             0.5532716600790514
           ],
           "n": 800
@@ -284,6 +332,38 @@
             0.09297975128402369
           ],
           "n": 800
+        },
+        "ece_eval": {
+          "value": 0.173119242288809,
+          "ci": [
+            0.13128976828954492,
+            0.22728159749696353
+          ],
+          "n": 800
+        },
+        "trusted_fraction_eval": {
+          "value": 1.0,
+          "ci": [
+            1.0,
+            1.0
+          ],
+          "n": 800
+        },
+        "brier_eval": {
+          "value": 0.19960111124268873,
+          "ci": [
+            0.1434464771902996,
+            0.2554240255444795
+          ],
+          "n": 800
+        },
+        "silent_failures_eval": {
+          "value": 0.7142857142857143,
+          "ci": [
+            0.5908422459893049,
+            0.84625
+          ],
+          "n": 42
         },
         "eval_force_rmse_pre": {
           "value": 0.1605408144109255,
@@ -401,8 +481,8 @@
         "auroc_pool": {
           "value": 0.8193111236589498,
           "ci": [
-            0.7477945609526157,
-            0.8954981410975874
+            0.7477945609526158,
+            0.8954981410975873
           ],
           "n": 800
         },
@@ -410,7 +490,7 @@
           "value": 0.8545034492994922,
           "ci": [
             0.811934920397676,
-            0.8984506966381967
+            0.8984506966381965
           ],
           "n": 800
         },
@@ -438,6 +518,14 @@
           ],
           "n": 800
         },
+        "silent_failures_pool": {
+          "value": 0.26582278481012656,
+          "ci": [
+            0.11474238875878222,
+            0.4409925558312654
+          ],
+          "n": 79
+        },
         "auroc_eval": {
           "value": 0.7728041503553646,
           "ci": [
@@ -453,6 +541,38 @@
             0.8737684581267988
           ],
           "n": 800
+        },
+        "ece_eval": {
+          "value": 0.0964805312993021,
+          "ci": [
+            0.05496491115313143,
+            0.14725233686969263
+          ],
+          "n": 800
+        },
+        "trusted_fraction_eval": {
+          "value": 0.88,
+          "ci": [
+            0.8362187500000001,
+            0.9225
+          ],
+          "n": 800
+        },
+        "brier_eval": {
+          "value": 0.11653268634971621,
+          "ci": [
+            0.06998383475904603,
+            0.16533016735285389
+          ],
+          "n": 800
+        },
+        "silent_failures_eval": {
+          "value": 0.5238095238095238,
+          "ci": [
+            0.25,
+            0.7250568181818181
+          ],
+          "n": 42
         },
         "eval_force_rmse_pre": {
           "value": 0.1605408144109255,
@@ -571,15 +691,15 @@
           "value": 0.8585881989496448,
           "ci": [
             0.813582564824489,
-            0.9022960975060641
+            0.9022960975060642
           ],
           "n": 800
         },
         "auroc_common": {
           "value": 0.8564007253531578,
           "ci": [
-            0.8120758435374825,
-            0.9005708148290114
+            0.8120758435374824,
+            0.9005708148290115
           ],
           "n": 800
         },
@@ -607,10 +727,18 @@
           ],
           "n": 800
         },
+        "silent_failures_pool": {
+          "value": 0.0,
+          "ci": [
+            0.0,
+            0.0
+          ],
+          "n": 236
+        },
         "auroc_eval": {
           "value": 0.82235326148309,
           "ci": [
-            0.7646509416957621,
+            0.764650941695762,
             0.8728007508587352
           ],
           "n": 800
@@ -622,6 +750,38 @@
             0.6785590453892607
           ],
           "n": 800
+        },
+        "ece_eval": {
+          "value": 0.3352397432274985,
+          "ci": [
+            0.2686777338608589,
+            0.39979916307023095
+          ],
+          "n": 800
+        },
+        "trusted_fraction_eval": {
+          "value": 0.0,
+          "ci": [
+            0.0,
+            0.0
+          ],
+          "n": 800
+        },
+        "brier_eval": {
+          "value": 0.33922157709571577,
+          "ci": [
+            0.2793154252248372,
+            0.3970755863860199
+          ],
+          "n": 800
+        },
+        "silent_failures_eval": {
+          "value": 0.0,
+          "ci": [
+            0.0,
+            0.0
+          ],
+          "n": 297
         },
         "eval_force_rmse_pre": {
           "value": 0.355961778325982,
@@ -746,8 +906,8 @@
         "auroc_common": {
           "value": 0.9298201459740963,
           "ci": [
-            0.9028115394744957,
-            0.956774167881343
+            0.9028115394744958,
+            0.9567741678813428
           ],
           "n": 800
         },
@@ -775,10 +935,18 @@
           ],
           "n": 800
         },
+        "silent_failures_pool": {
+          "value": 0.0,
+          "ci": [
+            0.0,
+            0.0
+          ],
+          "n": 42
+        },
         "auroc_eval": {
           "value": 0.9057310003911946,
           "ci": [
-            0.8744276639738118,
+            0.8744276639738119,
             0.9351588292609095
           ],
           "n": 800
@@ -790,6 +958,38 @@
             0.9450850730002415
           ],
           "n": 800
+        },
+        "ece_eval": {
+          "value": 0.10572406694712816,
+          "ci": [
+            0.07857855895999952,
+            0.13851156872450834
+          ],
+          "n": 800
+        },
+        "trusted_fraction_eval": {
+          "value": 0.8425,
+          "ci": [
+            0.79371875,
+            0.885
+          ],
+          "n": 800
+        },
+        "brier_eval": {
+          "value": 0.12539872552143055,
+          "ci": [
+            0.09449870341707331,
+            0.1568330257423034
+          ],
+          "n": 800
+        },
+        "silent_failures_eval": {
+          "value": 0.0,
+          "ci": [
+            0.0,
+            0.0
+          ],
+          "n": 16
         },
         "eval_force_rmse_pre": {
           "value": 0.16433566194746546,
@@ -891,13 +1091,13 @@
         "aimnet2",
         "orb"
       ],
-      "score": "sigma_F (+ reputation bids)",
+      "score": "max(isotonic P(wrong | \u03c3_F), Skeptic p_S); ties by \u03c3_F",
       "blackboard": {
-        "n_events": 16120,
+        "n_events": 3785,
         "path": "results\\synthetic\\blackboard_armD.jsonl"
       },
       "status": "ok",
-      "served": "Calibrator recommended model",
+      "served": "Calibrator recommendation (a model or the consensus)",
       "oracle_calls": 200,
       "oracle_calls_per_round": {
         "0": 40,
@@ -908,106 +1108,146 @@
       },
       "metrics": {
         "auroc_pool": {
-          "value": 0.8597776178728069,
+          "value": 0.8967261576879292,
           "ci": [
-            0.8077586533772537,
-            0.9033549156154355
+            0.8522530834481874,
+            0.9363795193501543
           ],
           "n": 800
         },
         "auroc_common": {
-          "value": 0.9298201459740963,
+          "value": 0.931065636716809,
           "ci": [
-            0.9028115394744957,
-            0.956774167881343
+            0.9040328572989145,
+            0.9569040902580153
           ],
           "n": 800
         },
         "spearman_pool": {
-          "value": 0.6968673154176804,
+          "value": 0.8570762844941946,
           "ci": [
-            0.588811920765752,
-            0.7906240364293784
+            0.7999307748646596,
+            0.8995222432352633
           ],
           "n": 800
         },
         "recall_at_k": {
-          "value": 0.609375,
+          "value": 0.6609195402298851,
           "ci": [
-            0.4971034645726542,
-            0.7100196078431372
+            0.5502760853008378,
+            0.78125
           ],
-          "n": 192
+          "n": 174
         },
         "served_wrong_rate_pool": {
-          "value": 0.24,
+          "value": 0.2175,
           "ci": [
-            0.18625,
-            0.29628125
+            0.16125,
+            0.275
           ],
           "n": 800
         },
-        "auroc_eval": {
-          "value": 0.7061247362869199,
+        "silent_failures_pool": {
+          "value": 0.1,
           "ci": [
-            0.6311015424748393,
-            0.7703437178796857
+            0.030746268656716442,
+            0.19233870967741934
+          ],
+          "n": 60
+        },
+        "auroc_eval": {
+          "value": 0.8395518207282913,
+          "ci": [
+            0.7855125979091815,
+            0.8895618332299627
           ],
           "n": 800
         },
         "spearman_eval": {
-          "value": 0.302170188905822,
+          "value": 0.7499188826857541,
           "ci": [
-            0.17402659885275715,
-            0.41457386921004846
+            0.6641459914577417,
+            0.8227054721037869
           ],
           "n": 800
         },
-        "eval_force_rmse_pre": {
-          "value": 0.17133913254308894,
+        "ece_eval": {
+          "value": 0.180997365275967,
           "ci": [
-            0.1551225394101636,
-            0.1886040914301305
+            0.14412009044980448,
+            0.23317943013907
+          ],
+          "n": 800
+        },
+        "trusted_fraction_eval": {
+          "value": 0.8975,
+          "ci": [
+            0.85625,
+            0.9325312499999999
+          ],
+          "n": 800
+        },
+        "brier_eval": {
+          "value": 0.18408596750314615,
+          "ci": [
+            0.16986730520308274,
+            0.19875782779997547
+          ],
+          "n": 800
+        },
+        "silent_failures_eval": {
+          "value": 0.23529411764705882,
+          "ci": [
+            0.03328125000000005,
+            0.4642857142857143
+          ],
+          "n": 34
+        },
+        "eval_force_rmse_pre": {
+          "value": 0.16666876538810668,
+          "ci": [
+            0.15069529591435257,
+            0.18195189068694187
           ],
           "n": 800
         },
         "eval_rel_e_mae_pre": {
-          "value": 0.11070616184540348,
+          "value": 0.10813111123424672,
           "ci": [
-            0.0991604627416925,
-            0.12310593012343553
+            0.09577272943918996,
+            0.12144525456113976
           ],
           "n": 800
         },
         "eval_wrong_rate_pre": {
-          "value": 0.21,
+          "value": 0.2125,
           "ci": [
-            0.15875,
-            0.26125
+            0.16118750000000007,
+            0.26503125
           ],
           "n": 800
         },
         "eval_force_rmse_post": {
-          "value": 0.17218095840913442,
+          "value": 0.15179517838444126,
           "ci": [
-            0.15602943343986583,
-            0.187914685800376
+            0.13606499410082698,
+            0.16644178055029063
           ],
           "n": 800
         },
         "eval_rel_e_mae_post": {
-          "value": 0.10991560515079023,
+          "value": 0.09587784703277588,
           "ci": [
-            0.09900436357968934,
-            0.12265009976965736
+            0.08507972314469779,
+            0.10633258881508036
           ],
           "n": 800
         },
         "eval_wrong_rate_post": {
-          "value": 0.21625,
+          "value": 0.17625,
           "ci": [
-            0.16375,
-            0.26878124999999997
+            0.12746875000000002,
+            0.2275
           ],
           "n": 800
         },
@@ -1030,29 +1270,29 @@
         "F0.1_E0.087": {
           "wrong_f": 0.1,
           "wrong_e": 0.087,
-          "auroc_pool": 0.7889162134307494,
+          "auroc_pool": 0.9056020733652312,
           "auroc_common": 0.9962358845671268,
-          "auroc_eval": 0.6127903075151218,
-          "recall_at_k": 0.2573189522342065,
-          "served_wrong_rate_pool": 0.81125
+          "auroc_eval": 0.8657997532894738,
+          "recall_at_k": 0.29545454545454547,
+          "served_wrong_rate_pool": 0.715
         },
         "F0.25_E0.25": {
           "wrong_f": 0.25,
           "wrong_e": 0.25,
-          "auroc_pool": 0.8597776178728069,
-          "auroc_common": 0.9298201459740963,
-          "auroc_eval": 0.7061247362869199,
-          "recall_at_k": 0.609375,
-          "served_wrong_rate_pool": 0.24
+          "auroc_pool": 0.8967261576879292,
+          "auroc_common": 0.931065636716809,
+          "auroc_eval": 0.8395518207282913,
+          "recall_at_k": 0.6609195402298851,
+          "served_wrong_rate_pool": 0.2175
         },
         "F0.4_E0.4": {
           "wrong_f": 0.4,
           "wrong_e": 0.4,
-          "auroc_pool": 0.9162646096992272,
-          "auroc_common": 0.9434299596025766,
-          "auroc_eval": 0.7661373873873873,
-          "recall_at_k": 0.8041237113402062,
-          "served_wrong_rate_pool": 0.12125
+          "auroc_pool": 0.9041125079906244,
+          "auroc_common": 0.9438666885031116,
+          "auroc_eval": 0.833416445035461,
+          "recall_at_k": 0.8076923076923077,
+          "served_wrong_rate_pool": 0.0975
         }
       },
       "finetune": {
@@ -1060,14 +1300,14 @@
         "shipped": true,
         "n_labels": 176,
         "ledger_force_rmse": {
-          "aimnet2": 0.32190248401652205,
-          "mace_mpa0": 0.6421667959930569,
-          "orb": 0.32994692076696197
+          "aimnet2": 0.320228909805105,
+          "mace_mpa0": 0.6433598063225816,
+          "orb": 0.3299387515605743
         },
         "report": {
           "mode": "replay",
           "n_labelled": 176,
-          "train_digest_requested": "2c6ad1f7c71c253c",
+          "train_digest_requested": "47550b42f1a8639c",
           "predictions_path": "data\\synthetic\\preds\\mace_lora_curated.npz",
           "acceptance_report": {
             "verdict": "pass",
@@ -1130,50 +1370,57 @@
   },
   "failures": [
     "D vs A_single: planted_caught not significantly better (diff +0.150, paired 95% CI [-0.167, +0.438])",
-    "D vs A_single: eval_force_rmse_post not significantly better (diff +0.012, paired 95% CI [-0.002, +0.023])",
+    "D vs A_single: ece_eval significantly WORSE (diff +0.163, paired 95% CI [+0.092, +0.181])",
+    "D vs A_single: brier_eval not significantly better (diff +0.019, paired 95% CI [-0.009, +0.049])",
     "D vs A_random: planted_caught not significantly better (diff +0.250, paired 95% CI [+0.000, +0.468])",
-    "D vs A_random: eval_force_rmse_post not significantly better (diff +0.012, paired 95% CI [-0.002, +0.023])",
-    "D vs B_seed: auroc_pool not significantly better (diff +0.040, paired 95% CI [-0.046, +0.113])",
-    "D vs B_seed: auroc_eval not significantly better (diff -0.067, paired 95% CI [-0.215, +0.067])",
-    "D vs B_seed: recall_at_k not significantly better (diff +0.001, paired 95% CI [-0.151, +0.131])",
+    "D vs A_random: ece_eval not significantly better (diff +0.008, paired 95% CI [-0.080, +0.099])",
+    "D vs A_random: brier_eval not significantly better (diff -0.016, paired 95% CI [-0.064, +0.037])",
+    "D vs B_seed: auroc_eval not significantly better (diff +0.067, paired 95% CI [-0.037, +0.164])",
+    "D vs B_seed: recall_at_k not significantly better (diff +0.052, paired 95% CI [-0.074, +0.163])",
     "D vs B_seed: planted_caught not significantly better (diff +0.000, paired 95% CI [-0.231, +0.233])",
-    "D vs B_seed: eval_force_rmse_post not significantly better (diff +0.012, paired 95% CI [-0.002, +0.023])",
-    "D vs B_mace_seeds: auroc_pool not significantly better (diff +0.001, paired 95% CI [-0.051, +0.050])",
-    "D vs B_mace_seeds: auroc_eval significantly WORSE (diff -0.116, paired 95% CI [-0.193, -0.036])",
+    "D vs B_seed: ece_eval significantly WORSE (diff +0.085, paired 95% CI [+0.009, +0.166])",
+    "D vs B_seed: brier_eval significantly WORSE (diff +0.068, paired 95% CI [+0.026, +0.109])",
+    "D vs B_mace_seeds: auroc_pool not significantly better (diff +0.038, paired 95% CI [-0.011, +0.084])",
+    "D vs B_mace_seeds: auroc_eval not significantly better (diff +0.017, paired 95% CI [-0.052, +0.085])",
     "D vs B_mace_seeds: planted_caught not significantly better (diff +0.100, paired 95% CI [-0.121, +0.347])",
-    "D vs C_collective: auroc_pool significantly WORSE (diff -0.078, paired 95% CI [-0.126, -0.039])",
-    "D vs C_collective: auroc_eval significantly WORSE (diff -0.200, paired 95% CI [-0.275, -0.137])",
-    "D vs C_collective: recall_at_k significantly WORSE (diff -0.135, paired 95% CI [-0.224, -0.047])",
+    "D vs B_mace_seeds: silent_failures_pool significantly WORSE (diff +0.100, paired 95% CI [+0.031, +0.192])",
+    "D vs B_mace_seeds: silent_failures_eval significantly WORSE (diff +0.235, paired 95% CI [+0.033, +0.464])",
+    "D vs C_collective: auroc_pool significantly WORSE (diff -0.041, paired 95% CI [-0.077, -0.006])",
+    "D vs C_collective: auroc_eval significantly WORSE (diff -0.066, paired 95% CI [-0.120, -0.018])",
+    "D vs C_collective: recall_at_k not significantly better (diff -0.083, paired 95% CI [-0.173, +0.018])",
     "D vs C_collective: planted_caught not significantly better (diff +0.050, paired 95% CI [+0.000, +0.154])",
-    "D vs C_collective: eval_force_rmse_post not significantly better (diff +0.008, paired 95% CI [-0.004, +0.019])"
+    "D vs C_collective: ece_eval significantly WORSE (diff +0.075, paired 95% CI [+0.021, +0.142])",
+    "D vs C_collective: brier_eval significantly WORSE (diff +0.059, paired 95% CI [+0.036, +0.082])",
+    "D vs C_collective: silent_failures_pool significantly WORSE (diff +0.100, paired 95% CI [+0.031, +0.192])",
+    "D vs C_collective: silent_failures_eval significantly WORSE (diff +0.235, paired 95% CI [+0.033, +0.464])"
   ],
   "comparisons": {
     "D_vs_A_single": {
       "auroc_pool": {
-        "diff": 0.2259725642307968,
+        "diff": 0.26292110404591906,
         "ci": [
-          0.12476525100139424,
-          0.3114172891907986
+          0.17221701099019315,
+          0.3552676458197496
         ],
         "higher_is_better": true,
         "d_significantly_better": true,
         "d_significantly_worse": false
       },
       "auroc_eval": {
-        "diff": 0.18535395600490845,
+        "diff": 0.31878104044627986,
         "ci": [
-          0.08665389938051121,
-          0.2782835972136855
+          0.22458808575317116,
+          0.4149483817801829
         ],
         "higher_is_better": true,
         "d_significantly_better": true,
         "d_significantly_worse": false
       },
       "recall_at_k": {
-        "diff": 0.31589673913043476,
+        "diff": 0.36744127936031984,
         "ci": [
-          0.133827482718285,
-          0.4734614875413037
+          0.18824288220148075,
+          0.538353528478365
         ],
         "higher_is_better": true,
         "d_significantly_better": true,
@@ -1190,42 +1437,82 @@
         "d_significantly_worse": false
       },
       "eval_force_rmse_post": {
-        "diff": 0.011640143998208924,
+        "diff": -0.008745636026484233,
         "ci": [
-          -0.0015694139912290643,
-          0.02311004264172434
+          -0.015306308117670338,
+          -0.0032121006587066334
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": true,
+        "d_significantly_worse": false
+      },
+      "ece_eval": {
+        "diff": 0.16315372337370881,
+        "ci": [
+          0.09219842246404632,
+          0.18100961719693073
         ],
         "higher_is_better": false,
         "d_significantly_better": false,
+        "d_significantly_worse": true
+      },
+      "brier_eval": {
+        "diff": 0.018525974643584103,
+        "ci": [
+          -0.009353385515709198,
+          0.0489751938659422
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": false,
+        "d_significantly_worse": false
+      },
+      "silent_failures_pool": {
+        "diff": -0.469620253164557,
+        "ci": [
+          -0.6684071170603072,
+          -0.23625420465610347
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": true,
+        "d_significantly_worse": false
+      },
+      "silent_failures_eval": {
+        "diff": -0.5980392156862746,
+        "ci": [
+          -0.7757255639097744,
+          -0.4089246809835045
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": true,
         "d_significantly_worse": false
       }
     },
     "D_vs_A_random": {
       "auroc_pool": {
-        "diff": 0.36916496965146306,
+        "diff": 0.4061135094665853,
         "ci": [
-          0.29287941341057433,
-          0.4318701370877187
+          0.3417649571185755,
+          0.4679089884474358
         ],
         "higher_is_better": true,
         "d_significantly_better": true,
         "d_significantly_worse": false
       },
       "auroc_eval": {
-        "diff": 0.19098848148854652,
+        "diff": 0.32441556592991794,
         "ci": [
-          0.11172517599197786,
-          0.27132682841378186
+          0.2545163585378832,
+          0.399172750203511
         ],
         "higher_is_better": true,
         "d_significantly_better": true,
         "d_significantly_worse": false
       },
       "recall_at_k": {
-        "diff": 0.39198369565217395,
+        "diff": 0.44352823588205903,
         "ci": [
-          0.26147045542536224,
-          0.5041756191432396
+          0.3194310428849903,
+          0.5723298398845018
         ],
         "higher_is_better": true,
         "d_significantly_better": true,
@@ -1242,42 +1529,82 @@
         "d_significantly_worse": false
       },
       "eval_force_rmse_post": {
-        "diff": 0.011640143998208924,
+        "diff": -0.008745636026484233,
         "ci": [
-          -0.0015694139912290643,
-          0.02311004264172434
+          -0.015306308117670338,
+          -0.0032121006587066334
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": true,
+        "d_significantly_worse": false
+      },
+      "ece_eval": {
+        "diff": 0.007878122987157982,
+        "ci": [
+          -0.07999648298911421,
+          0.09854039811972697
         ],
         "higher_is_better": false,
         "d_significantly_better": false,
+        "d_significantly_worse": false
+      },
+      "brier_eval": {
+        "diff": -0.015515143739542575,
+        "ci": [
+          -0.06436761159096155,
+          0.03707528769404374
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": false,
+        "d_significantly_worse": false
+      },
+      "silent_failures_pool": {
+        "diff": -0.6088607594936709,
+        "ci": [
+          -0.7593551745254135,
+          -0.41311056998557
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": true,
+        "d_significantly_worse": false
+      },
+      "silent_failures_eval": {
+        "diff": -0.4789915966386555,
+        "ci": [
+          -0.779330357142857,
+          -0.18785471743875834
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": true,
         "d_significantly_worse": false
       }
     },
     "D_vs_B_seed": {
       "auroc_pool": {
-        "diff": 0.040466494213857174,
+        "diff": 0.07741503402897942,
         "ci": [
-          -0.046458177634278605,
-          0.11253638580679802
+          0.013632823782347201,
+          0.13125020096356715
         ],
         "higher_is_better": true,
-        "d_significantly_better": false,
+        "d_significantly_better": true,
         "d_significantly_worse": false
       },
       "auroc_eval": {
-        "diff": -0.0666794140684448,
+        "diff": 0.06674767037292662,
         "ci": [
-          -0.2154142724196206,
-          0.06696544619211664
+          -0.03706501611459079,
+          0.1635624095336259
         ],
         "higher_is_better": true,
         "d_significantly_better": false,
         "d_significantly_worse": false
       },
       "recall_at_k": {
-        "diff": 0.0006793478260869179,
+        "diff": 0.052223888055972,
         "ci": [
-          -0.15096909181444118,
-          0.13111837424944375
+          -0.07374629049839382,
+          0.16250680962039982
         ],
         "higher_is_better": true,
         "d_significantly_better": false,
@@ -1294,42 +1621,82 @@
         "d_significantly_worse": false
       },
       "eval_force_rmse_post": {
-        "diff": 0.011640143998208924,
+        "diff": -0.008745636026484233,
         "ci": [
-          -0.0015694139912290643,
-          0.02311004264172434
+          -0.015306308117670338,
+          -0.0032121006587066334
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": true,
+        "d_significantly_worse": false
+      },
+      "ece_eval": {
+        "diff": 0.08451683397666489,
+        "ci": [
+          0.008560022410824764,
+          0.16639595791165832
         ],
         "higher_is_better": false,
         "d_significantly_better": false,
+        "d_significantly_worse": true
+      },
+      "brier_eval": {
+        "diff": 0.06755328115342994,
+        "ci": [
+          0.025775090931845813,
+          0.10894080635465911
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": false,
+        "d_significantly_worse": true
+      },
+      "silent_failures_pool": {
+        "diff": -0.16582278481012655,
+        "ci": [
+          -0.32734912414013756,
+          -0.03024003154128615
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": true,
+        "d_significantly_worse": false
+      },
+      "silent_failures_eval": {
+        "diff": -0.288515406162465,
+        "ci": [
+          -0.45811608734402853,
+          -0.11457589285714287
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": true,
         "d_significantly_worse": false
       }
     },
     "D_vs_B_mace_seeds": {
       "auroc_pool": {
-        "diff": 0.0011894189231621555,
+        "diff": 0.038137958738284405,
         "ci": [
-          -0.051380284288598976,
-          0.05043534159644059
+          -0.010706790229510451,
+          0.08392349890796724
         ],
         "higher_is_better": true,
         "d_significantly_better": false,
         "d_significantly_worse": false
       },
       "auroc_eval": {
-        "diff": -0.11622852519617011,
+        "diff": 0.017198559245201306,
         "ci": [
-          -0.19257974049064933,
-          -0.03643422746933301
+          -0.0522102746517762,
+          0.08502926033852186
         ],
         "higher_is_better": true,
         "d_significantly_better": false,
-        "d_significantly_worse": true
+        "d_significantly_worse": false
       },
       "recall_at_k": {
-        "diff": 0.21834935897435898,
+        "diff": 0.26989389920424406,
         "ci": [
-          0.10401613597773722,
-          0.3267337800766558
+          0.16139480284251753,
+          0.37897554560261915
         ],
         "higher_is_better": true,
         "d_significantly_better": true,
@@ -1346,46 +1713,86 @@
         "d_significantly_worse": false
       },
       "eval_force_rmse_post": {
-        "diff": -0.1837808199168476,
+        "diff": -0.20416659994154077,
         "ci": [
-          -0.2195635148307387,
-          -0.14914485772426958
+          -0.24097277962215646,
+          -0.16945632974085617
         ],
         "higher_is_better": false,
         "d_significantly_better": true,
         "d_significantly_worse": false
+      },
+      "ece_eval": {
+        "diff": -0.1542423779515315,
+        "ci": [
+          -0.21971816956064155,
+          -0.0770202328508327
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": true,
+        "d_significantly_worse": false
+      },
+      "brier_eval": {
+        "diff": -0.1551356095925696,
+        "ci": [
+          -0.22267063683035004,
+          -0.08676467821110126
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": true,
+        "d_significantly_worse": false
+      },
+      "silent_failures_pool": {
+        "diff": 0.1,
+        "ci": [
+          0.030746268656716442,
+          0.19233870967741934
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": false,
+        "d_significantly_worse": true
+      },
+      "silent_failures_eval": {
+        "diff": 0.23529411764705882,
+        "ci": [
+          0.03328125000000005,
+          0.4642857142857143
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": false,
+        "d_significantly_worse": true
       }
     },
     "D_vs_C_collective": {
       "auroc_pool": {
-        "diff": -0.07754343396565,
+        "diff": -0.04059489415052775,
         "ci": [
-          -0.12577475466212384,
-          -0.039313122376854
+          -0.07704667357162398,
+          -0.006383396342345392
         ],
         "higher_is_better": true,
         "d_significantly_better": false,
         "d_significantly_worse": true
       },
       "auroc_eval": {
-        "diff": -0.19960626410427473,
+        "diff": -0.06617917966290332,
         "ci": [
-          -0.27493627968055834,
-          -0.13729166418919805
+          -0.1203135553102504,
+          -0.0181573751533877
         ],
         "higher_is_better": true,
         "d_significantly_better": false,
         "d_significantly_worse": true
       },
       "recall_at_k": {
-        "diff": -0.13467261904761907,
+        "diff": -0.08312807881773399,
         "ci": [
-          -0.2238645830865573,
-          -0.04700248978309867
+          -0.17260630593755483,
+          0.018163605881629182
         ],
         "higher_is_better": true,
         "d_significantly_better": false,
-        "d_significantly_worse": true
+        "d_significantly_worse": false
       },
       "planted_caught": {
         "diff": 0.04999999999999999,
@@ -1398,14 +1805,54 @@
         "d_significantly_worse": false
       },
       "eval_force_rmse_post": {
-        "diff": 0.007845296461668955,
+        "diff": -0.012540483563024202,
         "ci": [
-          -0.004363157709090818,
-          0.01881478412612798
+          -0.02526066524602819,
+          -0.00038886153787790135
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": true,
+        "d_significantly_worse": false
+      },
+      "ece_eval": {
+        "diff": 0.07527329832883883,
+        "ci": [
+          0.020875049824474624,
+          0.14166771758738306
         ],
         "higher_is_better": false,
         "d_significantly_better": false,
-        "d_significantly_worse": false
+        "d_significantly_worse": true
+      },
+      "brier_eval": {
+        "diff": 0.0586872419817156,
+        "ci": [
+          0.03638408319890667,
+          0.08214338926076413
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": false,
+        "d_significantly_worse": true
+      },
+      "silent_failures_pool": {
+        "diff": 0.1,
+        "ci": [
+          0.030746268656716442,
+          0.19233870967741934
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": false,
+        "d_significantly_worse": true
+      },
+      "silent_failures_eval": {
+        "diff": 0.23529411764705882,
+        "ci": [
+          0.03328125000000005,
+          0.4642857142857143
+        ],
+        "higher_is_better": false,
+        "d_significantly_better": false,
+        "d_significantly_worse": true
       }
     }
   },
@@ -1420,5 +1867,5 @@
     "pool_eval_shared_formulas": 21,
     "planted_filter": "mace_mpa0 wrong (F>0.25, E>0.25)"
   },
-  "runtime_s": 28.1
+  "runtime_s": 57.5
 }

@@ -5,10 +5,10 @@ which it knows where the consensus was wrong), and the ``planted`` cases with la
 
 * Round 0: injects the planted structures (label-free) into the stream as ``plant`` events,
   together with their reactions' reactant frames so relative energies can be formed.
-* On every triage ``verdict`` with trust ≥ TRUST_HIGH: ``p_S`` = fraction of the k=7 nearest
+* On every ``verdict`` with trust ≥ TRUST_HIGH: ``p_S`` = fraction of the k=7 nearest
   references (standardised label-free descriptor) whose consensus was wrong; if
-  ``p_S > 0.5`` it posts ``veto`` and, every round until the system is revealed, a ``bid``
-  ``rep_S · p_S``.
+  ``p_S > 0.5`` it posts ``veto``. For triage systems it also bids ``rep_S · p_S`` every
+  round until the system is revealed; vetoes on served (eval) systems are advisory only.
 * Oracle results become new references (the reference set grows online).
 
 The Skeptic deliberately does **not** use its knowledge of which systems are planted when
@@ -24,7 +24,7 @@ from typing import Any, ClassVar
 import numpy as np
 
 from trustswarm import config
-from trustswarm.agents.base import Agent
+from trustswarm.agents.base import Agent, iter_rows
 from trustswarm.agents.stream import TRIAGE, structure_payload
 from trustswarm.blackboard import (BID, ORACLE_RESULT, PLANT, REPUTATION, SYSTEM, VERDICT, VETO,
                                    Blackboard, Event)
@@ -62,6 +62,9 @@ def reference_table(refs: Sequence[Frame], predictions: Mapping[str, Predictions
     return uids, np.array(X, dtype=float).reshape(len(uids), -1), np.array(y, dtype=bool)
 
 
+VERDICT_KEYS = ("uid", "phase", "trust", "sigma_F", "mean_abs_fbar")
+
+
 class Skeptic(Agent):
     subscriptions: ClassVar[frozenset[str]] = frozenset(
         {SYSTEM, PLANT, VERDICT, ORACLE_RESULT, REPUTATION})
@@ -90,7 +93,8 @@ class Skeptic(Agent):
         self._planted_posted = False
         self._geometry: dict[str, tuple[np.ndarray, np.ndarray]] = {}
         self._features: dict[str, tuple[float, float]] = {}
-        self._vetoed: dict[str, float] = {}
+        self._vetoed: dict[str, float] = {}  # uid -> p_S, any phase (bids: triage only)
+        self._phase: dict[str, str] = {}
         self._revealed: set[str] = set()
         self._last_bid_round: dict[str, int] = {}
         self._reputation = 0.5
@@ -115,13 +119,15 @@ class Skeptic(Agent):
             if e.kind in (SYSTEM, PLANT):
                 self._geometry[p["uid"]] = (np.asarray(p["Z"]), np.asarray(p["R"], dtype=float))
             elif e.kind == VERDICT:
-                self._audit(bb, p)
+                for _, row in iter_rows(p, VERDICT_KEYS):
+                    self._audit(bb, row)
             elif e.kind == ORACLE_RESULT:
                 self._learn(p)
             elif e.kind == REPUTATION and self.name in p["reputation"]:
                 self._reputation = float(p["reputation"][self.name])
         for uid in sorted(self._vetoed):
-            if uid in self._revealed or self._last_bid_round.get(uid) == bb.round:
+            if self._phase.get(uid) != TRIAGE or uid in self._revealed \
+                    or self._last_bid_round.get(uid) == bb.round:
                 continue
             self._last_bid_round[uid] = bb.round
             self.post(bb, BID, {"uid": uid, "value": self._reputation * self._vetoed[uid]})
@@ -134,13 +140,14 @@ class Skeptic(Agent):
     def _audit(self, bb: Blackboard, p: dict[str, Any]) -> None:
         uid = p["uid"]
         self._features[uid] = (float(p["sigma_F"]), float(p["mean_abs_fbar"]))
-        if p["phase"] != TRIAGE or uid in self._revealed or uid in self._vetoed \
+        self._phase[uid] = p["phase"]
+        if uid in self._revealed or uid in self._vetoed \
                 or p["trust"] < config.TRUST_HIGH or uid not in self._geometry:
             return
         p_s, nn = self.p_wrong(self._descriptor(uid))
         if p_s > config.VETO_P:
             self._vetoed[uid] = p_s
-            self.post(bb, VETO, {"uid": uid, "p_S": p_s, "trust": p["trust"],
+            self.post(bb, VETO, {"uid": uid, "phase": p["phase"], "p_S": p_s, "trust": p["trust"],
                                  "neighbours": [self._ref_uids[i] for i in nn]})
 
     def _learn(self, p: dict[str, Any]) -> None:

@@ -13,7 +13,7 @@ from typing import Any, ClassVar
 
 import numpy as np
 
-from trustswarm.agents.base import Agent
+from trustswarm.agents.base import Agent, batch_payload, iter_rows
 from trustswarm.blackboard import FLAG, PASS, PREDICTION, THRESHOLD, Blackboard, Event
 from trustswarm.signals import energy_spread, force_spread, mean_abs_force, model_deviations
 
@@ -34,6 +34,9 @@ class Measurement:
                 "mean_abs_fbar": self.mean_abs_fbar, "deviation": self.deviation,
                 "versions": self.versions, "tau": tau}
 
+    def pass_row(self, uid: str) -> dict[str, Any]:
+        return {"uid": uid, "phase": self.phase, "sigma_F": self.sigma_F}
+
 
 def measure(models: Sequence[str], preds: dict[str, dict[str, Any]]) -> Measurement:
     """σ statistics for one system from the latest prediction payload of each model."""
@@ -47,6 +50,9 @@ def measure(models: Sequence[str], preds: dict[str, dict[str, Any]]) -> Measurem
         deviation={m: float(d) for m, d in zip(models, model_deviations(forces))},
         versions={m: int(preds[m]["version"]) for m in models},
     )
+
+
+PREDICTION_KEYS = ("uid", "phase", "energy", "rel_energy", "forces")
 
 
 class DisagreementMonitor(Agent):
@@ -66,23 +72,30 @@ class DisagreementMonitor(Agent):
         tau_changed = False
         for e in events:
             if e.kind == PREDICTION:
-                uid, model = e.payload["uid"], e.payload["model"]
+                model = e.payload["model"]
                 if model not in self._models:
                     continue
-                self._latest.setdefault(uid, {})[model] = e.payload
-                if len(self._latest[uid]) == len(self._models):
-                    self._measured[uid] = measure(self._models, self._latest[uid])
-                    self._status[uid] = None  # (re-)measured: decide again
-            elif e.kind == THRESHOLD:
+                for _, row in iter_rows(e.payload, PREDICTION_KEYS):
+                    uid = row["uid"]
+                    self._latest.setdefault(uid, {})[model] = {**row, "version": e.payload["version"]}
+                    if len(self._latest[uid]) == len(self._models):
+                        self._measured[uid] = measure(self._models, self._latest[uid])
+                        self._status[uid] = None  # (re-)measured: decide again
+                continue
+            if e.kind == THRESHOLD:
                 tau_changed = tau_changed or e.payload["tau"] != self._tau
                 self._tau = float(e.payload["tau"])
         if self._tau is None:
             return  # no threshold yet: hold measurements until the Calibrator posts one
+        passes = []
         for uid in sorted(self._measured):
             m, status = self._measured[uid], self._status[uid]
             flagged = m.sigma_F >= self._tau
-            if status is None or (status == PASS and flagged and tau_changed):
-                kind = FLAG if flagged else PASS
-                if kind != status:
-                    self._status[uid] = kind
-                    self.post(bb, kind, m.payload(uid, self._tau))
+            if flagged and (status is None or (status == PASS and tau_changed)):
+                self._status[uid] = FLAG
+                self.post(bb, FLAG, m.payload(uid, self._tau))
+            elif not flagged and status is None:
+                self._status[uid] = PASS
+                passes.append(m.pass_row(uid))
+        if passes:  # passes are uneventful: one batch per step
+            self.post(bb, PASS, batch_payload(passes, tau=self._tau))

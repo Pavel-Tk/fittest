@@ -59,3 +59,12 @@ VETO_P: float = 0.5
 # --- Section 5: statistics ----------------------------------------------------------------
 N_BOOTSTRAP: int = 1000
 CI_LEVEL: float = 0.95
+
+# --- Revisions (coordinator, after the first synthetic run) -------------------------------
+CONSENSUS: str = "consensus"
+"""Served-answer candidate = ensemble mean of the model agents' predictions."""
+RISK_MIN_LABELLED: int = 20
+"""Below this many oracle labels the continuous risk score falls back to the σ rank."""
+SILENT_F: float = 0.4
+"""'Badly wrong' force RMSE [eV/Å] for the silent-failure metric."""
+ECE_BINS: int = 10

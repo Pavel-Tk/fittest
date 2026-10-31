@@ -8,7 +8,7 @@ Everything is run from the laptop with Git Bash; the VM is a shared Jupyter kern
 | Run a short (<60 s) python file in the kernel | `colab/cx.sh path/to/file.py 300` |
 | Start a detached job (anything longer) | `powershell -Command "wsl -d Ubuntu --cd /home/pavel -- bash /mnt/c/Software_projects/Workshops/science_claw/trustswarm/colab/jc.sh send -s tswarm start <name> --body-file /mnt/c/<path to .sh>"` |
 | Job status + log tail | same with `status <name> --tail 40` |
-| Block until done | same with `wait <name> --job-timeout 1500` |
+| Block until done | DO NOT use `wait`: it occupies the shared kernel and blocks every other agent. Poll `status` every few minutes instead (or loop locally: sleep between status calls in a background bash). |
 | Get a file back | write a tiny cx.sh python that prints it, or base64 small files; for big results tar on VM then `MSYS_NO_PATHCONV=1 powershell -File "C:/Users/ptkac/.claude/plugins/cache/colab-cli-ops/colab-cli-ops/0.1.0/skills/colab-cli-ops/scripts/colab.ps1" download -s tswarm /content/x.tgz C:\\...\\x.tgz` |
 
 Rules

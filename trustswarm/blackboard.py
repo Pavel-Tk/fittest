@@ -31,6 +31,10 @@ MODEL_UPDATE = "model_update"  # Curator: a model's weights were replaced
 TICK = "tick"                  # clock advanced (round driver)
 
 ARRIVAL_KINDS: frozenset[str] = frozenset({SYSTEM, PLANT})
+HEAVY_KEYS: frozenset[str] = frozenset({"forces", "F", "R"})
+"""Array-valued payload keys kept on in-memory events (the data plane) but summarised as
+``{"omitted": "array", "shape": [...]}`` in the JSONL audit log, so the log stays small."""
+LOG_SIGNIFICANT_DIGITS = 5
 MEASUREMENT_KINDS: frozenset[str] = frozenset({FLAG, PASS})
 
 
@@ -46,12 +50,40 @@ class Event:
     def to_json(self) -> str:
         return json.dumps(asdict(self), separators=(",", ":"), allow_nan=False)
 
+    def to_log_json(self, heavy_keys: frozenset[str] = HEAVY_KEYS) -> str:
+        """Compact audit-log form: arrays summarised, floats rounded."""
+        record = asdict(self)
+        record["payload"] = _compact(self.payload, heavy_keys)
+        record["t"] = round(self.t, 3)
+        return json.dumps(record, separators=(",", ":"), allow_nan=False, ensure_ascii=False)
+
+
+def _shape(value: Any) -> list[int]:
+    shape = []
+    while isinstance(value, list):
+        shape.append(len(value))
+        value = value[0] if value else None
+    return shape
+
+
+def _compact(value: Any, heavy_keys: frozenset[str]) -> Any:
+    if isinstance(value, dict):
+        return {k: ({"omitted": "array", "shape": _shape(v)} if k in heavy_keys and isinstance(v, list)
+                    else _compact(v, heavy_keys)) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_compact(v, heavy_keys) for v in value]
+    if isinstance(value, float):
+        return float(f"{value:.{LOG_SIGNIFICANT_DIGITS}g}")
+    return value
+
 
 class Blackboard:
-    """In-memory append-only log with an optional JSONL mirror.
+    """In-memory append-only log with an optional JSONL audit mirror.
 
-    ``post`` validates that the payload is JSON-serialisable (no numpy arrays, no NaN), so
-    the in-memory log and the file can never diverge.
+    ``post`` validates that the payload is JSON-serialisable (no numpy arrays, no NaN). The
+    JSONL file is the human-readable audit trail: identical events, except that array-valued
+    keys (:data:`HEAVY_KEYS`: forces, labels, coordinates) are replaced by their shape and
+    floats are rounded (:meth:`Event.to_log_json`).
     """
 
     def __init__(self, log_path: str | Path | None = None,
@@ -83,7 +115,7 @@ class Blackboard:
                       payload=json.loads(line), t=self._clock())
         self._events.append(event)
         if self._fh is not None:
-            self._fh.write(event.to_json() + "\n")
+            self._fh.write(event.to_log_json() + "\n")
             self._fh.flush()
         return event.id
 
@@ -116,6 +148,6 @@ class Blackboard:
 
 
 def load_jsonl(path: str | Path) -> list[Event]:
-    """Read a blackboard log back (for demos and post-hoc audits)."""
+    """Read a blackboard audit log back (arrays appear as shape summaries)."""
     with Path(path).open(encoding="utf-8") as fh:
         return [Event(**json.loads(line)) for line in fh if line.strip()]

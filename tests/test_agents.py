@@ -6,7 +6,7 @@ import pytest
 from trustswarm import config
 from trustswarm.agents import (Calibrator, DisagreementMonitor, ModelAgent, Oracle, PoolStream,
                                Skeptic)
-from trustswarm.agents.base import Agent
+from trustswarm.agents.base import Agent, batch_payload, iter_rows
 from trustswarm.agents.calibrator import bucket_of, isotonic_threshold
 from trustswarm.blackboard import (BID, FLAG, ORACLE_RESULT, PASS, PREDICTION, REPUTATION,
                                    THRESHOLD, VERDICT, Blackboard, Event)
@@ -99,9 +99,14 @@ def test_model_agent_bids_on_flags_only_until_revealed() -> None:
 
 def _prediction(bb: Blackboard, uid: str, model: str, forces: np.ndarray,
                 phase: str = "triage") -> int:
-    return bb.post(PREDICTION, model, {"uid": uid, "model": model, "weights": model, "version": 0,
-                                       "phase": phase, "energy": 0.0, "rel_energy": 0.0,
-                                       "forces": forces.tolist()})
+    """A one-row prediction batch, as a ModelAgent would post it."""
+    row = {"uid": uid, "phase": phase, "energy": 0.0, "rel_energy": 0.0, "forces": forces.tolist()}
+    return bb.post(PREDICTION, model, batch_payload([row], model=model, weights=model, version=0))
+
+
+def _verdicts(bb: Blackboard) -> list[dict]:
+    keys = ("uid", "phase", "trust", "risk", "recommended_model", "prediction_events", "bucket")
+    return [row for e in bb.read(VERDICT) for _, row in iter_rows(e.payload, keys)]
 
 
 def test_monitor_waits_for_threshold_then_flags_high_sigma() -> None:
@@ -115,7 +120,9 @@ def test_monitor_waits_for_threshold_then_flags_high_sigma() -> None:
     assert bb.read([FLAG, PASS]) == []
     bb.post(THRESHOLD, "calibrator", {"tau": 0.5})
     hook.step(bb)
-    assert {e.payload["uid"]: e.kind for e in bb.read([FLAG, PASS])} == {"calm": PASS, "hot": FLAG}
+    (passed,) = bb.read(PASS)  # passes come as one batch
+    assert passed.payload["uid"] == ["calm"] and passed.payload["tau"] == 0.5
+    assert [e.payload["uid"] for e in bb.read(FLAG)] == ["hot"]
     flag = bb.read(FLAG)[0].payload
     assert flag["sigma_F"] == pytest.approx(1.0)
     assert flag["deviation"] == {"a": 1.0, "b": 1.0}
@@ -140,11 +147,13 @@ def test_isotonic_threshold() -> None:
 
 
 def _oracle_result(bb: Blackboard, uid: str, wrong: dict[str, bool],
-                   bidders: dict[str, float]) -> None:
+                   bidders: dict[str, float], consensus_wrong: bool | None = None) -> None:
     errors = {m: {"force_rmse": 1.0 if w else 0.0, "rel_e_err": 0.0, "wrong": w}
               for m, w in wrong.items()}
+    consensus = None if consensus_wrong is None else {"force_rmse": 0.0, "rel_e_err": 0.0,
+                                                       "wrong": consensus_wrong}
     bb.post(ORACLE_RESULT, "oracle", {"uid": uid, "bidders": bidders, "errors": errors,
-                                      "consensus_error": None, "E": 0.0, "F": [[0, 0, 0]]})
+                                      "consensus_error": consensus, "E": 0.0, "F": [[0, 0, 0]]})
 
 
 def test_calibrator_beta_updates_settlement_and_snapshot() -> None:
@@ -154,26 +163,32 @@ def test_calibrator_beta_updates_settlement_and_snapshot() -> None:
         _prediction(bb, uid, "a", np.zeros((1, 3)))
         _prediction(bb, uid, "b", np.zeros((1, 3)))
     cal.step(bb)
-    assert bb.read(THRESHOLD) and len(bb.read(VERDICT)) == 2
-    v = bb.read(VERDICT)[0].payload
+    assert bb.read(THRESHOLD) and len(_verdicts(bb)) == 2
+    v = _verdicts(bb)[0]
     a0, b0 = config.CORRECTNESS_PRIOR
-    assert v["recommended_model"] == "a"  # prior tie -> model order
+    # prior tie over {a, b, consensus}: with no evidence the ensemble mean is served
+    assert v["recommended_model"] == "consensus"
+    assert set(v["prediction_events"]) == {"a", "b"}
     assert v["trust"] == pytest.approx(a0 / (a0 + b0))
+    assert v["risk"] is None  # too few labels for the isotonic risk
     bucket = tuple(v["bucket"])
 
-    # x: served model a is wrong, b right -> the bidders were right to ask
-    _oracle_result(bb, "x", {"a": True, "b": False}, {"a": 0.6, "skeptic": 0.4})
+    # x: served consensus is wrong (a wrong, b right) -> the bidders were right to ask
+    _oracle_result(bb, "x", {"a": True, "b": False}, {"a": 0.6, "skeptic": 0.4},
+                   consensus_wrong=True)
     cal.step(bb)
     assert cal.p_correct("a", bucket) == pytest.approx(a0 / (a0 + b0 + 1))
     assert cal.p_correct("b", bucket) == pytest.approx((a0 + 1) / (a0 + b0 + 1))
+    assert cal.p_correct("consensus", bucket) == pytest.approx(a0 / (a0 + b0 + 1))
     ra, rb = config.REPUTATION_PRIOR
     assert cal.reputation("a") == pytest.approx((ra + 0.6) / (ra + rb + 0.6))
     assert cal.reputation("skeptic") == pytest.approx((ra + 0.4) / (ra + rb + 0.4))
-    last = bb.read(VERDICT)[-1].payload  # y is re-verdicted with the updated ledger
+    last = _verdicts(bb)[-1]  # y is re-verdicted with the updated ledger
     assert (last["uid"], last["recommended_model"]) == ("y", "b")
+    assert set(last["prediction_events"]) == {"b"}
 
     # y: served model (now b) is right -> false alarm costs lambda * share
-    _oracle_result(bb, "y", {"a": True, "b": False}, {"a": 1.0})
+    _oracle_result(bb, "y", {"a": True, "b": False}, {"a": 1.0}, consensus_wrong=False)
     cal.step(bb)
     lam = config.FALSE_ALARM_PENALTY
     assert cal.reputation("a") == pytest.approx((ra + 0.6) / (ra + rb + 0.6 + lam))
@@ -182,12 +197,30 @@ def test_calibrator_beta_updates_settlement_and_snapshot() -> None:
 
     snap = cal.export_snapshot(budget=(40, 5))
     assert snap["models"] == ["a", "b"]
+    assert snap["candidates"] == ["a", "b", "consensus"]
     assert len(snap["sigma_edges"]) == config.SIGMA_BINS - 1
     assert len(snap["fbar_edges"]) == config.FBAR_BINS - 1
-    for m in ("a", "b"):
-        assert np.array(snap["p_correct"][m]).shape == (config.SIGMA_BINS, config.FBAR_BINS)
-    assert sum(map(sum, snap["counts"]["a"])) == 2
+    for c in snap["candidates"]:
+        assert np.array(snap["p_correct"][c]).shape == (config.SIGMA_BINS, config.FBAR_BINS)
+        assert sum(map(sum, snap["counts"][c])) == 2
     assert snap["budget"] == {"per_round": 40, "rounds": 5}
+
+
+def test_calibrator_risk_is_isotonic_in_sigma() -> None:
+    bb = Blackboard()
+    cal = Calibrator(["a", "b"])
+    n = config.RISK_MIN_LABELLED + 10
+    for i in range(n):  # σ grows with i; the served answer is wrong for the upper half
+        _prediction(bb, f"s{i}", "a", np.zeros((1, 3)))
+        _prediction(bb, f"s{i}", "b", np.array([[0.01 * (i + 1), 0.0, 0.0]]))
+    cal.step(bb)
+    for i in range(n):
+        _oracle_result(bb, f"s{i}", {"a": i >= n // 2, "b": i >= n // 2}, {},
+                       consensus_wrong=i >= n // 2)
+    cal.step(bb)
+    risks = [cal.risk(0.005 * (i + 1)) for i in range(n)]
+    assert all(r is not None for r in risks)
+    assert risks == sorted(risks) and risks[0] == 0.0 and risks[-1] == 1.0
 
 
 def test_calibrator_reputation_is_clipped() -> None:
@@ -197,7 +230,7 @@ def test_calibrator_reputation_is_clipped() -> None:
     _prediction(bb, "x", "b", np.zeros((1, 3)))
     cal.step(bb)
     for i in range(200):
-        _oracle_result(bb, f"z{i}", {"a": True, "b": True}, {"lucky": 1.0})
+        _oracle_result(bb, f"z{i}", {"a": True, "b": True}, {"lucky": 1.0}, consensus_wrong=True)
     cal.step(bb)
     assert cal.reputation("lucky") == config.REPUTATION_CLIP[1]
 

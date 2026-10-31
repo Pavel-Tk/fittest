@@ -127,7 +127,7 @@ def main() -> int:
         out["errors"].append("fewer than two committee members")
         Path(a.out).write_text(json.dumps(out, indent=1))
         return 1
-    mon = DisagreementMonitor(clients, tau=a.tau)
+    mon = DisagreementMonitor(clients, tau=a.tau, keep_forces="last")
 
     # ---------------------------------------------------------------- driver
     if a.driver == "aimnet2":
@@ -224,6 +224,9 @@ def main() -> int:
             fr_mean = [np.mean([frmse[m][i] for m in names]) if all(frmse[m][i] is not None for m in names)
                        else np.nan for i in range(len(ref_R))]
             row["spearman_sigma_vs_mean_force_rmse"] = spearman(sig_ref, fr_mean)
+            row["mean_force_rmse_dft_band"] = [None if not np.isfinite(v) else float(v) for v in fr_mean]
+            row["argmax_mean_force_rmse_dft_band"] = (int(np.nanargmax(fr_mean))
+                                                      if np.isfinite(fr_mean).any() else None)
         except Exception as exc:
             out["errors"].append(f"{ref['reaction_id']} dft band: {type(exc).__name__}: {exc}")
         if R_band is not None:
@@ -257,6 +260,11 @@ def main() -> int:
         "ts_has_max_sigma_dft_band": sum(r["sigma_rank_of_ts"] == 0 for r in ok),
         "ts_within_1_image_of_max_sigma": sum(abs(r["argmax_sigma_dft_band"] - r["dft_ts_index"]) <= 1 for r in ok),
         "max_sigma_coincides_with_max_error": sum(r["argmax_sigma_dft_band"] == r["argmax_mean_error_dft_band"] for r in ok),
+        "max_sigma_coincides_with_max_force_rmse": sum(r.get("argmax_mean_force_rmse_dft_band") == r["argmax_sigma_dft_band"] for r in ok),
+        "ts_has_max_force_rmse": sum(r.get("argmax_mean_force_rmse_dft_band") == r["dft_ts_index"] for r in ok),
+        "median_spearman_sigma_vs_force_rmse": (float(np.median([r["spearman_sigma_vs_mean_force_rmse"] for r in ok
+                                                                 if r.get("spearman_sigma_vs_mean_force_rmse") is not None]))
+                                                if any(r.get("spearman_sigma_vs_mean_force_rmse") is not None for r in ok) else None),
         "median_spearman_sigma_vs_rel_e_err": (float(np.median([r["spearman_sigma_vs_mean_abs_rel_e_err"] for r in ok
                                                                 if r["spearman_sigma_vs_mean_abs_rel_e_err"] is not None]))
                                                if ok else None),
@@ -317,7 +325,11 @@ def plot(rows, path, cfg):
         ax2 = ax.twinx()
         for m, e in r["abs_rel_energy_error_dft_band"].items():
             ax2.plot(x, e, "-", color=colors.get(m, None), alpha=0.75, lw=1, label=f"|ΔE err| {m}")
-        ax2.set_ylabel("|ΔE_model − ΔE_DFT|  [eV]")
+        fr = r.get("force_rmse_dft_band", {})
+        if fr and all(v is not None for vals in fr.values() for v in vals):
+            ax2.plot(x, np.mean([fr[m] for m in fr], axis=0), "-s", color="orange", ms=3, lw=1.2,
+                     label="mean force RMSE vs DFT [eV/Å]")
+        ax2.set_ylabel("error  [eV | eV/Å]")
         title = r["reaction_id"]
         if r.get("driver_barrier_error") is not None:
             title += f"\nNEB barrier err {r['driver_barrier_error']:+.2f} eV"

@@ -55,8 +55,14 @@ def load_frames(a):
     return frames, src
 
 
+CACHED_SIGMA: dict[str, float] = {}
+
+
 def auto_tau(a, frames) -> tuple[float, str]:
-    """70th percentile of sigma_F over the cached pool predictions (Calibrator's round-0 floor)."""
+    """70th percentile of sigma_F over the cached pool predictions (Calibrator's round-0 floor).
+
+    Also fills ``CACHED_SIGMA`` (uid -> sigma_F from data/preds via ``signals.force_spread``) so the
+    hook's in-flight admission sigma can be cross-checked against the offline pipeline."""
     try:
         from trustswarm.cache import load_models
         from trustswarm.config import HETERO_MODELS, TAU_FLOOR_QUANTILE
@@ -66,6 +72,7 @@ def auto_tau(a, frames) -> tuple[float, str]:
         uids = [f.uid for f in frames if all(f.uid in p.forces for p in preds.values())]
         if len(uids) >= 20:
             sig = [force_spread(np.stack([preds[m].forces[u] for m in HETERO_MODELS]))[0] for u in uids]
+            CACHED_SIGMA.update(zip(uids, sig))
             return float(np.quantile(sig, TAU_FLOOR_QUANTILE)), \
                 f"q{TAU_FLOOR_QUANTILE:.2f} of cached sigma_F over {len(uids)} frames"
     except Exception as exc:  # cache absent: fall back
@@ -271,6 +278,13 @@ def main() -> int:
                                                    if r["sigma_admission"] is not None],
                                                   [0.1, 0.5, 0.7, 0.9]).tolist() if per_frame else None),
     }
+    both = [(r["sigma_admission"], CACHED_SIGMA[r["uid"]]) for r in per_frame
+            if r["sigma_admission"] is not None and r["uid"] in CACHED_SIGMA]
+    if both:
+        d = np.abs(np.subtract(*np.array(both).T))
+        summary["consistency_vs_cached_sigma"] = {
+            "n": len(both), "max_abs_diff": float(d.max()), "median_abs_diff": float(np.median(d)),
+            "note": "in-flight hook sigma at admission vs offline data/preds + signals.force_spread"}
     if a.score_labels and per_frame and "force_rmse_admission" in per_frame[0]:
         from trustswarm.config import WRONG_F
 

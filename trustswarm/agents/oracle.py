@@ -18,7 +18,7 @@ from typing import Any, ClassVar
 
 import numpy as np
 
-from trustswarm.agents.base import Agent, to_list
+from trustswarm.agents.base import Agent, iter_rows, to_list
 from trustswarm.blackboard import BID, ORACLE_RESULT, PREDICTION, Blackboard, Event
 from trustswarm.data import Frame, reactant_index
 from trustswarm.signals import frame_error
@@ -59,7 +59,8 @@ class Oracle(Agent):
                 # latest bid per (bidder, system) within a round counts
                 self._bids[e.round][(e.author, e.payload["uid"])] = float(e.payload["value"])
             elif e.kind == PREDICTION:
-                self._latest_pred[e.payload["uid"]][e.payload["model"]] = e.payload
+                for _, row in iter_rows(e.payload, ("uid", "rel_energy", "forces")):
+                    self._latest_pred[row["uid"]][e.payload["model"]] = row
         while self._next_round_to_settle < bb.round:
             self._settle(bb, self._next_round_to_settle)
             self._next_round_to_settle += 1

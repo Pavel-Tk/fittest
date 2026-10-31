@@ -3,7 +3,11 @@
 One code path for the foundation model and for TrustSwarm's LoRA-repaired model:
 
 * ``BatchedMACE()``                      -> ``MACEWrapper.from_checkpoint("medium-mpa-0")``
-* ``BatchedMACE(model_path=<dir>)``      -> PEFT checkpoint written by
+* ``BatchedMACE(model_path=<dir with trustswarm.json>)`` -> TrustSwarm fine-tune checkpoint
+  (``trustswarm.mace_lora`` format written by ``scripts/finetune.py``: merged LoRA weights +
+  refitted E0 in ``model.pt``), loaded with ``trustswarm.mace_lora.load_mace_lora`` into a
+  ``MACEWrapper`` (cuEq conversion optional). This is the primary fine-tune path.
+* ``BatchedMACE(model_path=<dir>)``      -> bare ALCHEMI PEFT checkpoint written by
   ``FineTuningStrategy.save_checkpoint(dir, save_trainable_state_only=True)``
   (``scripts/finetune.py``). The base model is rebuilt from the checkpoint's own
   ``model_specs["main"]`` (the exact ``from_checkpoint`` kwargs used for training: cuEq,
@@ -67,8 +71,16 @@ def load_mace_wrapper(checkpoint: str = DEFAULT_CHECKPOINT, model_path: str | No
         return _freeze(w), info
 
     p = Path(model_path)
+    if p.is_dir() and (p / "trustswarm.json").exists():
+        # TrustSwarm fine-tune checkpoint (trustswarm.mace_lora format, scripts/finetune.py):
+        # merged LoRA + refitted E0 in <dir>/model.pt; optional cuEq conversion on load.
+        from trustswarm.mace_lora import load_mace_lora, read_manifest
+
+        w = load_mace_lora(p, device=device, dtype=dtype, enable_cueq=enable_cueq)
+        info.update(format="trustswarm.mace_lora", manifest_base=read_manifest(p).get("base_checkpoint"))
+        return _freeze(w.to(device)), info
     if p.is_dir():
-        # PEFT checkpoint directory (FineTuningStrategy.save_checkpoint).
+        # Bare ALCHEMI PEFT checkpoint directory (FineTuningStrategy.save_checkpoint).
         from nvalchemi.training.peft import load_peft_checkpoint_into_model
 
         base = None
@@ -93,8 +105,9 @@ def load_mace_wrapper(checkpoint: str = DEFAULT_CHECKPOINT, model_path: str | No
                 info["base_spec_error"] = f"{type(exc).__name__}: {exc}"
         if base is None:
             e0_path = p / "atomic_energies.json"
+            # Adapters trained on the e3nn layout (scripts/finetune.py) -> rebuild without cuEq.
             base = MACEWrapper.from_checkpoint(
-                checkpoint, device=device, dtype=dtype, enable_cueq=enable_cueq,
+                checkpoint, device=device, dtype=dtype, enable_cueq=False,
                 atomic_energies_path=e0_path if e0_path.exists() else None)
             info["base_from"] = f"{checkpoint} (+{e0_path.name})" if e0_path.exists() else checkpoint
         w = load_peft_checkpoint_into_model(base, p, map_location=device, merge=True)

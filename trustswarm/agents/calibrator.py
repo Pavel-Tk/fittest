@@ -1,10 +1,15 @@
 """Calibrator: keeps the ledger; posts ``threshold``, ``verdict`` and ``reputation`` (DESIGN.md §4).
 
-* Ledger: per (model, context bucket) Beta posterior of correctness from oracle results.
+* Candidates: every model, plus ``consensus`` (the ensemble-mean prediction), each with its
+  own per-bucket Beta ledger and the same prior. Oracle results carry the consensus error.
+* Ledger: per (candidate, context bucket) Beta posterior of correctness from oracle results.
   The bucket is label-free: (σ_F quantile bin [4], mean |F̄| bin [3]); bin edges are fixed
-  from the σ distribution the Calibrator sees in round 0.
-* Verdict: ``recommended_model = argmax_m P(m correct | bucket)``; the served answer is that
-  model's prediction; ``trust = P(served answer correct)``.
+  from the σ distribution the Calibrator sees in round 0 (see :func:`bucket_of`).
+* Verdict: ``recommended = argmax_c P(c correct | bucket)`` over candidates (ties: global
+  posterior, then consensus first, then model order — with no evidence the ensemble mean is
+  served); ``trust = P(served answer correct | bucket)``; ``risk`` = isotonic
+  P(served wrong | σ_F) fitted on the oracle-labelled points (continuous; ``None`` until
+  ``RISK_MIN_LABELLED`` labels exist).
 * Threshold: smallest τ with ledger-estimated P(served wrong | σ ≥ τ) ≥ 0.5 (isotonic fit on
   labelled points), floored at the 70th percentile of round-0 σ. If no τ reaches 0.5 the
   floor is kept (the hook never flags *less* than the floor).
@@ -16,19 +21,21 @@ from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Sequence
-from datetime import datetime, timezone
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Any, ClassVar
 
 import numpy as np
 from sklearn.isotonic import IsotonicRegression
 
 from trustswarm import config
-from trustswarm.agents.base import Agent
+from trustswarm.agents.base import Agent, batch_payload, iter_rows
 from trustswarm.agents.stream import TRIAGE
 from trustswarm.blackboard import (ORACLE_RESULT, PREDICTION, REPUTATION, THRESHOLD, VERDICT,
                                    Blackboard, Event)
 from trustswarm.signals import force_spread, mean_abs_force
+
+CONSENSUS = config.CONSENSUS
 
 
 @dataclass
@@ -43,10 +50,11 @@ class BetaCounter:
 
 @dataclass(frozen=True)
 class Verdict:
-    recommended_model: str
+    recommended: str
     trust: float
-    prediction_event: int
+    prediction_events: dict[str, tuple[int, int]]
     bucket: tuple[int, int]
+    risk: float | None
 
 
 def bucket_of(sigma_F: float, mean_abs_fbar: float, sigma_edges: Sequence[float],
@@ -74,6 +82,12 @@ def isotonic_threshold(sigma: np.ndarray, wrong: np.ndarray, target: float) -> f
     return float(s[ok[0]]) if ok.size else None
 
 
+def isotonic_probability(x: np.ndarray, wrong: np.ndarray) -> IsotonicRegression:
+    """Monotone (non-decreasing) P(wrong | x), clipped to [0, 1] and to the observed range."""
+    return IsotonicRegression(increasing=True, out_of_bounds="clip", y_min=0.0,
+                              y_max=1.0).fit(np.asarray(x, float), np.asarray(wrong, float))
+
+
 class Calibrator(Agent):
     subscriptions: ClassVar[frozenset[str]] = frozenset({PREDICTION, ORACLE_RESULT})
 
@@ -84,11 +98,16 @@ class Calibrator(Agent):
         super().__init__(name)
         if len(models) < 2:
             raise ValueError("the Calibrator needs at least two models to compare")
+        if CONSENSUS in models:
+            raise ValueError(f"{CONSENSUS!r} is reserved for the ensemble-mean candidate")
         self._models = tuple(models)
+        self.candidates: tuple[str, ...] = (*self._models, CONSENSUS)
+        self._tiebreak = {c: i for i, c in enumerate((CONSENSUS, *self._models))}
         self._prior = correctness_prior
         self._rep_prior = reputation_prior
         self._lambda = false_alarm_penalty
-        self._preds: dict[str, dict[str, tuple[int, dict[str, Any]]]] = defaultdict(dict)
+        # uid -> model -> ((prediction event id, row index), row)
+        self._preds: dict[str, dict[str, tuple[tuple[int, int], dict[str, Any]]]] = defaultdict(dict)
         self._sigma: dict[str, tuple[float, float]] = {}  # uid -> (σ_F, mean |F̄|)
         self._phase: dict[str, str] = {}
         self._sigma_edges: np.ndarray | None = None
@@ -99,24 +118,36 @@ class Calibrator(Agent):
         # ledger (private): built exclusively from oracle_result events
         self._ledger: dict[tuple[str, tuple[int, int]], BetaCounter] = {}
         self._counts: dict[tuple[str, tuple[int, int]], int] = defaultdict(int)
-        self._global: dict[str, BetaCounter] = {m: BetaCounter(*self._prior) for m in self._models}
+        self._global = {c: BetaCounter(*self._prior) for c in self.candidates}
         self.labelled: dict[str, int] = {}  # uid -> id of the oracle_result that revealed it
         self._labelled_points: list[tuple[float, bool]] = []
+        self._risk_fit: IsotonicRegression | None = None
         self._reputation: dict[str, BetaCounter] = {}
         self._verdicts: dict[str, Verdict] = {}
 
-    # --- public read-only views (used by tests and scoring) -------------------------------
+    # --- public read-only views (used by tests, scoring and the service snapshot) ------
+    @property
+    def models(self) -> tuple[str, ...]:
+        return self._models
+
+    @property
+    def tau(self) -> float | None:
+        return self._tau
+
     def reputation(self, agent: str) -> float:
         lo, hi = config.REPUTATION_CLIP
         c = self._reputation.get(agent, BetaCounter(*self._rep_prior))
         return float(np.clip(c.mean, lo, hi))
 
-    def p_correct(self, model: str, bucket: tuple[int, int]) -> float:
-        return self._ledger.get((model, bucket), BetaCounter(*self._prior)).mean
+    def p_correct(self, candidate: str, bucket: tuple[int, int]) -> float:
+        return self._ledger.get((candidate, bucket), BetaCounter(*self._prior)).mean
 
-    @property
-    def tau(self) -> float | None:
-        return self._tau
+    def risk(self, sigma_F: float) -> float | None:
+        """Isotonic P(served answer wrong | σ_F) from oracle labels; None if too few labels."""
+        if self._risk_fit is None:
+            return None
+        # == IsotonicRegression.predict with out_of_bounds="clip", without per-call validation
+        return float(np.interp(sigma_F, self._risk_fit.X_thresholds_, self._risk_fit.y_thresholds_))
 
     def export_snapshot(self, wrong_thresholds: tuple[float, float] = (config.WRONG_F, config.WRONG_E),
                         budget: tuple[int, int] | None = None) -> dict[str, Any]:
@@ -130,11 +161,12 @@ class Calibrator(Agent):
 
         return {
             "models": list(self._models),
+            "candidates": list(self.candidates),
             "tau": float(self._tau),
             "sigma_edges": [float(x) for x in self._sigma_edges],
             "fbar_edges": [float(x) for x in self._fbar_edges],
-            "p_correct": {m: grid(lambda b, m=m: float(self.p_correct(m, b))) for m in self._models},
-            "counts": {m: grid(lambda b, m=m: int(self._counts[(m, b)])) for m in self._models},
+            "p_correct": {c: grid(lambda b, c=c: float(self.p_correct(c, b))) for c in self.candidates},
+            "counts": {c: grid(lambda b, c=c: int(self._counts[(c, b)])) for c in self.candidates},
             "reputation": {a: self.reputation(a) for a in sorted(self._reputation)},
             "wrong_thresholds": {"force_rmse": float(wrong_thresholds[0]),
                                  "rel_e": float(wrong_thresholds[1])},
@@ -149,23 +181,26 @@ class Calibrator(Agent):
         ledger_changed = False
         reputations_changed = False
         for e in events:
-            if e.kind == PREDICTION:
-                p = e.payload
-                if p["model"] in self._models:
-                    self._preds[p["uid"]][p["model"]] = (e.id, p)
-                    self._phase[p["uid"]] = p["phase"]
-                    if len(self._preds[p["uid"]]) == len(self._models):
-                        self._sigma[p["uid"]] = self._measure(p["uid"])
-                        dirty.add(p["uid"])
+            if e.kind == PREDICTION and e.payload["model"] in self._models:
+                for i, row in iter_rows(e.payload, ("uid", "phase", "forces")):
+                    uid = row["uid"]
+                    self._preds[uid][e.payload["model"]] = ((e.id, i), row)
+                    self._phase[uid] = row["phase"]
+                    if len(self._preds[uid]) == len(self._models):
+                        self._sigma[uid] = self._measure(uid)
+                        dirty.add(uid)
         self._ensure_bucket_edges()
         for e in events:
             if e.kind == ORACLE_RESULT:
                 reputations_changed |= self._settle(e)
                 ledger_changed = True
+        if ledger_changed:
+            self._refit_risk()
         self._update_threshold(bb)
-        targets = (set(self._sigma) - set(self.labelled)) if ledger_changed else dirty - set(self.labelled)
-        for uid in sorted(targets):
-            self._maybe_post_verdict(bb, uid)
+        targets = (set(self._sigma) if ledger_changed else dirty) - set(self.labelled)
+        rows = [r for r in (self._verdict_row(uid) for uid in sorted(targets)) if r is not None]
+        if rows:  # one verdict batch per step
+            self.post(bb, VERDICT, batch_payload(rows))
         if reputations_changed:
             self.post(bb, REPUTATION, {"reputation": {a: self.reputation(a)
                                                       for a in sorted(self._reputation)}})
@@ -187,10 +222,15 @@ class Calibrator(Agent):
     def bucket(self, uid: str) -> tuple[int, int]:
         assert self._sigma_edges is not None and self._fbar_edges is not None
         s, f = self._sigma[uid]
-        return int(np.searchsorted(self._sigma_edges, s, side="right")), \
-            int(np.searchsorted(self._fbar_edges, f, side="right"))
+        return bucket_of(s, f, self._sigma_edges, self._fbar_edges)
 
     # --- ledger + settlement ------------------------------------------------------------------
+    @staticmethod
+    def _candidate_error(payload: dict[str, Any], candidate: str) -> dict[str, Any] | None:
+        if candidate == CONSENSUS:
+            return payload.get("consensus_error")
+        return payload["errors"].get(candidate)
+
     def _settle(self, e: Event) -> bool:
         p = e.payload
         uid = p["uid"]
@@ -198,20 +238,22 @@ class Calibrator(Agent):
             return False
         self.labelled[uid] = e.id
         verdict = self._verdicts.get(uid)
-        served = verdict.recommended_model if verdict else self._best_global()
-        served_err = p["errors"].get(served) or p["consensus_error"]
+        served = verdict.recommended if verdict else self._best_global()
+        served_err = self._candidate_error(p, served) or p.get("consensus_error")
         served_wrong = bool(served_err["wrong"]) if served_err else False
         if uid in self._sigma:
             b = self.bucket(uid)
-            for m in self._models:
-                if m in p["errors"]:
-                    correct = not p["errors"][m]["wrong"]
-                    c = self._ledger.setdefault((m, b), BetaCounter(*self._prior))
-                    c.alpha += correct
-                    c.beta += not correct
-                    self._counts[(m, b)] += 1
-                    self._global[m].alpha += correct
-                    self._global[m].beta += not correct
+            for c in self.candidates:
+                err = self._candidate_error(p, c)
+                if err is None:
+                    continue
+                correct = not err["wrong"]
+                counter = self._ledger.setdefault((c, b), BetaCounter(*self._prior))
+                counter.alpha += correct
+                counter.beta += not correct
+                self._counts[(c, b)] += 1
+                self._global[c].alpha += correct
+                self._global[c].beta += not correct
             if self._phase.get(uid) == TRIAGE:
                 self._labelled_points.append((self._sigma[uid][0], served_wrong))
         total = sum(p["bidders"].values())
@@ -223,6 +265,14 @@ class Calibrator(Agent):
             else:
                 c.beta += self._lambda * share
         return bool(p["bidders"])
+
+    def _refit_risk(self) -> None:
+        if len(self._labelled_points) < config.RISK_MIN_LABELLED:
+            self._risk_fit = None
+            return
+        sig = np.array([s for s, _ in self._labelled_points])
+        wrong = np.array([w for _, w in self._labelled_points])
+        self._risk_fit = isotonic_probability(sig, wrong)
 
     # --- threshold ------------------------------------------------------------------------------
     def _update_threshold(self, bb: Blackboard) -> None:
@@ -242,24 +292,29 @@ class Calibrator(Agent):
 
     # --- verdicts -------------------------------------------------------------------------------
     def _best_global(self) -> str:
-        return max(self._models, key=lambda m: (self._global[m].mean, -self._models.index(m)))
+        return max(self.candidates, key=lambda c: (self._global[c].mean, -self._tiebreak[c]))
 
     def recommend(self, uid: str) -> Verdict:
         b = self.bucket(uid)
-        rec = max(self._models, key=lambda m: (self.p_correct(m, b), self._global[m].mean,
-                                               -self._models.index(m)))
-        return Verdict(rec, self.p_correct(rec, b), self._preds[uid][rec][0], b)
+        rec = max(self.candidates, key=lambda c: (self.p_correct(c, b), self._global[c].mean,
+                                                  -self._tiebreak[c]))
+        events = {m: self._preds[uid][m][0] for m in self._models}
+        served = events if rec == CONSENSUS else {rec: events[rec]}
+        return Verdict(rec, self.p_correct(rec, b), served, b, self.risk(self._sigma[uid][0]))
 
-    def _maybe_post_verdict(self, bb: Blackboard, uid: str) -> None:
+    def _verdict_row(self, uid: str) -> dict[str, Any] | None:
+        """The verdict for ``uid`` if it changed materially since the last one, else None."""
         v = self.recommend(uid)
         old = self._verdicts.get(uid)
-        if old is not None and old.recommended_model == v.recommended_model \
-                and old.prediction_event == v.prediction_event \
-                and abs(old.trust - v.trust) < config.VERDICT_REPOST_DELTA:
-            return
+        if old is not None and old.recommended == v.recommended \
+                and old.prediction_events == v.prediction_events \
+                and abs(old.trust - v.trust) < config.VERDICT_REPOST_DELTA \
+                and (old.risk is None) == (v.risk is None) \
+                and abs((old.risk or 0.0) - (v.risk or 0.0)) < config.VERDICT_REPOST_DELTA:
+            return None
         self._verdicts[uid] = v
         sigma, fbar = self._sigma[uid]
-        self.post(bb, VERDICT, {"uid": uid, "phase": self._phase[uid], "trust": v.trust,
-                                "p_wrong": 1.0 - v.trust, "recommended_model": v.recommended_model,
-                                "prediction_event": v.prediction_event, "bucket": list(v.bucket),
-                                "sigma_F": sigma, "mean_abs_fbar": fbar})
+        return {"uid": uid, "phase": self._phase[uid], "trust": v.trust, "risk": v.risk,
+                "recommended_model": v.recommended,
+                "prediction_events": {m: list(ref) for m, ref in v.prediction_events.items()},
+                "bucket": list(v.bucket), "sigma_F": sigma, "mean_abs_fbar": fbar}
