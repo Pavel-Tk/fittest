@@ -66,14 +66,35 @@ turned into a verdict with the Calibrator state learned in the final run
 
 | tool | input | returns |
 |---|---|---|
-| `check_structures` | `structures`: XYZ text (single or multi-frame; bare `El x y z` lines work), one `{Z or symbols, R}` object, or a list mixing both (Å); `include_forces` (default false) | per structure: `verdict` (`trust` / `send_to_dft`), `trust_score`, `recommended` model or blend and its `served_members`, `served_energy_eV`, max/mean force (eV/Å), `sigma_F` vs `tau`, per-model energy and max force, `domain_warning` |
-| `explain` | one structure | σ_F vs τ; the Calibrator bucket (σ_F range, mean-force range, oracle labels in it) and P(correct) of every candidate in it; each member's deviation from the committee mean; pairwise force RMS; the most divergent member; the three most uncertain atoms |
-| `swarm_status` | none | answerers (MACE-MPA-0, AIMNet2, Orb-v3, live status, reputation), critic (Skeptic), coordinators (Calibrator, Oracle, Curator); the ledger; the calibration domain; the evolution family tree when `results/evolution/family_tree.json` exists |
-| `usage_stats` | none | distinct users, total / external / internal calls, calls per tool, first and last call |
+| `check_structures` | `structures`: XYZ text (single or multi-frame; bare atoms on lines or separated by `,`/`;`), one `{Z or symbols, R}` object, or a list mixing both (Å); `include_forces` (default false) | per structure: `verdict` (`trust` / `send_to_dft`) and `verdict_reasons`; `trust_score` with `trust_score_90ci` and `labels_behind_score`; `recommended` model or blend and its `served_members`; `served_energy_eV` and `reference_energy_eV` (one fixed model, AIMNet2, for the whole batch); max/mean force (eV/Å); `sigma_F` vs `tau`; per-model energy and max force; `domain_warning`. A structure that cannot be parsed gets its own `{index, error}` entry and the rest of the batch is still scored |
+| `explain` | one structure | the same verdict, by the same rule, with the reason in words; σ_F vs τ; the Calibrator bucket (σ_F range, mean-force range, oracle labels in it) and the posterior P(correct) with interval for every candidate in it; each member's deviation from the committee mean; pairwise force RMS; the most divergent member; the three most uncertain atoms |
+| `swarm_status` | none | answerers (MACE-MPA-0, AIMNet2, Orb-v3, live status, reputation), critic (Skeptic), coordinators (Calibrator, Oracle, Curator); the ledger; the calibration domain, τ, the verdict rule and the supported elements; the evolution family trees (`results/evolution/family_tree.json`, `results/evolution_c/`) once they exist |
+| `usage_stats` | none | users ([definition](#privacy-what-the-hosted-mcp-server-logs)), total / external / internal calls, calls per tool, first and last call |
 
 Limits: ≤ 20 structures per call, ≤ 100 atoms each, non-periodic, coordinates within ±1000 Å, no atoms
-closer than 0.3 Å; per-client rate limit (burst 20, then 1 call per 2 s); 120 s per request; model
-evaluations are serialized.
+closer than 0.3 Å; element symbols must be exact (`Cl` or `cl`; PDB-style `C1` is fine, ambiguous `CA` or
+`HE1` is an error); per-client rate limit (burst 20, then 1 call per 2 s) plus a per-IP limit; 120 s per
+request; model evaluations are serialized.
+
+**The verdict rule.** One rule feeds `check_structures`, `explain` and the usage counts. A structure gets
+`trust` only if all four hold:
+
+1. every model agent supports its elements (AIMNet2 sets the limit; the full committee covers
+   H B C N O F Si P S Cl As Se Br I), otherwise `send_to_dft` with reason `unsupported_elements` and no
+   trust score;
+2. the forces do not all vanish (max |F| < 0.05 eV/Å for every model means symmetry or exact equilibrium,
+   where disagreement carries no information);
+3. σ_F < τ;
+4. `trust_score` ≥ 0.5.
+
+Otherwise the verdict is `send_to_dft`, with every failing condition listed in `verdict_reasons`.
+τ = 0.620 eV/Å is fixed: it is the 70th percentile of σ_F on the round-0 pool, which the Calibrator's
+threshold rule never moved. `trust_score` is the Calibrator's Beta posterior mean of P(served answer
+correct) for the served candidate in the structure's (σ_F, mean |F|) bucket, built from DFT oracle labels
+on Transition1x with prior Beta(2, 1), so it is never exactly 1. It comes with `trust_score_90ci` (the
+90% credible interval) and `labels_behind_score` (the DFT labels in that bucket); a bucket with few labels
+gives a wide interval, so read the score with it. "Correct" means force RMSE ≤ 0.25 eV/Å and relative
+energy error ≤ 0.25.
 
 **Claude Code**
 
@@ -91,37 +112,52 @@ claude mcp add --transport http fittest https://fittest-mcp.westus2.cloudapp.azu
 `https://fittest-mcp.westus2.cloudapp.azure.com/mcp`.
 
 Example prompt: *"Use fittest to check whether I can trust an ML potential on this water molecule:
-O 0 0 0, H 0.96 0 0, H -0.24 0.93 0."* In the verification run Claude Code answered `trust`, trust
-score 1.0, recommended AIMNet2, σ_F = 0.378 eV/Å below τ = 0.620 eV/Å, no domain warning
+O 0 0 0, H 0.96 0 0, H -0.24 0.93 0."* Atoms may be separated by newlines, commas or semicolons. In
+the Round-2 verification run this prompt, used verbatim, gave `trust`, trust score 0.857 (90% CI
+0.61–0.99, 4 labels behind it), recommended AIMNet2, σ_F = 0.378 eV/Å below τ = 0.620 eV/Å
 ([`docs/MCP.md`](docs/MCP.md), verification log).
 
 **Hosted CPU vs the GPU run.** On the 12 held-out Transition1x frames of `results/service_demo.xyz` the
-hosted server's verdicts agree 12/12 with the earlier GPU run (`results/service_demo.json`), with identical
-trust scores and max |Δσ_F| = 0.0005 eV/Å.
+hosted server's σ_F ≥ τ flags agree 12/12 with the earlier GPU run (`results/service_demo.json`), with
+max |Δσ_F| = 0.0005 eV/Å. Under the verdict rule 7 of the 12 are trusted and none of the trusted frames is
+DFT-wrong; the earlier τ-only rule trusted 2 DFT-wrong frames.
 
 **Domain.** The Calibrator learned from gas-phase C/H/N/O Transition1x reactions with at most 7 heavy atoms,
-including transition states and NEB paths. A `domain_warning` is added for other elements, larger molecules,
-isolated atoms or fragments and unusually short bonds; there the trust score is an extrapolation. Absolute
-energies are on each model's own reference (PBE for MACE and Orb, ωB97M for AIMNet2), so a blend's
-`served_energy_eV` is only meaningful for differences.
+including transition states and NEB paths. A `domain_warning` is added for elements outside C/H/N/O that
+the committee still supports, larger molecules, isolated atoms or fragments and unusually short bonds;
+there the trust score is an extrapolation. Absolute energies are on each model's own reference (PBE for
+MACE and Orb, ωB97M for AIMNet2), so `served_energy_eV` values from different models are not comparable
+and a batch whose served model differs carries an `energy_warning`. Compare `reference_energy_eV`
+(always AIMNet2) across structures instead.
 
 ### 1.2 Local MCP server
 
 ```bash
-claude mcp add fittest -- uvx --from git+https://github.com/Pavel-Tk/fittest fittest-mcp   # register with Claude Code
-uvx --from git+https://github.com/Pavel-Tk/fittest fittest-mcp                 # stdio; real models if installed
-uvx --from git+https://github.com/Pavel-Tk/fittest fittest-mcp --fake-models   # CPU stand-ins, no torch; wiring only
-pip install "fittest[models] @ git+https://github.com/Pavel-Tk/fittest"        # MACE + AIMNet2 (ALCHEMI Toolkit)
-FITTEST_ORB_PYTHON=/path/to/orb-env/bin/python fittest-mcp                     # add Orb from its own env
+# demo only: a plain uvx install has no model agents
+claude mcp add fittest-demo -- uvx --from git+https://github.com/Pavel-Tk/fittest fittest-mcp --fake-models
+
+# real models: install into an environment that has them (documented, not yet tested end to end)
+uv venv fittest-env --python 3.12
+uv pip install --python fittest-env/bin/python "fittest[models] @ git+https://github.com/Pavel-Tk/fittest" \
+    --extra-index-url https://download.pytorch.org/whl/cpu --index-strategy unsafe-best-match
+claude mcp add fittest-local -- $PWD/fittest-env/bin/fittest-mcp          # MACE + AIMNet2
+claude mcp add fittest-local -e FITTEST_ORB_PYTHON=/path/to/orb-env/bin/python -- $PWD/fittest-env/bin/fittest-mcp   # + Orb
 ```
 
-Local mode runs over stdio on CPU (`--device cuda` with a GPU) and spawns one process per installed model
-agent. Orb needs its own Python environment because orb-models pins dependencies that conflict with the
-Toolkit. With only MACE and AIMNet2 it serves a **partial committee** and every response carries a warning:
-τ and the trust map were learned on the full three-model committee. With no models installed the tools
-return an error pointing to `--fake-models`, the `[models]` extra and the hosted server. Local mode logs
-only to `~/.fittest-mcp/usage.sqlite` and never reports anywhere. Real-model local mode was exercised on
-Linux only; on Windows only `--fake-models` is verified.
+A plain `uvx --from git+…` install has **no model agents**. It serves only `--fake-models`, CPU stand-ins
+whose verdicts mean nothing (useful to test the wiring); without that flag the tools return an error
+pointing to `--fake-models`, the `[models]` extra and the hosted server. For real verdicts, install into an
+environment that has the models and point your client at that environment's `fittest-mcp`. **This
+real-models local install is documented but has not been tested end to end** (fresh environment through to
+a verdict); the hosted server is the tested path.
+
+The `[models]` extra installs MACE-MPA-0 and AIMNet2 through the ALCHEMI Toolkit. Orb-v3 needs its own
+Python environment because orb-models pins dependencies that conflict with the Toolkit; set
+`FITTEST_ORB_PYTHON` to that environment's Python. With only MACE and AIMNet2 the server serves a
+**partial committee** and every response carries a warning: τ and the Calibrator's buckets and ledger were
+built on the full three-model committee, so verdicts are approximate. Local mode runs over stdio on CPU
+(`--device cuda` with a GPU), spawns one process per installed model agent, each with its own random
+socket key, logs only to `~/.fittest-mcp/usage.sqlite` and never reports anywhere.
 
 ### 1.3 Python API: the trust service
 
@@ -631,22 +667,35 @@ deploy/             hosted MCP: Caddy (TLS) + systemd units for fittest-mcp and 
 Every tool description, the server instructions and every `check_structures` response state this policy
 (`fittest/usage_log.py`, [`docs/MCP.md`](docs/MCP.md)):
 
-* **Logged per call** (one SQLite row): UTC time, tool, transport, an anonymous client id, an internal-test
-  flag, structure count, atom count, verdict counts, latency, ok/error and an error *category*
-  (`input_error`, `rate_limited`, `timeout` or the exception type; never the message, which can echo input).
-* **Client id** = HMAC-SHA256(secret salt, client name | client version | remote IP), truncated to 16 hex
-  characters. The salt is a random server-side file, never committed, so ids cannot be reversed.
-  **Raw IPs are never stored**: uvicorn's access log is off and Caddy's access log drops the client-IP and
-  X-Forwarded-For fields.
-* **Never stored:** structures, coordinates, element lists, structure names, results. A test scans the raw
-  database bytes for a planted structure name and coordinates.
-* **Users** = distinct client ids with at least one successful call, excluding internal test clients
-  (header `X-Fittest-Internal: 1`). Two people with the same client version behind one NAT count as one
-  user; one person on two networks counts as two. Aggregate counts are public at `/stats`.
+* **Logged per call** (one SQLite row): UTC time, tool (or `unknown`), transport, an anonymous client id,
+  an internal-test flag, structure count, atom count, verdict counts, per-structure failures, latency,
+  ok/error and an error *category* (`input_error`, `invalid_arguments`, `unknown_tool`, `not_ready`,
+  `rate_limited`, `busy`, `timeout` or the exception type; never the message, which can echo input). Every
+  call is logged, including unknown tools and schema-validation failures. Hosted, the log is SQLite at
+  `/var/lib/fittest-mcp/usage.sqlite`, owned by the unprivileged `fittest-mcp` system user.
+* **Client id** = HMAC-SHA256(secret salt, client name | remote IP), truncated to 16 hex characters. The
+  client *version* is deliberately not part of it, so upgrading or forging a version string does not create
+  new ids. The salt is a random server-side file (`/var/lib/fittest-mcp/salt`, mode 600, never committed),
+  so ids cannot be reversed. Hosted, the IP comes from Caddy, which overwrites X-Forwarded-For.
+* **Raw IPs are never stored**: uvicorn's access log is off and Caddy's access log drops the remote IP,
+  client IP, X-Forwarded-For, X-Real-IP, Forwarded, Cf-Connecting-Ip and True-Client-Ip fields.
+* **Never stored or logged:** structures, coordinates, element lists, structure names, results. The server's
+  own journal lines carry only the tool name and an error category or exception type. A test scans the raw
+  database bytes for a planted structure name and coordinates; another checks that a failing call leaves
+  no input in the log.
+* **Users** = distinct client ids that received **at least one structure verdict** from `check_structures`
+  or `explain`, excluding internal test clients (header `X-Fittest-Internal: 1`; a client id seen with it is
+  registered as internal). Calls to `swarm_status` or `usage_stats`, and calls whose structures all failed
+  to parse, do not count. Every test so far was marked internal. Caveats: people who share a public IP and
+  client name merge into one user (an office or venue Wi-Fi, and claude.ai / Claude Desktop custom
+  connectors, which call from Anthropic's shared egress IPs, so all claude.ai users may count as one); one
+  person on several networks or clients counts several times; varying the client name from different IPs
+  could still inflate the count. Read it as a rough activity signal, not a count of people. Aggregate
+  counts are public at `/stats`.
 * **A privacy bug, found and fixed:** the first deploy left uvicorn's access log on, which wrote client IPs
   into the systemd journal. It was turned off and the journal vacuumed; a re-check found the test client's
   IP 0 times in the server and Caddy journals and in the Caddy access log.
-* Local (stdio) mode logs only on your machine.
+* Local (stdio) mode logs only on your machine (`~/.fittest-mcp/usage.sqlite`).
 
 ### Licence
 
