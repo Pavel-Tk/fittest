@@ -887,6 +887,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     data_dir.mkdir(parents=True, exist_ok=True)
     ulog = UsageLog(data_dir / "usage.sqlite", salt_path=a.salt_file or data_dir / "salt")
     wanted = a.models.split(",") if a.models else list(snap.models)
+    have: list[str] = []
 
     if a.fake_models:
         engine = Engine(snap, "fake", snap_path)
@@ -909,7 +910,6 @@ def main(argv: Sequence[str] | None = None) -> None:
         else:
             print(f"fittest-mcp: starting model agents {have}" + (f" (not installed: {missing})" if missing else ""),
                   file=sys.stderr)
-        start_local_models(engine, have, a.device, a.orb_python, str(data_dir / "logs"))
     atexit.register(engine.close)
     # Import everything the tools need on the main thread now. On Windows, a worker thread that
     # imports sklearn/joblib blocks while the stdio transport sits in a blocking stdin read.
@@ -922,6 +922,8 @@ def main(argv: Sequence[str] | None = None) -> None:
 
     server = build_server(engine, ulog, transport=a.transport, host=a.host, port=a.port,
                           public_host=a.public_host)
+    if engine.mode == "local" and have:  # spawn only once the server is built (no orphans on errors)
+        start_local_models(engine, have, a.device, a.orb_python, str(data_dir / "logs"))
     if a.transport == "stdio":
         server.run("stdio")
     else:
