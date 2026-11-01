@@ -63,8 +63,8 @@ def cover():
     notes = ("Talking points: Fittest is a swarm of machine-learned interatomic potentials competing for a fixed DFT budget. "
              "DFT goes where the models disagree; models that add something to the swarm survive; offspring are bred on the DFT "
              "labels and must pass a gate. It runs on the NVIDIA ALCHEMI Toolkit and anyone can call it through one MCP server. "
-             "Breeding with selection failed its pre-registered test; growing the swarm without selection passed a separate "
-             "pre-registered test on 12 new seeds (run E); the live service runs the static swarm.")
+             "Evolution failed its first pre-registered tests (runs A–D); with a gate that tests forces only, the full loop beat the "
+             "static swarm on 12 new seeds and on 2,475 never-read frames (run F, pre-registered); the live service runs the static swarm.")
     write("cover", sec("cover", INK, BONE, body, notes, pad="128px", extra=";justify-content:space-between"))
 
 
@@ -424,7 +424,7 @@ def verify_run_e():
     print("run E numbers verified")
 
 
-def compete():
+def compete_grow():
     W, H = 1664, 480
     x0, x1, lo, hi = 400, 1240, -0.05, 0.05
     X = lambda v: x0 + (v - lo) / (hi - lo) * (x1 - x0)
@@ -483,7 +483,141 @@ design (new seeds 12–23, budget 800, three families, pre-registered before any
              "matches our original flagship rule, with a gate and fitness pruning, gained nothing on average (−0.001, interval "
              "−0.017 to +0.016) and was worse than static in 4 of 12 seeds. The honest lesson: variation helps, our selection "
              "didn't. The live service still runs the static swarm.")
-    write("compete", sec("compete", INK, BONE, body, notes, pad="128px 128px 150px", extra=";gap:32px"))
+    write("compete_grow", sec("compete_grow", INK, BONE, body, notes, pad="128px 128px 150px", extra=";gap:32px"))
+
+
+# ---------- 05 survival of the fittest: run F (+ run E) per-seed Δ served force RMSE vs static on FRESH frames
+# fresh frames: Transition1x val formulas, 2475 frames / 225 reactions never read by any evolution run (PREREG_fresh_frames.md)
+FRESH = {   # arm key in results/evolution_f/fresh_seed_level.json -> per-seed Δ (rounded 4 dp) and significance
+    "F-gpu/evolved/fresh": {"src": ("evolution_f", "evolved", range(24, 36)),
+        "d": [-0.0530, -0.0186, -0.0274, -0.0110, -0.0315, -0.0282, -0.0311, -0.0131, -0.0344, -0.0189, -0.0308, -0.0174],
+        "sig": [1] * 12, "mean": -0.026, "ci": (-0.034, -0.019), "better": 12, "worse": 0, "holds": True},
+    "E-gpu/noselect/fresh": {"src": ("evolution_e", "noselect", range(12, 24)),
+        "d": [-0.0233, -0.0268, -0.0173, -0.0051, -0.0158, -0.0164, -0.0491, -0.0109, -0.0270, -0.0108, -0.0142, -0.0044],
+        "sig": [1] * 12, "mean": -0.018, "ci": (-0.026, -0.011), "better": 12, "worse": 0, "holds": True},
+    "E-gpu/evolved/fresh": {"src": ("evolution_e", "evolved", range(12, 24)),
+        "d": [-0.0592, -0.0320, 0.0122, -0.0158, 0.0099, 0.0158, -0.0474, -0.0058, 0.0040, -0.0070, 0.0123, -0.0064],
+        "sig": [1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1], "mean": -0.010, "ci": (-0.026, 0.006), "better": 7, "worse": 4, "holds": False},
+}
+# also quoted in notes: F eval, E-cpu fresh (secondary, fails), sham control, diagnosis r
+F_EXTRA = {"F_eval": (-0.026, -0.030, -0.021, 12, 0), "Ecpu_fresh": (-0.019, 9, 2, False),
+           "sham": (-0.004, -0.013, 0.005), "diag_r": "r = −0.15", "fresh_frames": 2475, "fresh_reactions": 225}
+
+
+def verify_fresh():
+    if not RES.exists():
+        return
+    sl = json.loads((RES / "evolution_f/fresh_seed_level.json").read_text())
+    for key, E in FRESH.items():
+        run, arm, seeds = E["src"]
+        per = {}
+        for g in ("fresh_gpu1", "fresh_gpu2"):
+            d = json.loads((RES / f"{run}/{g}/summary.json").read_text())
+            for bb in d["budgets"].values():
+                assert bb["budget"] == 800
+                for r, x in bb["runs"].items():
+                    if r.startswith(arm + "_s"):
+                        per[int(r.split("_s")[-1])] = x["fresh"]["vs_static"]["force_rmse"]
+        assert sorted(per) == list(seeds), (key, sorted(per))
+        assert [round(per[s]["diff"], 4) for s in seeds] == E["d"], (key, [round(per[s]["diff"], 4) for s in seeds])
+        assert [int(per[s]["significant"]) for s in seeds] == E["sig"], key
+        fr = sl[key]["force_rmse"]
+        assert fr["n"] == 12 and round(fr["mean"], 3) == E["mean"] and tuple(round(c, 3) for c in fr["ci"]) == E["ci"], key
+        assert (fr["sig_better"], fr["sig_worse"]) == (E["better"], E["worse"]) and sl[key]["rule_holds"] is E["holds"], key
+        xs = [per[s]["diff"] for s in seeds]
+        m = sum(xs) / 12
+        h = 2.201 * (sum((x - m) ** 2 for x in xs) / 11) ** 0.5 / 12 ** 0.5
+        assert abs(m - fr["mean"]) < 1e-9 and abs(m - h - fr["ci"][0]) < 1e-9 and abs(m + h - fr["ci"][1]) < 1e-9, key
+    fe = sl["F-gpu/evolved/eval"]["force_rmse"]
+    assert (round(fe["mean"], 3), *(round(c, 3) for c in fe["ci"]), fe["sig_better"], fe["sig_worse"]) == F_EXTRA["F_eval"]
+    ec = sl["E-cpu/noselect/fresh"]
+    assert (round(ec["force_rmse"]["mean"], 3), ec["force_rmse"]["sig_better"], ec["force_rmse"]["sig_worse"],
+            ec["rule_holds"]) == F_EXTRA["Ecpu_fresh"]
+    # sham control (run E, CPU, seeds 12-17, learning rate 0): seed-level mean and 95% t-CI (df 5 -> 2.571)
+    sh = json.loads((RES / "evolution_e/expl_cpu_sham/summary.json").read_text())
+    xs = [x["vs_static"]["force_rmse"]["diff"] for bb in sh["budgets"].values() for r, x in bb["runs"].items()
+          if r.startswith("noselect_s")]
+    assert len(xs) == 6
+    m = sum(xs) / 6
+    h = 2.571 * (sum((x - m) ** 2 for x in xs) / 5) ** 0.5 / 6 ** 0.5
+    assert (round(m, 3), round(m - h, 3), round(m + h, 3)) == F_EXTRA["sham"], (m, m - h, m + h)
+    assert F_EXTRA["diag_r"] in (RES / "evolution/DIAGNOSIS.md").read_text()
+    pf = (RES / "evolution_f/PREREG_fresh_frames.md").read_text()
+    assert "2475 frames" in pf and "225 reactions" in pf
+    pr = (RES / "evolution_f/PREREG.md").read_text()
+    assert "New seeds 24–35" in pr and "Budget 800, three families" in pr
+    print("run F / fresh-frame numbers verified")
+
+
+def compete():
+    W, H = 1664, 520
+    x0, x1, lo, hi = 400, 1240, -0.07, 0.03
+    X = lambda v: x0 + (v - lo) / (hi - lo) * (x1 - x0)
+    LINE, MUTE = "#2C3630", "#8F9A92"
+    p = []
+    T = lambda x, y, s, c=MUTE, a="start", sz=24, f="Geist Mono, monospace": (
+        f'<text x="{x}" y="{y}" text-anchor="{a}" font-family="{f}" font-size="{sz}" fill="{c}">{s}</text>')
+    m = lambda t: t.replace("-", "−")
+    ytop, ybot = 56, 470
+    for t in (-0.06, -0.04, -0.02, 0.02):
+        p.append(f'<line x1="{X(t):.0f}" x2="{X(t):.0f}" y1="{ytop}" y2="{ybot}" stroke="{LINE}" stroke-width="2"/>')
+        p.append(T(f"{X(t):.0f}", ybot + 40, m(f"{t:+.2f}"), MUTE, "middle"))
+    p.append(f'<line x1="{X(0):.0f}" x2="{X(0):.0f}" y1="{ytop - 16}" y2="{ybot}" stroke="{BONE}" stroke-width="3"/>')
+    p.append(T(f"{X(0):.0f}", ybot + 40, "0 = static", BONE, "middle"))
+    p.append(T(f"{X(0) - 16:.0f}", 30, "← better than static", BONE, "end"))
+    p.append(T(f"{X(0) + 16:.0f}", 30, "worse →", MUTE, "start"))
+    rows = [("F-gpu/evolved/fresh", "Evolve", "force-only gate · run F", EMBER, 110),
+            ("E-gpu/noselect/fresh", "Grow", "no selection · run E", "#E9B48F", 245),
+            ("E-gpu/evolved/fresh", "Evolve", "original gate · run E seeds", "#8F9A92", 380)]
+    for key, name, sub, c, yc in rows:
+        E = FRESH[key]
+        p.append(T(0, yc - 2, name, c, sz=40, f="Instrument Serif, Georgia, serif"))
+        p.append(T(0, yc + 30, sub, MUTE, sz=24, f="Geist, sans-serif"))
+        levels = []          # simple beeswarm: first level with no neighbour within 20 px
+        for d, sg in sorted(zip(E["d"], E["sig"])):
+            k = next(k for k in range(12) if all(abs(X(d) - xx) >= 20 for xx in (levels[k] if k < len(levels) else [])))
+            levels += [[] for _ in range(k + 1 - len(levels))]
+            levels[k].append(X(d))
+            y = yc - 12 + ((k + 1) // 2) * (-18 if k % 2 else 18)
+            p.append(f'<circle cx="{X(d):.1f}" cy="{y}" r="9" fill="{c if sg else INK}" stroke="{c}" stroke-width="3"/>')
+        a, b = E["ci"]
+        yb = yc + 46
+        p.append(f'<path d="M{X(a):.1f} {yb}H{X(b):.1f}M{X(a):.1f} {yb - 11}V{yb + 11}M{X(b):.1f} {yb - 11}V{yb + 11}" '
+                 f'stroke="{c}" stroke-width="5" fill="none"/>')
+        p.append(f'<rect x="{X(E["mean"]) - 8:.1f}" y="{yb - 8}" width="16" height="16" transform="rotate(45 {X(E["mean"]):.1f} {yb})" fill="{c}"/>')
+        p.append(T(1290, yc - 4, m(f"{E['mean']:+.3f}"), c, sz=44, f="Instrument Serif, Georgia, serif"))
+        p.append(T(1290, yc + 26, m(f"[{a:+.3f}, {b:+.3f}]"), MUTE))
+        p.append(T(1290, yc + 56, f"{E['better']} better · {E['worse']} worse", BONE if E["worse"] == 0 else MUTE))
+    svg = (f'<svg aria-label="Per-seed change in served force error versus the static swarm on 2,475 never-read frames. '
+           f'Evolve with force-only gate (run F): mean −0.026 eV per angstrom, 95% CI −0.034 to −0.019, 12 of 12 seeds better. '
+           f'Grow without selection (run E): −0.018, CI −0.026 to −0.011, 12 better. '
+           f'Evolve with the original gate (run E seeds): −0.010, CI −0.026 to +0.006, 7 better, 4 worse." '
+           f'viewBox="0 0 {W} {H}" style="width:{W}px;height:{H}px;flex:none">{"".join(p)}</svg>')
+    foot = "Δ force RMSE vs static, eV/Å · filled = seed significant · ◆ mean ± 95% t-CI · results/evolution_f/FRESH_FRAMES.md"
+    body = f'''<!-- sources: per-seed Δ force RMSE on fresh frames and significance: /home/azureuser/fittest/results/evolution_f/fresh_gpu1, fresh_gpu2 /summary.json
+(budgets.*.runs.evolved_s24..35.fresh.vs_static.force_rmse) and /home/azureuser/fittest/results/evolution_e/fresh_gpu1, fresh_gpu2 /summary.json (noselect_s12..23, evolved_s12..23);
+seed-level means, 95% t-CIs, better/worse, rule: /home/azureuser/fittest/results/evolution_f/fresh_seed_level.json (F-gpu/evolved/fresh, E-gpu/noselect/fresh, E-gpu/evolved/fresh);
+fresh frames (2475 frames, 225 reactions, Transition1x val formulas): /home/azureuser/fittest/results/evolution_f/PREREG_fresh_frames.md, FRESH_FRAMES.md;
+design (new seeds 24–35, budget 800, three families, rel-E gate check off): /home/azureuser/fittest/results/evolution_f/PREREG.md; /home/azureuser/fittest/results/evolution/SUMMARY.md "Run F" -->
+{kicker("05", "Survival of the fittest", EMBER)}
+<h2 style="font-family:{SERIF};font-size:96px;font-weight:400;line-height:1.05;letter-spacing:-2px">Evolution beats static, <i style="color:{EMBER}">once the gate tests forces.</i></h2>
+<p style="font-family:{MONO};font-size:26px;letter-spacing:1px;color:{BONE}">pre-registered · 12 new seeds each · scored on 2,475 never-read frames (new formulas)</p>
+{svg}
+<p style="font-size:28px;color:#C9C3B6">Breed <span style="color:{EMBER}">→</span> gate on forces <span style="color:{EMBER}">→</span> prune what adds nothing <span style="color:{EMBER}">→</span> serve the best answer.</p>
+{footer(foot, MUTE_D)}'''
+    notes = ("Talking points, in order. We pre-registered what would count as evolution working. Runs A, B and C failed that test, and "
+             "run D, a pre-registered fix that protected base models and softened the gate, was not confirmed (4 of 6 seeds, 5 needed). "
+             "The diagnosis: the gate's reaction-energy check, computed on a handful of labels, did not predict held-out results "
+             "(r = −0.15) and mostly rejected the children with the largest force gains. Run F switched that check off, keeping "
+             "breeding, the force gate and fitness pruning, and was pre-registered on 12 new seeds: served force error fell versus "
+             "the static swarm in all 12 (−0.026 eV/Å, 95% interval −0.030 to −0.021 on the eval split). Run E, also pre-registered, "
+             "grew the swarm without any selection and gained −0.018. Because the fix came from reading earlier eval results, we "
+             "pre-registered a second check before scoring: 2,475 frames from new formulas that no run had ever read. The eval numbers "
+             "reproduced exactly, and the gains held: run F −0.026, 12 of 12 seeds better; run E −0.018, 12 of 12. The original gate on "
+             "run E's seeds is the contrast: −0.010, with 4 seeds worse than static. A sham control, children with learning rate zero, "
+             "gains only −0.004 (not significant), so the force gain comes from learning. Not everything passed: the CPU replication "
+             "of run E failed the fresh-frame rule with 2 seeds worse. The live service still runs the static swarm.")
+    write("compete", sec("compete", INK, BONE, body, notes, pad="128px 128px 150px", extra=";gap:24px"))
 
 
 # ---------- (unused since run E) old 04: real family tree, run B seed 1 (AIMNet2 lineage)
@@ -623,22 +757,23 @@ def notyet():
 /home/azureuser/fittest/{A_SUM} ("evolved_s1 final − static": F −0.011 *, rel-E +0.056 *);
 run B: /home/azureuser/fittest/{B_VERDICT} (per_run.holds), /home/azureuser/fittest/{B_SUM} ("final − static (same budget)" rows: s1 F −0.024 *, s0 F −0.001 n.s.);
 run C (pre-registered GPU run, AIMNet2+Orb+MACE specialists): /home/azureuser/fittest/{C_SUM} (verdict.per_run, verdict.per_budget; budgets.*.runs.evolved_*.vs_static.force_rmse: +0.034, +0.019, +0.011 significant);
+diagnosis r = −0.15: /home/azureuser/fittest/results/evolution/DIAGNOSIS.md;
 gate failures run C: /home/azureuser/fittest/results/evolution_c/b*/family_tree.json evolved_* (54 children, 36 stillborn, 35 on rel-E);
 run D (pre-registered fix, seeds 6–11): /home/azureuser/fittest/results/evolution_d/cpu/summary.json verdict.per_run (s6 T, s7 T, s8 F, s9 T, s10 F, s11 T), PREREG.md (needs ≥5 of 6);
 /home/azureuser/fittest/results/evolution_d/gpu/summary.json (4 of 6 hold; s9 +0.015 *, s10 +0.005 * worse than static on forces);
 secondary: rel-E "final − static" rows of both summary_tables.md + {C_SUM} vs_static.rel_e_mae; also /home/azureuser/fittest/{EVO_SUMMARY} "Secondary outcome" -->
-{kicker("Backup", "What didn't work (yet)", EMBER_D)}
-<h2 style="font-family:{SERIF};font-size:96px;font-weight:400;line-height:1.05;letter-spacing:-2px">Selection did not beat <i style="color:{EMBER_D}">the static swarm.</i></h2>
+{kicker("Backup", "Pre-registered failures", EMBER_D)}
+<h2 style="font-family:{SERIF};font-size:96px;font-weight:400;line-height:1.05;letter-spacing:-2px">What failed first, <i style="color:{EMBER_D}">and led to the fix.</i></h2>
 <div style="display:flex;justify-content:space-between;align-items:center;gap:32px">
 <p style="font-size:26px;line-height:1.4;color:#2E3631">Pre-registered: beat static (paired 95% CI) and own gen 0 on force error, <b>in every seed</b>, ≥3 gens.</p>
 {legend}
 </div>
 <div style="display:flex;flex-direction:column">{"".join(rowh)}</div>
 <div style="display:flex;flex-direction:column;gap:10px;border-top:2px solid #CFC7B6;padding-top:16px">
-<p style="font-size:28px;line-height:1.35;color:{INK}">Secondary (pre-registered for run C): evolution lowers reaction-energy error vs static in <b>{EVO['relE_lower']} of {EVO['relE_runs']}</b> seed runs ({r0:.3f} to {r1:.3f} eV; fine-tuning without selection gains as much).</p>
+<p style="font-size:28px;line-height:1.35;color:{INK}">Diagnosis: the gate's reaction-energy check on a few labels did not predict eval ({F_EXTRA['diag_r']}) and rejected the best children. Gating on forces only fixed it: <b>run F, slide 05</b>.</p>
 </div>
-{footer("results/evolution · evolution_aimnet · evolution_c · evolution_d · results/evolution/SUMMARY.md", MUTE_L)}'''.replace("[-", "[−").replace(", -", ", −").replace("(-0.", "(−0.").replace("to -0.", "to −0.")
-    notes = ("Talking points: we pre-registered what would count as evolution working, and it has not cleared that bar. "
+{footer("results/evolution · evolution_aimnet · evolution_c · evolution_d · results/evolution/SUMMARY.md, DIAGNOSIS.md", MUTE_L)}'''.replace("[-", "[−").replace(", -", ", −").replace("(-0.", "(−0.").replace("to -0.", "to −0.")
+    notes = ("Talking points: these are the pre-registered runs that failed before the fix on slide 05. "
              "Run A bred MACE children: 15 of 18 were stillborn, mostly on reaction energy, and in seed 1 the child that replaced base MACE "
              "improved forces but made reaction energies worse. Run B bred AIMNet2 children with a reaction-energy loss: it holds in "
              "one seed of two. Run C bred niche specialists from all three families at three DFT budgets: one seed holds at 200 and "
@@ -650,7 +785,9 @@ secondary: rel-E "final − static" rows of both summary_tables.md + {C_SUM} vs_
              "9 of 10 seed runs, but children are trained and gated on reaction energy, and fine-tuning without selection gains as much. "
              "Run D pre-registered a fix on six new seeds (protect base models, gentler gate): it needed 5 of 6 and held in 4; "
              "on GPU with three families also 4 of 6, with two seeds worse than static. Not confirmed. "
-             "What did pass a pre-registered test is growing without selection (run E, slide 04).")
+             "The diagnosis that followed: the gate's reaction-energy check on a few labels did not predict eval (r = −0.15) and "
+             "rejected the children with the largest force gains. Run F gated on forces only and passed on 12 new seeds and on "
+             "never-read frames (slide 05).")
     write("notyet", sec("notyet", BONE, INK, body, notes, pad="128px 128px 140px", extra=";gap:20px"))
 
 
@@ -698,6 +835,7 @@ if __name__ == "__main__":
     OUT.mkdir(parents=True, exist_ok=True)
     verify_evolution()
     verify_run_e()
+    verify_fresh()
     for f in (args or ORDER):
         globals()[f]()
     deck()
