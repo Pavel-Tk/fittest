@@ -295,6 +295,8 @@ EVO = {
     # secondary outcome: served rel-E MAE, evolved final − static, over the 10 pre-registered seed runs (A 2, B 2, C 6)
     "relE_lower": 9, "relE_runs": 10, "relE_range": (-0.007, -0.044),
     "held_runs": 3,                     # pre-registered seed runs where the rule held: B s1, C b200 s1, C b800 s0
+    # run D (evolution_d/cpu|gpu/summary.json), seeds 6..11; PREREG.md: confirmed iff >= 5 of 6 on CPU and none worse
+    "D_cpu_holds": (True, True, False, True, False, True), "D_needed": 5, "D_gpu_held": 4, "D_gpu_worse": 2,
     "C_children": 54, "C_stillborn": 36, "C_stillborn_relE": 35,      # run C b*/family_tree.json evolved_* (GPU, pre-registered)
 }
 
@@ -361,6 +363,16 @@ def verify_evolution():
     sb = [n for n in kids_c if n["status"] == "stillborn"]
     sb_rel = [n for n in sb if any(not ch["passed"] and "rel_energy" in ch["name"] for ch in n["gate"]["checks"])]
     assert (len(kids_c), len(sb), len(sb_rel)) == (EVO["C_children"], EVO["C_stillborn"], EVO["C_stillborn_relE"])
+    for kind in ("cpu", "gpu"):
+        dv = json.loads((RES / f"evolution_d/{kind}/summary.json").read_text())
+        pr = {int(k.split("_s")[-1]): v["holds"] for k, v in dv["verdict"]["per_run"].items()}
+        worse = sum(x["vs_static"]["force_rmse"]["significant"] and x["vs_static"]["force_rmse"]["diff"] > 0
+                    for bb in dv["budgets"].values() for r, x in bb["runs"].items() if r.startswith("evolved"))
+        if kind == "cpu":
+            assert tuple(pr[s] for s in range(6, 12)) == EVO["D_cpu_holds"] and worse == 0, (pr, worse)
+        else:
+            assert sum(pr.values()) == EVO["D_gpu_held"] and len(pr) == 6 and worse == EVO["D_gpu_worse"], (pr, worse)
+    assert "at least 5 of 6" in (RES / "evolution_d/PREREG.md").read_text()
     print("evolution numbers verified against", RES)
 
 
@@ -457,9 +469,15 @@ def notyet():
                f"{EVO['A_s1_dF']:+.3f} eV/Å, but reaction energy {EVO['A_s1_dRelE']:+.3f} eV worse.")),
             ("B", "AIMNet2 offspring", [("", [EVO["B_holds"][0], EVO["B_holds"][1]])],
              m(f"Seed 1 beats static ({EVO['B_s1_dF']:+.3f} eV/Å); seed 0 does not ({EVO['B_s0_dF']:+.3f}, n.s.).")),
-            ("C", "Niche specialists<br>(3 families)", [(f"{b}", list(h)) for b, h in EVO["C_holds"].items()],
-             m(f"{EVO['C_worse_F'][0]} of 6 runs worse than static on forces (+{EVO['C_worse_F'][1]:.3f} to "
-               f"+{EVO['C_worse_F'][2]:.3f} eV/Å)."))]
+            ("C", "Niche specialists<br>(3 families)", [(f"{b} labels", list(h)) for b, h in EVO["C_holds"].items()],
+             m(f"{EVO['C_stillborn']} of {EVO['C_children']} children stillborn; {EVO['C_worse_F'][0]} of 6 runs worse than "
+               f"static on forces (+{EVO['C_worse_F'][1]:.3f} to +{EVO['C_worse_F'][2]:.3f} eV/Å).")),
+            ("D", 'Fix, on new seeds<span style="display:block;font-size:24px;font-weight:400;line-height:1.3;color:#2E3631;margin-top:6px">'
+                  'pre-registered: protect base models + gentler gate</span>',
+             [("seeds 6–11 (CPU)", list(EVO["D_cpu_holds"]))],
+             f"{sum(EVO['D_cpu_holds'])} of 6 (needed {EVO['D_needed']}); on GPU also {EVO['D_gpu_held']} of 6, "
+             f"two seeds worse than static.", "not confirmed")]
+    rows = [r if len(r) == 5 else (*r, "does not hold") for r in rows]
 
     def dots(h):
         out = []
@@ -474,43 +492,42 @@ def notyet():
         return "".join(out)
 
     def group(lab, h):
-        top = (f'<p style="font-family:{MONO};font-size:24px;color:{MUTE_L};height:30px">{lab} labels</p>' if lab else "")
+        top = (f'<p style="font-family:{MONO};font-size:24px;color:{MUTE_L};height:30px">{lab}</p>' if lab else "")
         return f'<div style="display:flex;flex-direction:column;gap:10px">{top}<div style="display:flex;gap:16px">{dots(h)}</div></div>'
 
     rowh = []
-    for k, name, groups, note in rows:
-        rowh.append(f'''<div style="display:grid;grid-template-columns:72px 380px 520px 1fr;align-items:center;column-gap:32px;border-top:2px solid #CFC7B6;padding:10px 0">
+    for k, name, groups, note, verdict in rows:
+        rowh.append(f'''<div style="display:grid;grid-template-columns:72px 380px 520px 1fr;align-items:center;column-gap:32px;border-top:2px solid #CFC7B6;padding:6px 0">
 <p style="font-family:{SERIF};font-size:80px;line-height:1;color:{INK}">{k}</p>
 <p style="font-size:32px;font-weight:600">{name}</p>
 <div style="display:flex;gap:44px">{"".join(group(l, h) for l, h in groups)}</div>
-<div style="display:flex;flex-direction:column;gap:8px"><p style="font-family:{MONO};font-size:24px;letter-spacing:2px;text-transform:uppercase;color:{EMBER_D}">does not hold</p>
+<div style="display:flex;flex-direction:column;gap:8px"><p style="font-family:{MONO};font-size:24px;letter-spacing:2px;text-transform:uppercase;color:{EMBER_D}">{verdict}</p>
 <p style="font-size:24px;line-height:1.35;color:#2E3631">{note}</p></div>
 </div>''')
     sw = lambda fill: (f'<span style="width:24px;height:24px;border-radius:50%;display:inline-block;'
                        f'{"background:" + EMBER_D if fill else "border:3px solid #3C4640"}"></span>')
-    legend = (f'<div style="display:grid;grid-template-columns:72px 380px 520px 1fr;column-gap:32px;font-family:{MONO};font-size:24px;color:{MUTE_L}">'
-              f'<span></span><span>run</span>'
-              f'<span style="display:flex;gap:20px;align-items:center">seed 0, seed 1: {sw(True)} held {sw(False)} not</span>'
-              f'<span>verdict (needs every seed)</span></div>')
+    legend = (f'<span style="display:inline-flex;gap:14px;align-items:center;font-family:{MONO};font-size:24px;color:{MUTE_L};white-space:nowrap">'
+              f'{sw(True)} held {sw(False)} not · seed 0, seed 1</span>')
     r0, r1 = EVO["relE_range"]
     body = f'''<!-- sources: run A: /home/azureuser/fittest/{A_VERDICT} (per_run.holds), /home/azureuser/fittest/{A_TREE} (children: 18, stillborn: 15, seeds 0+1),
 /home/azureuser/fittest/{A_SUM} ("evolved_s1 final − static": F −0.011 *, rel-E +0.056 *);
 run B: /home/azureuser/fittest/{B_VERDICT} (per_run.holds), /home/azureuser/fittest/{B_SUM} ("final − static (same budget)" rows: s1 F −0.024 *, s0 F −0.001 n.s.);
 run C (pre-registered GPU run, AIMNet2+Orb+MACE specialists): /home/azureuser/fittest/{C_SUM} (verdict.per_run, verdict.per_budget; budgets.*.runs.evolved_*.vs_static.force_rmse: +0.034, +0.019, +0.011 significant);
 gate failures run C: /home/azureuser/fittest/results/evolution_c/b*/family_tree.json evolved_* (54 children, 36 stillborn, 35 on rel-E);
+run D (pre-registered fix, seeds 6–11): /home/azureuser/fittest/results/evolution_d/cpu/summary.json verdict.per_run (s6 T, s7 T, s8 F, s9 T, s10 F, s11 T), PREREG.md (needs ≥5 of 6);
+/home/azureuser/fittest/results/evolution_d/gpu/summary.json (4 of 6 hold; s9 +0.015 *, s10 +0.005 * worse than static on forces);
 secondary: rel-E "final − static" rows of both summary_tables.md + {C_SUM} vs_static.rel_e_mae; also /home/azureuser/fittest/{EVO_SUMMARY} "Secondary outcome" -->
 {kicker("Backup", "What didn't work (yet)", EMBER_D)}
 <h2 style="font-family:{SERIF};font-size:96px;font-weight:400;line-height:1.05;letter-spacing:-2px">Evolution did not beat <i style="color:{EMBER_D}">the static swarm.</i></h2>
-<p style="font-size:26px;line-height:1.4;color:#2E3631;width:1664px">Pre-registered: beat the static swarm (paired 95% CI) and its own gen 0 on served force error, <b>in every seed</b>, after ≥3 generations.</p>
-<div style="display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;justify-content:space-between;align-items:center;gap:32px">
+<p style="font-size:26px;line-height:1.4;color:#2E3631">Pre-registered: beat static (paired 95% CI) and own gen 0 on force error, <b>in every seed</b>, ≥3 gens.</p>
 {legend}
+</div>
 <div style="display:flex;flex-direction:column">{"".join(rowh)}</div>
-</div>
-<div style="display:flex;flex-direction:column;gap:10px;border-top:2px solid #CFC7B6;padding-top:20px">
+<div style="display:flex;flex-direction:column;gap:10px;border-top:2px solid #CFC7B6;padding-top:16px">
 <p style="font-size:28px;line-height:1.35;color:{INK}">Secondary (pre-registered for run C): evolution lowers reaction-energy error vs static in <b>{EVO['relE_lower']} of {EVO['relE_runs']}</b> seed runs ({r0:.3f} to {r1:.3f} eV; fine-tuning without selection gains as much).</p>
-<p style="font-size:26px;line-height:1.35;color:#2E3631">Most children fail the gate on reaction energy ({EVO['C_stillborn']} of {EVO['C_children']} in run C, {EVO['A_stillborn']} of {EVO['A_children']} in run A).<br>Why evolved swarms sometimes end up worse than static is not yet established.</p>
 </div>
-{footer("results/evolution · results/evolution_aimnet · results/evolution_c · results/evolution/SUMMARY.md", MUTE_L)}'''.replace("[-", "[−").replace(", -", ", −").replace("(-0.", "(−0.").replace("to -0.", "to −0.")
+{footer("results/evolution · evolution_aimnet · evolution_c · evolution_d · results/evolution/SUMMARY.md", MUTE_L)}'''.replace("[-", "[−").replace(", -", ", −").replace("(-0.", "(−0.").replace("to -0.", "to −0.")
     notes = ("Talking points: we pre-registered what would count as evolution working, and it has not cleared that bar. "
              "Run A bred MACE children: 15 of 18 were stillborn, mostly on reaction energy, and in seed 1 the child that replaced base MACE "
              "improved forces but made reaction energies worse. Run B bred AIMNet2 children with a reaction-energy loss: it holds in "
@@ -520,7 +537,9 @@ secondary: rel-E "final − static" rows of both summary_tables.md + {C_SUM} vs_
              "one hypothesis is that selection prunes base models for niche specialists, but no-selection changes several things "
              "at once and lost to evolved in one of the two pre-registered seeds, so we do not claim it. "
              "The pre-registered secondary outcome: the evolved swarm has lower reaction-energy error than static in "
-             "9 of 10 seed runs, but children are trained and gated on reaction energy, and fine-tuning without selection gains as much. The static swarm on slide 05 is the result we stand on.")
+             "9 of 10 seed runs, but children are trained and gated on reaction energy, and fine-tuning without selection gains as much. "
+             "Run D pre-registered a fix on six new seeds (protect base models, gentler gate): it needed 5 of 6 and held in 4; "
+             "on GPU with three families also 4 of 6, with two seeds worse than static. Not confirmed. The static swarm on slide 05 is the result we stand on.")
     write("notyet", sec("notyet", BONE, INK, body, notes, pad="128px 128px 140px", extra=";gap:20px"))
 
 
