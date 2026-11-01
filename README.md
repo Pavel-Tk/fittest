@@ -40,7 +40,7 @@ Formerly **TrustSwarm**; the old GitHub URL redirects here.
   (**run F**, pre-registered, 12 new seeds), the full loop beats the static swarm in **12 of 12 seeds**: served force
   error −0.026 eV/Å [−0.030, −0.021] (≈12%), with better relative energies and calibration. It **held on 2,475 frames
   of new chemistry** that no run had ever read (−0.026 [−0.034, −0.019], 12/12). Growing the swarm without selection
-  (run E) also wins (−0.018, 12/12 on new chemistry). A sham control (children that learn nothing) shows the force
+  (run E) also wins (−0.018, 12/12 on new chemistry). A sham control for run E (CPU; children that learn nothing) shows its force
   gain comes from learning. [`results/evolution/SUMMARY.md`](results/evolution/SUMMARY.md)
 * **Use it now.** Add the hosted MCP server to Claude Code:
   `claude mcp add --transport http fittest https://fittest-mcp.westus2.cloudapp.azure.com/mcp`,
