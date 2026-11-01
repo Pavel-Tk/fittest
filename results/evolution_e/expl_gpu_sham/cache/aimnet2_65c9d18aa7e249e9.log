@@ -1,0 +1,22 @@
+/content/fittest/scripts/evolve_c_offspring.py:220: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:836.)
+  "rel_e_mse": float(el / len(lab_pos))})
+Warp 1.18.0 initialized:
+   CUDA Toolkit 13.4, Driver 13.0
+   Devices:
+     "cpu"      : "x86_64"
+     "cuda:0"   : "NVIDIA L4" (22 GiB, sm_89, mempool enabled)
+   Kernel cache:
+     /root/.cache/warp/1.18.0
+{"step": 0, "loss": 0.1925270321267088, "force_mse": 0.18473577499389648, "rel_e_mse": 0.0311650285312493}
+{"step": 20, "loss": 0.1592432379201456, "force_mse": 0.15134355425834656, "rel_e_mse": 0.03159873464719618}
+{"step": 40, "loss": 0.20411755608090226, "force_mse": 0.19141875207424164, "rel_e_mse": 0.05079521602664253}
+{"step": 60, "loss": 0.23929147864154396, "force_mse": 0.23097150027751923, "rel_e_mse": 0.033279913456098945}
+{"step": 80, "loss": 0.275886006071254, "force_mse": 0.270658940076828, "rel_e_mse": 0.0209082639777041}
+{"step": 100, "loss": 0.3124876972662135, "force_mse": 0.3032442033290863, "rel_e_mse": 0.036973975748508726}
+{"step": 120, "loss": 0.28250218349015555, "force_mse": 0.23913449048995972, "rel_e_mse": 0.17347077200078323}
+{"step": 140, "loss": 0.17923218602112542, "force_mse": 0.15951907634735107, "rel_e_mse": 0.07885243869509735}
+{"step": 160, "loss": 0.2423202482836575, "force_mse": 0.225030779838562, "rel_e_mse": 0.06915787378038196}
+{"step": 180, "loss": 0.3887135529714319, "force_mse": 0.3260757029056549, "rel_e_mse": 0.250551400263108}
+{"step": 199, "loss": 0.22514604565548976, "force_mse": 0.19765421748161316, "rel_e_mse": 0.10996731269550637}
+DONE {"id": "g3_aimnet2_flagged", "ckpt": "results/expl_gpu_sham/cache/aimnet2_65c9d18aa7e249e9.pt", "n_train": 270, "n_train_reactions": 64, "n_head_params": 862665, "train_seconds": 19.551918745040894, "predict_seconds": 0.3990795612335205, "wall_seconds": 19.950998783111572, "toolkit": {}}

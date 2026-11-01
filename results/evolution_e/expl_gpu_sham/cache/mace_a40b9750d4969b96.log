@@ -1,0 +1,27 @@
+/usr/local/lib/python3.13/dist-packages/torch/jit/_script.py:1488: DeprecationWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
+  warnings.warn(
+/content/fittest/scripts/evolve_c_offspring.py:172: UserWarning: Environment variable TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD detected, since the`weights_only` argument was not explicitly passed to `torch.load`, forcing weights_only=False.
+  state = torch.load(spec["parent_ckpt"], map_location=args.device)
+/content/fittest/scripts/evolve_c_offspring.py:220: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:836.)
+  "rel_e_mse": float(el / len(lab_pos))})
+Warp 1.18.0 initialized:
+   CUDA Toolkit 13.4, Driver 13.0
+   Devices:
+     "cpu"      : "x86_64"
+     "cuda:0"   : "NVIDIA L4" (22 GiB, sm_89, mempool enabled)
+   Kernel cache:
+     /root/.cache/warp/1.18.0
+Using medium MPA-0 model as default MACE-MP model, to use previous (before 3.10) default model please specify 'medium' as model argument
+{"step": 0, "loss": 1.193902611732483, "force_mse": 0.9445045590400696, "rel_e_mse": 0.9975920915603638}
+{"step": 20, "loss": 1.9082025289535522, "force_mse": 1.8297556638717651, "rel_e_mse": 0.3137876093387604}
+{"step": 40, "loss": 1.3255360126495361, "force_mse": 0.936251699924469, "rel_e_mse": 1.5571370124816895}
+{"step": 60, "loss": 0.6834657192230225, "force_mse": 0.6666078567504883, "rel_e_mse": 0.06743138283491135}
+{"step": 80, "loss": 2.235379934310913, "force_mse": 2.1871299743652344, "rel_e_mse": 0.19300024211406708}
+{"step": 100, "loss": 1.077970266342163, "force_mse": 0.9708099365234375, "rel_e_mse": 0.4286411702632904}
+{"step": 120, "loss": 1.088124394416809, "force_mse": 0.8962423205375671, "rel_e_mse": 0.7675283551216125}
+{"step": 140, "loss": 0.8736761808395386, "force_mse": 0.7262407541275024, "rel_e_mse": 0.5897418260574341}
+{"step": 160, "loss": 0.5671064257621765, "force_mse": 0.5499991774559021, "rel_e_mse": 0.06842909753322601}
+{"step": 180, "loss": 0.8395476937294006, "force_mse": 0.7779139280319214, "rel_e_mse": 0.24653516709804535}
+{"step": 199, "loss": 1.4611866474151611, "force_mse": 0.9497029185295105, "rel_e_mse": 2.0459346771240234}
+DONE {"id": "g3_mace_flagged", "ckpt": "results/expl_gpu_sham/cache/mace_a40b9750d4969b96.pt", "n_train": 270, "n_train_reactions": 67, "n_head_params": 2192, "train_seconds": 47.704448223114014, "predict_seconds": 11.291565656661987, "wall_seconds": 58.99601435661316, "toolkit": {}}
