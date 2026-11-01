@@ -733,6 +733,9 @@ Everything below is also in [`results/RESULTS.md`](results/RESULTS.md) ("Failure
 
 * **Live DFT** instead of Transition1x lookups.
 * **Selection vs growth on the same seeds**, to isolate what selection adds.
+* **A reliable energy test for children.** Run F tests children on forces only. The energy check was dropped
+  because on a few select labels it was noise, not because energies do not matter; with enough labels, children
+  can be judged on reaction energies again.
 * **Let the council set its own size.** It already grows and shrinks (final councils of 3 to 6 members), but
   the bounds 3 and 6 are ours.
 * **Let new model families join.** Today only AIMNet2, Orb and MACE breed.
