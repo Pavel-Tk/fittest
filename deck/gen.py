@@ -63,8 +63,8 @@ def cover():
     notes = ("Talking points: Fittest is a swarm of machine-learned interatomic potentials competing for a fixed DFT budget. "
              "DFT goes where the models disagree; models that add something to the swarm survive; offspring are bred on the DFT "
              "labels and must pass a gate. It runs on the NVIDIA ALCHEMI Toolkit and anyone can call it through one MCP server. "
-             "Breeding is experimental; the pre-registered test says it does not yet beat the static swarm; the live service "
-             "runs the static swarm.")
+             "Breeding with selection failed its pre-registered test; growing the swarm without selection passed a separate "
+             "pre-registered test on 12 new seeds (run E); the live service runs the static swarm.")
     write("cover", sec("cover", INK, BONE, body, notes, pad="128px", extra=";justify-content:space-between"))
 
 
@@ -376,8 +376,118 @@ def verify_evolution():
     print("evolution numbers verified against", RES)
 
 
-# ---------- 04 compete: real family tree, run B seed 1 (AIMNet2 lineage)
+# ---------- 04 grow: run E (pre-registered, 12 new seeds), per-seed Δ served force RMSE vs static
+E_SL = "results/evolution_e/seed_level_gpu_{arm}.json"
+E_SUMS = ("results/evolution_e/gpu1/summary.json", "results/evolution_e/gpu2/summary.json")
+# per-seed Δ force RMSE (arm − static, eV/Å) and significance, seeds 12..23, from E_SUMS / seed_level_gpu_*.json
+RUN_E = {
+    "noselect": {"d": [-0.0205, -0.0271, -0.0163, -0.0050, -0.0165, -0.0181, -0.0312, -0.0188, -0.0290, -0.0151, -0.0186, -0.0011],
+                 "sig": [1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0],
+                 "mean": -0.018, "ci": (-0.024, -0.013), "better": 10, "worse": 0,
+                 "relE": (-0.026, -0.033, -0.019), "ece_ci_hi_above0": True},
+    "evolved": {"d": [-0.0422, -0.0302, 0.0307, -0.0012, 0.0232, 0.0379, -0.0254, -0.0091, 0.0006, -0.0088, 0.0277, -0.0111],
+                "sig": [1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1],
+                "mean": -0.001, "ci": (-0.017, 0.016), "better": 6, "worse": 4},
+}
+
+
+def verify_run_e():
+    if not RES.exists():
+        return
+    for arm, E in RUN_E.items():
+        per = {}
+        for f in E_SUMS:
+            d = json.loads((RES / f[len("results/"):]).read_text())
+            for bb in d["budgets"].values():
+                assert bb["budget"] == 800
+                for r, x in bb["runs"].items():
+                    if r.startswith(arm + "_s"):
+                        per[int(r.split("_s")[-1])] = x["vs_static"]["force_rmse"]
+        assert sorted(per) == list(range(12, 24)), sorted(per)
+        assert [round(per[s]["diff"], 4) for s in range(12, 24)] == E["d"], [round(per[s]["diff"], 4) for s in range(12, 24)]
+        assert [int(per[s]["significant"]) for s in range(12, 24)] == E["sig"]
+        sl = json.loads((RES / E_SL.format(arm=arm)[len("results/"):]).read_text())["seed_level"]
+        fr = sl["force_rmse"]
+        assert fr["n"] == 12 and round(fr["mean"], 3) == E["mean"] and tuple(round(c, 3) for c in fr["ci"]) == E["ci"]
+        assert (fr["sig_better"], fr["sig_worse"]) == (E["better"], E["worse"])
+        # recompute the seed-level t-interval (scripts/seed_level.py: two-sided 95 %, df = 11 -> 2.201)
+        xs = [per[s]["diff"] for s in range(12, 24)]
+        m = sum(xs) / 12
+        h = 2.201 * (sum((x - m) ** 2 for x in xs) / 11) ** 0.5 / 12 ** 0.5
+        assert abs(m - fr["mean"]) < 1e-9 and abs(m - h - fr["ci"][0]) < 1e-9 and abs(m + h - fr["ci"][1]) < 1e-9
+        if arm == "noselect":
+            re_ = sl["rel_e_mae"]
+            assert (round(re_["mean"], 3), *(round(c, 3) for c in re_["ci"])) == E["relE"]
+            assert sl["ece"]["ci"][0] < 0 < sl["ece"]["ci"][1]          # no calibration regression (CI spans 0)
+    pre = (RES / "evolution_e/PREREG.md").read_text()
+    assert "New seeds 12–23" in pre and "Budget **800**" in pre
+    print("run E numbers verified")
+
+
 def compete():
+    W, H = 1664, 480
+    x0, x1, lo, hi = 400, 1240, -0.05, 0.05
+    X = lambda v: x0 + (v - lo) / (hi - lo) * (x1 - x0)
+    LINE, MUTE = "#2C3630", "#8F9A92"
+    p = []
+    T = lambda x, y, s, c=MUTE, a="start", sz=24, f="Geist Mono, monospace", w=400: (
+        f'<text x="{x}" y="{y}" text-anchor="{a}" font-family="{f}" font-size="{sz}" font-weight="{w}" fill="{c}">{s}</text>')
+    m = lambda t: t.replace("-", "−")
+    ytop, ybot = 70, 420
+    for t in (-0.04, -0.02, 0.02, 0.04):
+        p.append(f'<line x1="{X(t):.0f}" x2="{X(t):.0f}" y1="{ytop}" y2="{ybot}" stroke="{LINE}" stroke-width="2"/>')
+        p.append(T(f"{X(t):.0f}", ybot + 40, m(f"{t:+.2f}"), MUTE, "middle"))
+    p.append(f'<line x1="{X(0):.0f}" x2="{X(0):.0f}" y1="{ytop - 20}" y2="{ybot}" stroke="{BONE}" stroke-width="3"/>')
+    p.append(T(f"{X(0):.0f}", ybot + 40, "0 = static", BONE, "middle"))
+    p.append(T(f"{X(0) - 16:.0f}", 36, "← better than static", BONE, "end"))
+    p.append(T(f"{X(0) + 16:.0f}", 36, "worse →", MUTE, "start"))
+    rows = [("noselect", "Grow", "no selection", EMBER, 150), ("evolved", "Evolve", "gate + pruning", "#C9C3B6", 320)]
+    for arm, name, sub, c, yc in rows:
+        E = RUN_E[arm]
+        p.append(T(0, yc - 2, name, c, sz=40, f="Instrument Serif, Georgia, serif"))
+        p.append(T(0, yc + 32, sub, MUTE, sz=24, f="Geist, sans-serif"))
+        levels = []          # simple beeswarm: put each dot on the first level with no neighbour within 22 px
+        for d, sg in sorted(zip(E["d"], E["sig"])):
+            k = next(k for k in range(12) if all(abs(X(d) - xx) >= 22 for xx in (levels[k] if k < len(levels) else [])))
+            levels += [[] for _ in range(k + 1 - len(levels))]
+            levels[k].append(X(d))
+            y = yc - 10 + (k // 2 + k % 2) * (-22 if k % 2 else 22) if k else yc - 10
+            p.append(f'<circle cx="{X(d):.1f}" cy="{y}" r="10" fill="{c if sg else INK}" stroke="{c}" stroke-width="3" fill-opacity="0.9"/>')
+        a, b = E["ci"]
+        yb = yc + 62
+        p.append(f'<path d="M{X(a):.1f} {yb}H{X(b):.1f}M{X(a):.1f} {yb - 12}V{yb + 12}M{X(b):.1f} {yb - 12}V{yb + 12}" '
+                 f'stroke="{c}" stroke-width="5" fill="none"/>')
+        p.append(f'<rect x="{X(E["mean"]) - 9:.1f}" y="{yb - 9}" width="18" height="18" transform="rotate(45 {X(E["mean"]):.1f} {yb})" fill="{c}"/>')
+        p.append(T(1290, yc - 6, m(f"{E['mean']:+.3f}"), c, sz=48, f="Instrument Serif, Georgia, serif"))
+        p.append(T(1290, yc + 26, m(f"[{a:+.3f}, {b:+.3f}] eV/Å"), MUTE))
+        p.append(T(1290, yc + 58, f"{E['better']} better · {E['worse']} worse", BONE if arm == "noselect" else MUTE))
+    svg = (f'<svg aria-label="Run E, 12 new seeds: per-seed change in served force error versus the static swarm. '
+           f'Growing without selection: mean −0.018 eV per angstrom, 95% CI −0.024 to −0.013, 10 seeds better, 0 worse. '
+           f'Evolving with gate and pruning: mean −0.001, CI −0.017 to +0.016, 6 better, 4 worse." '
+           f'viewBox="0 0 {W} {H}" style="width:{W}px;height:{H}px;flex:none">{"".join(p)}</svg>')
+    foot = "Δ force RMSE vs static (eV/Å) · dot = seed, filled = significant · ◆ mean ± 95% t-CI over seeds · results/evolution_e"
+    body = f'''<!-- sources: per-seed Δ force RMSE and significance: /home/azureuser/fittest/{E_SUMS[0]}, /home/azureuser/fittest/{E_SUMS[1]} (budgets.*.runs.{{noselect,evolved}}_s12..23.vs_static.force_rmse);
+seed-level means, 95% t-CIs, better/worse counts: /home/azureuser/fittest/results/evolution_e/seed_level_gpu_noselect.json, seed_level_gpu_evolved.json (seed_level.force_rmse);
+design (new seeds 12–23, budget 800, three families, pre-registered before any seed ran): /home/azureuser/fittest/results/evolution_e/PREREG.md; verdict: /home/azureuser/fittest/results/evolution/SUMMARY.md "Run E" -->
+{kicker("04", "Let them grow", EMBER)}
+<h2 style="font-family:{SERIF};font-size:96px;font-weight:400;line-height:1.05;letter-spacing:-2px">Growing the swarm beats static. <i style="color:{EMBER}">Our selection didn't.</i></h2>
+<p style="font-family:{MONO};font-size:26px;letter-spacing:1px;color:{BONE}">pre-registered · 12 new seeds · 800 DFT labels · three model families</p>
+{svg}
+<p style="font-size:28px;color:#C9C3B6">Grow: each round, fine-tune a niche specialist per family <span style="color:{EMBER}">→</span> keep parents and base models <span style="color:{EMBER}">→</span> serve the best answer.</p>
+{footer(foot, MUTE_D)}'''
+    notes = ("Talking points: run E was pre-registered after exploratory runs hinted that growing works better than selecting; it "
+             "used 12 new seeds, three model families and the same 800-label DFT budget for every arm. Growing the swarm, adding "
+             "one fine-tuned niche specialist per family each round while never removing the base models, lowered served force "
+             "error versus the static swarm in 10 of 12 seeds and was worse in none: on average −0.018 eV/Å, 95% interval over "
+             "seeds −0.024 to −0.013, with lower reaction-energy error too (−0.026 eV) and no loss of calibration. The arm that "
+             "matches our original flagship rule, with a gate and fitness pruning, gained nothing on average (−0.001, interval "
+             "−0.017 to +0.016) and was worse than static in 4 of 12 seeds. The honest lesson: variation helps, our selection "
+             "didn't. The live service still runs the static swarm.")
+    write("compete", sec("compete", INK, BONE, body, notes, pad="128px 128px 150px", extra=";gap:32px"))
+
+
+# ---------- (unused since run E) old 04: real family tree, run B seed 1 (AIMNet2 lineage)
+def compete_tree():
     G, END = [190, 440, 690, 940], 1150
     LINE, DEAD, MUTE = "#3E4A42", "#55635A", "#8F9A92"
     p = []
@@ -458,7 +568,7 @@ def compete():
              "AIMNet2 founder and the child that replaced it. Its own child survives with the highest fitness in the swarm. "
              "Breeding is the experimental part: under the pre-registered test it did not beat the static swarm (it held in 3 of 10 "
              "seed runs; backup slide). The result on the next slide is the static swarm.")
-    write("compete", sec("compete", INK, BONE, body, notes, pad="128px 128px 150px", extra=";gap:40px"))
+    write("compete_tree", sec("compete_tree", INK, BONE, body, notes, pad="128px 128px 150px", extra=";gap:40px"))
 
 
 # ---------- backup: what didn't work (yet)
@@ -518,7 +628,7 @@ run D (pre-registered fix, seeds 6–11): /home/azureuser/fittest/results/evolut
 /home/azureuser/fittest/results/evolution_d/gpu/summary.json (4 of 6 hold; s9 +0.015 *, s10 +0.005 * worse than static on forces);
 secondary: rel-E "final − static" rows of both summary_tables.md + {C_SUM} vs_static.rel_e_mae; also /home/azureuser/fittest/{EVO_SUMMARY} "Secondary outcome" -->
 {kicker("Backup", "What didn't work (yet)", EMBER_D)}
-<h2 style="font-family:{SERIF};font-size:96px;font-weight:400;line-height:1.05;letter-spacing:-2px">Evolution did not beat <i style="color:{EMBER_D}">the static swarm.</i></h2>
+<h2 style="font-family:{SERIF};font-size:96px;font-weight:400;line-height:1.05;letter-spacing:-2px">Selection did not beat <i style="color:{EMBER_D}">the static swarm.</i></h2>
 <div style="display:flex;justify-content:space-between;align-items:center;gap:32px">
 <p style="font-size:26px;line-height:1.4;color:#2E3631">Pre-registered: beat static (paired 95% CI) and own gen 0 on force error, <b>in every seed</b>, ≥3 gens.</p>
 {legend}
@@ -539,7 +649,8 @@ secondary: rel-E "final − static" rows of both summary_tables.md + {C_SUM} vs_
              "The pre-registered secondary outcome: the evolved swarm has lower reaction-energy error than static in "
              "9 of 10 seed runs, but children are trained and gated on reaction energy, and fine-tuning without selection gains as much. "
              "Run D pre-registered a fix on six new seeds (protect base models, gentler gate): it needed 5 of 6 and held in 4; "
-             "on GPU with three families also 4 of 6, with two seeds worse than static. Not confirmed. The static swarm on slide 05 is the result we stand on.")
+             "on GPU with three families also 4 of 6, with two seeds worse than static. Not confirmed. "
+             "What did pass a pre-registered test is growing without selection (run E, slide 04).")
     write("notyet", sec("notyet", BONE, INK, body, notes, pad="128px 128px 140px", extra=";gap:20px"))
 
 
@@ -586,6 +697,7 @@ if __name__ == "__main__":
         fetch_users()
     OUT.mkdir(parents=True, exist_ok=True)
     verify_evolution()
+    verify_run_e()
     for f in (args or ORDER):
         globals()[f]()
     deck()
