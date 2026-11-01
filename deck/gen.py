@@ -218,7 +218,7 @@ ARMS = [("One model (AIMNet2)", 0.317, 0.30, 0.33), ("AIMNet2 + random flags", 0
         ("AIMNet2+Orb average|hindsight, uses eval labels", 0.202, None, None)]
 
 
-def wins(kick="05", title=None, notes=None):
+def wins(kick="04", title=None, notes=None):
     W, rowh, x0, x1 = 1040, 54, 380, 1000
     lo, hi = 0.15, 0.35
     X = lambda v: x0 + (v - lo) / (hi - lo) * (x1 - x0)
@@ -469,7 +469,7 @@ def compete():
     body = f'''<!-- sources: per-seed Δ force RMSE and significance: /home/azureuser/fittest/{E_SUMS[0]}, /home/azureuser/fittest/{E_SUMS[1]} (budgets.*.runs.{{noselect,evolved}}_s12..23.vs_static.force_rmse);
 seed-level means, 95% t-CIs, better/worse counts: /home/azureuser/fittest/results/evolution_e/seed_level_gpu_noselect.json, seed_level_gpu_evolved.json (seed_level.force_rmse);
 design (new seeds 12–23, budget 800, three families, pre-registered before any seed ran): /home/azureuser/fittest/results/evolution_e/PREREG.md; verdict: /home/azureuser/fittest/results/evolution/SUMMARY.md "Run E" -->
-{kicker("04", "Let them grow", EMBER)}
+{kicker("05", "Let them grow", EMBER)}
 <h2 style="font-family:{SERIF};font-size:96px;font-weight:400;line-height:1.05;letter-spacing:-2px">Growing the swarm beats static. <i style="color:{EMBER}">Our selection didn't.</i></h2>
 <p style="font-family:{MONO};font-size:26px;letter-spacing:1px;color:{BONE}">pre-registered · 12 new seeds · 800 DFT labels · three model families</p>
 {svg}
@@ -655,7 +655,7 @@ secondary: rel-E "final − static" rows of both summary_tables.md + {C_SUM} vs_
 
 
 # ---------- deck.json (order, sections, fonts)
-ORDER = ["cover", "abundant", "silent", "disagree", "compete", "wins", "yours", "notyet"]
+ORDER = ["cover", "abundant", "silent", "disagree", "wins", "compete", "yours", "notyet"]
 
 
 def deck():
@@ -664,7 +664,7 @@ def deck():
          "sections": {
              "s1": {"description": "The problem: ground truth is scarce and models fail silently", "start": "cover"},
              "s2": {"description": "The idea: independent models disagree; let them compete", "start": "disagree"},
-             "s3": {"description": "Evidence: same DFT budget", "start": "wins"},
+             "s3": {"description": "Evidence: same DFT budget; then growing the swarm", "start": "wins"},
              "s4": {"description": "Use it: the live MCP server", "start": "yours"},
              "s5": {"description": "Backup: what didn't work (yet)", "start": "notyet"}},
          "faces": {
