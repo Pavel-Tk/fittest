@@ -26,15 +26,20 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
+
+import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / "scripts"))
 
 from fittest.blackboard import Blackboard  # noqa: E402
 from fittest.cache import load_frames, load_models, load_predictions  # noqa: E402
 from fittest.data import assign_leakfree_splits  # noqa: E402
-from fittest.evolution import EvalScorer, OffspringResult, jsonable  # noqa: E402
+from fittest.evolution import EvalScorer, LabelBook, OffspringResult, PredStore, jsonable  # noqa: E402
+from fittest.evolution import recommend  # noqa: E402
 from fittest.evolution_c import (NicheEvolution, budget_config, noselect_c, served_by_niche,  # noqa: E402
                                  static_c)
 
@@ -148,6 +153,58 @@ class GPUFactory:
         return results
 
 
+# ============================================================ fresh-frame scorer (opt-in)
+class FreshScorer:
+    """``--also-score fresh`` (results/evolution_f/PREREG_fresh_frames.md, amendment 1): serves and scores each
+    generation's state on the leak-free ``planted`` + ``skeptic_ref`` frames (Transition1x val formulas).
+
+    Read-only with respect to the run: the population's buckets, tau and ledger are re-fitted exactly as in
+    ``Evolution.serve_eval`` (same call, pool labels only); the fresh frames are only bucketed with those buckets,
+    served with that ledger and scored with the same :class:`EvalScorer` metrics and paired reaction bootstrap
+    (over the fresh reactions). Child predictions come from ``<cache entry>.fresh.npz`` written by
+    ``scripts/evolve_c_fresh_predict.py`` from the child's saved head state. Nothing is posted or fed back."""
+
+    SPLITS = ("planted", "skeptic_ref")
+
+    def __init__(self, frames, base, n_boot: int) -> None:
+        self.store = PredStore([f for f in frames if f.split in self.SPLITS])
+        for m, p in base.items():
+            self.store.add(m, p)
+        self.labels = LabelBook(self.store)
+        self.scorer = EvalScorer(n_boot, 0)
+
+    def _name(self, evo, m: str) -> str:
+        """Store name of a member: base models by name; children by checkpoint (child ids repeat across runs)."""
+        mem = evo.members[m]
+        if mem.kind == "base":
+            return m
+        from evolve_c_fresh_predict import fresh_path
+
+        key = str(mem.ckpt)
+        if key not in self.store.F:
+            fp = fresh_path(mem.ckpt)
+            if not fp.exists():
+                raise FileNotFoundError(f"{m}: no fresh-frame predictions {fp}; run scripts/evolve_c_fresh_predict.py")
+            self.store.add(key, load_predictions(str(fp)))
+        return key
+
+    def record(self, name: str, evo) -> dict[str, Any]:
+        idx = np.array(evo.oracle.labelled, dtype=int)
+        sw, led = evo.fitted_swarm(evo.population, idx)  # identical to serve_eval: buckets, tau, ledger from pool
+        models = [self._name(evo, m) for m in sw.models]
+        sigma = self.store.sigma_F(models)
+        bucket = sw.buckets.of(sigma, self.store.mean_abs_fbar(models))
+        rec, trust = recommend(led, bucket)
+        names = sw.candidate_names()
+        state = {"population": models, "W": sw.W, "rec": rec, "trust": trust, "sigma": sigma, "tau": sw.tau,
+                 "eval_idx": np.arange(len(self.store.uids)),
+                 "served": {n: int((rec == c).sum()) for c, n in enumerate(names) if (rec == c).any()}}
+        shim = SimpleNamespace(store=self.store, labels=self.labels, cfg=evo.cfg, oracle=evo.oracle)
+        vals = self.scorer.record(name, shim, state)
+        vals["population"] = list(evo.population)
+        return vals
+
+
 # ============================================================ one budget
 def cmd_run(args) -> None:
     out = Path(args.out) / f"b{args.budget}{args.tag}"
@@ -160,6 +217,7 @@ def cmd_run(args) -> None:
                              lr_scale=args.lr_scale)
     base = load_models(args.preds, list(base_cfg.base_models))
     scorer = EvalScorer(args.n_boot, 0)
+    fresh = FreshScorer(frames, base, args.n_boot) if "fresh" in args.also_score.split(",") else None
     factory = GPUFactory(Path(args.out), args.frames, args.core_python, args.orb_python, args.device,
                          args.parallel, args.gpu_slots, args.threads)
     runs: dict[str, NicheEvolution] = {}
@@ -179,6 +237,8 @@ def cmd_run(args) -> None:
                     info["selection"] = evo.select(g)
                     state = evo.serve_eval()
                     scorer.record(f"{name}_g{g}", evo, state)
+                    if fresh is not None:  # read-only side scorer; after eval, before breeding
+                        fresh.record(f"{name}_g{g}", evo)
                     niche_eval[f"{name}_g{g}"] = served_by_niche(evo, state)
                     info["served_eval"] = state["served"]
                     info["population_after_selection"] = list(evo.population)
@@ -192,12 +252,12 @@ def cmd_run(args) -> None:
                           f"{v['force_rmse']['value']:.4f} relE {v['rel_e_mae']['value']:.4f} "
                           f"({time.time() - t0:.0f} s)", flush=True)
                 runs[name] = evo
-                write_outputs(out, runs, scorer, base_cfg, split_report, niche_eval, factory, args.budget)
+                write_outputs(out, runs, scorer, base_cfg, split_report, niche_eval, factory, args.budget,
+                              fresh.scorer if fresh is not None else None)
     print("RUN_DONE", out, flush=True)
 
 
-def write_outputs(out: Path, runs, scorer: EvalScorer, cfg, split_report, niche_eval, factory, budget) -> None:
-    G = cfg.generations
+def comparisons(runs, scorer: EvalScorer, G: int) -> dict[str, Any]:
     comp: dict[str, Any] = {}
     names = set(runs)
     for name in runs:
@@ -211,11 +271,21 @@ def write_outputs(out: Path, runs, scorer: EvalScorer, cfg, split_report, niche_
         if arm == "evolved" and f"noselect_s{seed}" in names:
             c["final_vs_noselect"] = scorer.paired(last, f"noselect_s{seed}_g{G - 1}")
         comp[name] = c
+    return comp
+
+
+def write_outputs(out: Path, runs, scorer: EvalScorer, cfg, split_report, niche_eval, factory, budget,
+                  fresh_scorer: EvalScorer | None = None) -> None:
+    G = cfg.generations
+    comp = comparisons(runs, scorer, G)
     any_run = next(iter(runs.values()))
     payload = {"budget": budget, "config": dataclasses.asdict(cfg), "pool_split": any_run.split_report,
                "leakfree_split": split_report, "niches": any_run.niche_report(), "states": scorer.values,
                "comparisons": comp, "served_by_niche": niche_eval, "offspring_log": factory.log,
                "wrongness_units": "F_RMSE/WRONG_F + |dE_rel|/WRONG_E"}
+    if fresh_scorer is not None:  # fresh frames (planted + skeptic_ref), PREREG_fresh_frames.md
+        payload["states_fresh"] = fresh_scorer.values
+        payload["comparisons_fresh"] = comparisons(runs, fresh_scorer, G)
     (out / "generations.json").write_text(json.dumps(jsonable(payload), indent=1))
     (out / "family_tree.json").write_text(json.dumps(jsonable(
         {n: e.family_tree() for n, e in runs.items() if not n.startswith("static")}), indent=1))
@@ -267,6 +337,15 @@ def cmd_summarize(args) -> None:
                 r["verdict"] = verdict_for(c, last["population"])
             if name.startswith("noselect") and "final_vs_static" in c:  # same rule, reported separately (run E)
                 r["verdict_noselect"] = verdict_for(c, last["population"])
+            if "states_fresh" in J:  # fresh frames (PREREG_fresh_frames.md); same metrics, separate block
+                lf, cf = J["states_fresh"][f"{name}_g{G - 1}"], J["comparisons_fresh"].get(name, {})
+                r["fresh"] = {"final": {m: lf[m] for m in ("force_rmse", "rel_e_mae", "ece", "brier",
+                                                           "trusted_fraction", "badly_wrong_trusted", "wrong_rate")},
+                              "counts": lf["counts"], "population": lf["population"],
+                              "vs_gen0": {m: cf["final_vs_gen0"][m] for m in ("force_rmse", "rel_e_mae")}}
+                if "final_vs_static" in cf:
+                    r["fresh"]["vs_static"] = {m: cf["final_vs_static"][m]
+                                               for m in ("force_rmse", "rel_e_mae", "ece", "brier")}
             entry["runs"][name] = r
             rows.append((B, d.parent.name, name, r))
         summary["budgets"][d.parent.name] = {"budget": B, **entry}
@@ -368,6 +447,8 @@ def main(argv=None) -> None:
     r.add_argument("--gate-tol", type=float, default=0.0, help="relative rel-E tolerance of the gate")
     r.add_argument("--protect-base", action="store_true", help="never prune base models")
     r.add_argument("--lr-scale", type=float, default=1.0, help="scale child learning rates (0 = sham control)")
+    r.add_argument("--also-score", default="", help="'fresh': also serve + score every state on the planted + "
+                   "skeptic_ref frames (read-only; needs evolve_c_fresh_predict.py outputs)")
     s = sub.add_parser("summarize")
     s.add_argument("--out", default="results/evolution_c")
     args = ap.parse_args(argv)

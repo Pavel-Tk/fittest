@@ -29,14 +29,19 @@ def t_interval(xs: list[float]) -> dict:
     return {"n": n, "mean": m, "sd": sd, "ci": [m - h, m + h]}
 
 
-def collect(paths: list[str], arm: str, budget: int) -> dict:
-    out: dict = {"arm": arm, "budget": budget, "seeds": {}}
+def collect(paths: list[str], arm: str, budget: int, split: str = "eval") -> dict:
+    """split 'eval' reads r["vs_static"]; 'fresh' reads r["fresh"]["vs_static"] (PREREG_fresh_frames.md)."""
+    out: dict = {"arm": arm, "budget": budget, "split": split, "seeds": {}}
     for p in paths:
         S = json.loads(Path(p).read_text())
         for entry in S["budgets"].values():
             if entry["budget"] != budget:
                 continue
             for name, r in entry["runs"].items():
+                if split == "fresh":
+                    if "fresh" not in r:
+                        raise KeyError(f"{p}: run {name} has no fresh block (rerun with --also-score fresh)")
+                    r = r["fresh"]
                 if not name.startswith(arm + "_s") or "vs_static" not in r:
                     continue
                 out["seeds"][f"{Path(p).parent.name}/{name}"] = {
@@ -57,8 +62,9 @@ def main(argv=None) -> None:
     ap.add_argument("--arm", default="noselect")
     ap.add_argument("--budget", type=int, default=800)
     ap.add_argument("--out", default=None)
+    ap.add_argument("--split", default="eval", choices=("eval", "fresh"))
     a = ap.parse_args(argv)
-    r = collect(a.summaries, a.arm, a.budget)
+    r = collect(a.summaries, a.arm, a.budget, a.split)
     txt = json.dumps(r, indent=1)
     if a.out:
         Path(a.out).write_text(txt)

@@ -216,3 +216,77 @@ def test_exploratory_knobs_default_off_and_explore_base_recipes():
     ws = [mutate_recipe(None, "aimnet2", ex, 0, 0, sibling=j)["energy_weight"] for j in range(3)]
     assert ws == [3.0, 10.0, 1.0]
     assert mutate_recipe(None, "aimnet2", ex, 0, 0, sibling=3)["lr"] == BASE_RECIPES["aimnet2"]["lr"] * 0.5
+
+
+def test_fresh_scorer_is_read_only(world, tmp_path):
+    """--also-score fresh: interleaving the fresh-frame scorer changes nothing in the run (eval states, history,
+    labels, children requested), and it scores every state on the planted + skeptic_ref frames only."""
+    import json
+
+    from fittest.cache import save_predictions
+    from fittest.evolution import jsonable
+
+    drv = _load_script("evolve_c")
+    fp = _load_script("evolve_c_fresh_predict")
+    frames, preds = world
+    rng = np.random.default_rng(5)
+    fresh_frames = []
+    for split in ("planted", "skeptic_ref"):
+        for r in range(6):
+            rx = f"{split}_rx{r:03d}"
+            base = rng.normal(size=(N_ATOMS, 3)) * 1.5
+            for k, role in enumerate(["reactant", "product", "ts", "path"]):
+                fresh_frames.append(Frame(uid=f"{rx}_{k}", reaction=rx, formula="C2H2O", split=split, role=role,
+                                          Z=np.array([6, 1, 1, 8, 7]), R=base + rng.normal(scale=0.3, size=base.shape),
+                                          E=float(rng.normal()), F=rng.normal(size=(N_ATOMS, 3))))
+    allf = frames + fresh_frames
+    base = {m: _model(allf, m, s, e, i) for i, (m, s, e) in enumerate(
+        (("mace_mpa0", 0.6, 0.4), ("aimnet2", 0.15, 0.05), ("orb", 0.2, 0.08)), 1)}
+
+    class Fac(SynthFactory):
+        def __call__(self, requests):
+            out = super().__call__(requests)
+            for r, o in zip(requests, out):
+                ck = tmp_path / f"{r.id}_{len(self.calls)}.pt"
+                o.ckpt = str(ck)
+                sub = fresh_frames
+                p = _model(sub, r.id, 0.1, 0.03, hash(str(ck)) % 1000)
+                save_predictions(fp.fresh_path(ck), r.id, [f.uid for f in sub], [p.energy[f.uid] for f in sub],
+                                 [p.forces[f.uid] for f in sub], {})
+            return out
+
+    def run(with_fresh):
+        sc = EvalScorer(60, 0)
+        fresh = drv.FreshScorer(allf, base, 60) if with_fresh else None
+        hist, calls = {}, {}
+        for arm, cfg in (("static", static_c(_cfg())), ("evolved", _cfg()), ("noselect", noselect_c(_cfg()))):
+            fac = Fac(allf, base)
+            evo = NicheEvolution(allf, base, cfg, None if arm == "static" else fac, label=arm)
+            for g in range(cfg.generations):
+                info = {"triage": evo.triage(g), "selection": evo.select(g)}
+                state = evo.serve_eval()
+                sc.record(f"{arm}_s0_g{g}", evo, state)
+                if fresh is not None:
+                    fresh.record(f"{arm}_s0_g{g}", evo)
+                info["served"] = state["served"]
+                if g < cfg.generations - 1:
+                    info["breeding"] = evo.breed(g)
+                evo.history.append(info)
+            hist[arm] = (evo.history, list(evo.oracle.labelled), list(evo.population))
+            calls[arm] = [(r.id, r.recipe, r.train_uids) for r in fac.calls]
+        return sc, fresh, hist, calls
+
+    a, _, ha, ca = run(False)
+    b, fr, hb, cb = run(True)
+    dump = lambda x: json.dumps(jsonable(x), sort_keys=True)  # noqa: E731
+    assert dump(a.values) == dump(b.values)
+    assert all(np.array_equal(a.samples[k][m], b.samples[k][m], equal_nan=True)
+               for k in a.samples for m in a.samples[k])
+    assert dump(ha) == dump(hb) and dump(ca) == dump(cb)
+    assert set(fr.scorer.values) == set(b.values)
+    v = fr.scorer.values["evolved_s0_g3"]
+    assert v["counts"]["n_eval"] == len(fresh_frames) and v["counts"]["n_reactions"] == 12
+    assert v["population"] == hb["evolved"][2]
+    assert set(fr.store.split) == {"planted", "skeptic_ref"}
+    comp = drv.comparisons({f"{a_}_s0": None for a_ in ("static", "evolved", "noselect")}, fr.scorer, 4)
+    assert "final_vs_static" in comp["evolved_s0"] and "final_vs_noselect" in comp["evolved_s0"]
