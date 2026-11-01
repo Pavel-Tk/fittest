@@ -1,0 +1,22 @@
+Warp CUDA warning: Could not find or load the NVIDIA CUDA driver. GPU execution will not be available.
+/home/azureuser/fittest_evoC/scripts/evolve_c_offspring.py:220: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /__w/pytorch/pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:820.)
+  "rel_e_mse": float(el / len(lab_pos))})
+Warp 1.18.0 initialized:
+   CUDA Toolkit 13.4, CUDA driver not available (NVRTC compilation available)
+   Devices:
+     "cpu"      : "x86_64"
+   Kernel cache:
+     /home/azureuser/.cache/warp/1.18.0
+{"step": 0, "loss": 0.4414121383811136, "force_mse": 0.4058736264705658, "rel_e_mse": 0.035538511910547806}
+{"step": 20, "loss": 0.014223995141620493, "force_mse": 0.013595937751233578, "rel_e_mse": 0.0006280573903869158}
+{"step": 40, "loss": 0.004092973042573553, "force_mse": 0.0039883628487586975, "rel_e_mse": 0.00010461019381485569}
+{"step": 60, "loss": 0.0018988207907550167, "force_mse": 0.0018697918858379126, "rel_e_mse": 2.9028904917104168e-05}
+{"step": 80, "loss": 0.0012525618862965608, "force_mse": 0.0012366275768727064, "rel_e_mse": 1.5934309423854442e-05}
+{"step": 100, "loss": 0.0009628991021435669, "force_mse": 0.0009522861219011247, "rel_e_mse": 1.0612980242442173e-05}
+{"step": 120, "loss": 0.0007736987563156988, "force_mse": 0.0007660104893147945, "rel_e_mse": 7.688267000904301e-06}
+{"step": 140, "loss": 0.0006401985455527049, "force_mse": 0.0006344172870740294, "rel_e_mse": 5.781258478675482e-06}
+{"step": 160, "loss": 0.0005414713157490935, "force_mse": 0.0005369503633119166, "rel_e_mse": 4.520952437176912e-06}
+{"step": 180, "loss": 0.00046574034979343057, "force_mse": 0.0004620821273420006, "rel_e_mse": 3.658222451429971e-06}
+{"step": 199, "loss": 0.00040869261312747793, "force_mse": 0.00040565247763879597, "rel_e_mse": 3.040135488681981e-06}
+DONE {"id": "g1_aimnet2_flagged", "ckpt": "results/expl_grow_budget/cache/aimnet2_dee21d7262620349.pt", "n_train": 22, "n_train_reactions": 4, "n_head_params": 862665, "train_seconds": 23.459983587265015, "predict_seconds": 5.154437065124512, "wall_seconds": 28.614421129226685, "toolkit": {}}
