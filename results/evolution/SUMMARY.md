@@ -258,6 +258,10 @@ the eval numbers reproduced exactly (max |Δ| = 0 in all 6 reruns), and the fres
 
 The gains carry over to chemistry no run has seen, at the same size as on eval (F: −0.026 on both).
 
+**Run F design at other budgets (exploratory; GPU, seeds 24–29, `../evolution_f/expl_gpu_budget/`):** budget 400
+gives −0.010 [−0.023, +0.004] (4 seeds better, 1 worse; not significant); budget 1600 gives −0.030 [−0.035, −0.024]
+(6 of 6 better). The fixed loop needs enough labels; at 800 and above it wins.
+
 **Run E controls (exploratory).** Sham children (learning rate 0, identical to their parent; everything else
 equal), CPU, seeds 12–17: forces −0.004 [−0.013, +0.005] (n.s.) vs −0.018 for real children, so run E's force gain
 comes from learning. But sham rel-E is −0.011 [−0.016, −0.006]: part of the rel-E gain in runs E/F is a pipeline effect
