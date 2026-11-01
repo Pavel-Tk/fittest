@@ -1,22 +1,32 @@
-# Evolution: does a swarm that breeds and selects its own models beat the static swarm?
+# Evolution: does a council that breeds and selects its own models beat the static council?
 
-**Verdict under the pre-registered rule: no.** Runs A, B and C each fail. A post-hoc fix (never prune the base
-models, soften the gate) held in 5 of 6 exploratory seeds at budget 800 (CPU). Its pre-registered confirmation on new
-seeds (run D) fell short: on CPU (primary) it held in 4 of 6 new seeds where 5 were required (none worse than
-static); on GPU with three families (secondary) it held in 4 of 6 and was significantly worse than static in 2. **A narrower claim did confirm (run E, pre-registered, 12 new seeds): growing the swarm with fine-tuned
-specialists while keeping the base models, without selection, beats the static swarm on served force error
-(−0.018 eV/Å [−0.024, −0.013], 0 of 12 seeds worse) and on relative energies.** **And once the gate tests only forces (run F, pre-registered after a diagnosis, 12 new seeds), the full
-evolutionary loop beats the static swarm in 12 of 12 seeds (−0.026 eV/Å [−0.030, −0.021]), passing even the original
-every-seed rule. That fix was chosen after reading earlier eval results; a pre-registered check on never-read frames
-is reported in the run F section: it passed (fresh, never-read Transition1x val formulas: −0.026 [−0.034, −0.019],
-12 of 12 seeds better).** Below, every pre-registered run
-is reported side by side, including the failures. This is followed by exploratory runs (extra seeds and design
-variants) that were **not** pre-registered and are labelled as such. Those runs do not change the verdict.
+**Verdict: yes, with a force-only gate (run F, pre-registered, 12 new seeds), after four designs that failed or were not confirmed.**
+With the gate testing forces only, the full evolutionary loop (breeding, gate, fitness pruning) beats the static
+council in **12 of 12 seeds**: served force RMSE −0.026 eV/Å [−0.030, −0.021] on eval, passing even the original
+every-seed rule. The fix was chosen after reading earlier eval results, so a check on frames no run had ever read
+was pre-registered before scoring; it passed: −0.026 [−0.034, −0.019], 12 of 12 seeds better, on 2,475 frames from
+Transition1x val formulas.
+
+How we got there, every pre-registered run reported side by side:
+- **Runs A, B and C fail** their rule (a significant win in every seed). Most children failed the gate on
+  reaction-relative energy.
+- **Run D**, a post-hoc fix (never prune the base models, soften the gate), held in 5 of 6 exploratory seeds but
+  fell short on new seeds: on CPU (primary) 4 of 6 where 5 were required; on GPU with three families (secondary)
+  4 of 6, and significantly worse than static in 2.
+- **Run E confirmed a narrower claim:** growing the council with fine-tuned specialists while keeping the base
+  models, without selection, beats static on served force error (−0.018 eV/Å [−0.024, −0.013], 0 of 12 seeds
+  worse) and on relative energies.
+- **A diagnosis** (`DIAGNOSIS.md`) found that the gate's relative-energy check on the small select set was noise
+  and threw away the best AIMNet2 children. **Run F** removed only that check.
+
+Growth without selection (E) already gives −0.018 of run F's −0.026, on different seeds, so what selection adds
+on its own is not isolated yet. Exploratory runs (extra seeds and design variants) were **not** pre-registered,
+are labelled as such and do not change any verdict.
 
 ## The rule (fixed before any run; `METHODS.md`, `../evolution_c/PREREG.md`)
-Evolution *holds* iff, **in every seed run**, the evolved swarm's served force RMSE on the eval split at
+Evolution *holds* iff, **in every seed run**, the evolved council's served force RMSE on the eval split at
 the final generation (after 3 breeding generations, ≥ 3 generations) is significantly lower (paired 95 %
-reaction-bootstrap CI below 0) than **both** the static swarm at the same DFT budget **and** its own generation
+reaction-bootstrap CI below 0) than **both** the static council at the same DFT budget **and** its own generation
 0. Offspring must be in the final population, and there must be no significant regression vs static in served
 rel-E MAE or ECE. "Static" uses the same triage and oracle, with no breeding and no pruning. Eval = 1485 frames / 135
 reactions, never labelled and never used for any decision.
@@ -62,7 +72,7 @@ deviates from the pre-registration by breeding AIMNet2 specialists only and is r
 ¹ **The CIs cover eval resampling only, not run-to-run noise.** A s0 ends with exactly the static population, yet
 differs "significantly" (+0.010 forces, −0.007 rel-E): the brief life of child g1_c changed which frames were
 labelled, so the Calibrator's ledger serves AIMNet2 alone on 225 of 1485 frames instead of the AIMNet2+Orb mean.
-The static swarm itself moves 0.202 → 0.220 eV/Å between seeds and 0.202–0.233 across generations. Effects below
+The static council itself moves 0.202 → 0.220 eV/Å between seeds and 0.202–0.233 across generations. Effects below
 about 0.02 eV/Å should be read as within run noise.
 ² C′ b200 s1 is numerically identical to C b200 s1 (the same AIMNet2 child; the Orb and MACE children died), so
 it is not an independent confirmation.
@@ -97,7 +107,7 @@ only 2 of 6 cells.
    35 of them on reactant-relative energy. In run A, 15 of 18 MACE LoRA children were stillborn; several also failed
    on force and the ALCHEMI check, and only E:F 10 and 30 children passed. In C′ (AIMNet2 only), seed 0 kept no
    child at any budget. The gate is small: at budget 200 it decides on about 15 frames from 4 reactions.
-2. **Why the evolved swarm sometimes gets worse is not established.** In the three GPU run C cells that are
+2. **Why the evolved council sometimes gets worse is not established.** In the three GPU run C cells that are
    significantly worse than static on forces (b200 s0, b400 s0, b800 s1), a base model was pruned. But a base model
    was also pruned in three of the five pre-registered runs that pass the rule (B s1; C b800 s0, with all three
    bases pruned; C′ b400 s1), and in exploratory C′ s3. The worse runs are worse both inside the flagged niche (served force RMSE 0.308–0.310 vs
@@ -105,13 +115,13 @@ only 2 of 6 cells.
    not a finding.
 3. **Surviving children can help, but it is a coin flip across seeds** (holds: B s1, C b200 s1, C b800 s0,
    C′ b200/b400 s1). Both pre-registered seed-1 wins at budget 200 (B s1, C b200 s1) are against a weak static
-   seed (0.220 eV/Å). In absolute terms, B s1's evolved swarm (0.197) is only 0.005 below seed 0's static (0.202).
+   seed (0.220 eV/Å). In absolute terms, B s1's evolved council (0.197) is only 0.005 below seed 0's static (0.202).
 4. **Fine-tuning without selection looks more consistent, but the evidence is mixed and confounded.** In the
    pre-registered head-to-head the two arms split by seed (above). In the exploratory AIMNet2-only runs it beats
    static on forces in 6 of 6 seeds at budget 800, but at budgets 200/400 it is n.s. in some seeds and makes rel-E
    significantly worse in seed 0 (below). It changes several things at once, so it does not show that selection is
    the weak link.
-5. The static swarm (arm D, served force RMSE 0.206 eV/Å, `../RESULTS.md`) remains the reported system. Nothing
+5. The static council (arm D, served force RMSE 0.206 eV/Å, `../RESULTS.md`) remains the reported system. Nothing
    in this file changes the static ablation results.
 
 ## Exploratory (NOT pre-registered; does not change the verdict)
@@ -192,12 +202,12 @@ models did not prevent harm, which further weakens the hypothesis above. In all 
 better than static.
 
 **Run D verdict: not confirmed** (D-cpu 4 of 6 < 5; D-gpu 4 of 6 with 2 seeds worse). What recurs is narrower:
-evolved swarms whose children survive usually lower reaction-relative energy error (not in run A s1 or most C′
+evolved councils whose children survive usually lower reaction-relative energy error (not in run A s1 or most C′
 cells), and at budget 800 no-selection beat static on forces more often than the evolved arm (exploratory; not
 tested in run D). Neither was the pre-registered claim. Run E (`../evolution_e/PREREG.md`) tests the second on new
 seeds.
 
-## Run E: growing the swarm without selection (pre-registered, `../evolution_e/PREREG.md`) — CONFIRMED
+## Run E: growing the council without selection (pre-registered, `../evolution_e/PREREG.md`) — CONFIRMED
 Design: the run C no-selection arm (each breeding generation fine-tunes one niche specialist per family and keeps the
 newest; base models are never removed; no gate, no clone check, no pruning) vs static, plus the evolved arm, budget 800,
 **new seeds 12–23**. The pre-registration was committed (2f8114e, 00:07 UTC) before any run E seed ran. E-gpu (three
@@ -212,14 +222,14 @@ seed level.
 | E-cpu no-selection | −0.018 [−0.027, −0.009] | 11 / 1 | −0.015 [−0.021, −0.009] | −0.013 [−0.027, −0.000] | — |
 | E-cpu evolved | −0.008 [−0.015, −0.000] | 4 / 0 | −0.012 [−0.023, −0.001] | +0.002 [−0.014, +0.017] | — |
 
-**Verdict: confirmed.** All three conditions hold in E-gpu. Adding fine-tuned niche specialists to a swarm that
-keeps its base models lowers served force error vs the static swarm at the same DFT budget (−0.018 eV/Å, about 9 % of
+**Verdict: confirmed.** All three conditions hold in E-gpu. Adding fine-tuned niche specialists to a council that
+keeps its base models lowers served force error vs the static council at the same DFT budget (−0.018 eV/Å, about 9 % of
 static's ~0.21) and lowers reaction-relative energy error. The secondary CPU replication agrees. On the same seeds,
 the evolved arm (gate + fitness pruning) shows no force gain on average and is worse than static in 4 of 12
 seeds. Sources: `../evolution_e/gpu{1,2}/summary.json`, `../evolution_e/seed_level_gpu_{noselect,evolved}.json`,
 `../evolution_e/cpu/`.
 
-What this does and does not show: the swarm improves by **growing** (variation plus keeping parents), not by
+What this does and does not show: the council improves by **growing** (variation plus keeping parents), not by
 **selection**: our gate and fitness pruning removed the gain. This was not the flagship claim, which needed the
 evolved arm to win and did not. Children are trained only on labels drawn from the same 800-label budget, so both
 arms use the same DFT cost.
@@ -238,14 +248,14 @@ specialist.
 | F-cpu evolved (AIMNet2 only) | −0.017 [−0.023, −0.010] | 10 / 0 | −0.026 [−0.032, −0.020] | +0.002 [−0.017, +0.020] | holds in 10 of 12 |
 
 **Verdict: confirmed under the pre-registered rule.** With a force-only gate, the full evolutionary loop
-(breeding, gate, fitness pruning) beats the static swarm in every one of 12 new seeds. It even passes the original
+(breeding, gate, fitness pruning) beats the static council in every one of 12 new seeds. It even passes the original
 flagship rule, which required every seed. It also beats run E's no-selection arm on average (−0.026 vs −0.018, on
 different seeds).
 
 **Caveat: adaptivity to the eval split.** Every run is scored on the same 1485 eval frames. The run F design came from a
 diagnosis that read earlier runs' eval results, so new seeds do not rule out that the fix suits this eval split. A
 pre-registered check on frames no evolution run has ever read (Transition1x val formulas, 2475 frames,
-`../evolution_f/PREREG_fresh_frames.md`, committed f817523 before scoring) **passed** (`../evolution_f/FRESH_FRAMES.md`). Each final swarm was replayed from its cached children,
+`../evolution_f/PREREG_fresh_frames.md`, committed f817523 before scoring) **passed** (`../evolution_f/FRESH_FRAMES.md`). Each final council was replayed from its cached children,
 the eval numbers reproduced exactly (max |Δ| = 0 in all 6 reruns), and the fresh frames were then served and scored:
 
 | on fresh frames (2475 frames, 225 reactions, new formulas) | mean Δ force RMSE vs static [95 % t-CI] | seeds better / worse | rule |

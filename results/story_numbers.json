@@ -1,0 +1,55 @@
+{
+ "critic_vs_answerer": {
+  "aimnet2": {
+   "n_checks": 528,
+   "critic_delta_auroc_mean": -0.0674,
+   "critic_ci_above_0": 15,
+   "answerer_delta_mean": 1.087
+  },
+  "mace_mpa0": {
+   "n_checks": 491,
+   "critic_delta_auroc_mean": 0.0398,
+   "critic_ci_above_0": 157,
+   "answerer_delta_mean": -0.012
+  },
+  "orb": {
+   "n_checks": 503,
+   "critic_delta_auroc_mean": -0.0371,
+   "critic_ci_above_0": 33,
+   "answerer_delta_mean": 0.419
+  }
+ },
+ "run_f_gpu_lineages": {
+  "foundation_models": 36,
+  "children": 108,
+  "in_final_council": 43,
+  "pruned": 50,
+  "stillborn": 9,
+  "clone": 6,
+  "foundation_models_retired": 32,
+  "retired_by_family": {
+   "mace": 12,
+   "aimnet2": 8,
+   "orb": 12
+  }
+ },
+ "run_f_gpu_served": {
+  "eval": {
+   "seeds": 12,
+   "static_force_rmse": 0.207,
+   "evolved_force_rmse": 0.1813,
+   "evolved_vs_static_pct": -12.4,
+   "evolved_vs_best_baseline_pct": -36.7
+  },
+  "fresh": {
+   "seeds": 12,
+   "static_force_rmse": 0.1906,
+   "evolved_force_rmse": 0.1643,
+   "evolved_vs_static_pct": -13.8
+  }
+ },
+ "static_study_baselines_eval": {
+  "A_single": 0.3169,
+  "B_seed": 0.2862
+ }
+}

@@ -1,11 +1,21 @@
 # Fittest
 
-**A swarm of machine-learned interatomic potentials (MLIPs) that decides which model to trust on a
-structure, where, and when to stop trusting any of them and call DFT.**
+**The fittest survive, not the smartest.** An evolving agent council that decides what gets compute and lab
+time.
 
-*Survival of the fittest, in materials science.* The models compete for the right to answer, and the fittest
-answer is served. Whether *breeding* new models on top pays off was tested against a pre-registered rule; it did
-not pass ([`results/evolution/SUMMARY.md`](results/evolution/SUMMARY.md)).
+Intelligence is abundant; ground truth is not. ML models screen candidate molecules and materials by the
+million, but only a few get a high-fidelity calculation (DFT) or a lab experiment. Fittest is a council of
+three independent foundation machine-learned interatomic potentials (MLIPs: MACE-MPA-0, AIMNet2, Orb-v3) and
+four role agents (Skeptic, Calibrator, Oracle, Curator) that share one log. For every structure it decides
+which answer to serve, how far to trust it, and which structures get ground truth. In this repo ground truth
+is DFT read from Transition1x (lookups, not live calculations); the decision is the same for lab time.
+
+The project asks two questions, each tested against baselines or a pre-registered rule:
+
+1. **What if the models decide as a council?** Their disagreement tells the council when to be skeptical
+   ([§2.3](#23-idea-1-decide-as-a-council), [§3.3](#33-ablation-idea-1-final-run-v4)).
+2. **Can the council evolve to give better predictions?** Yes, once the test for new members was fixed:
+   fine-tuned children replace their parents ([§2.5](#25-idea-2-let-the-council-evolve)).
 
 Built at ScienceClaw 2026 (MIT Media Lab) for the NVIDIA ALCHEMI challenge, on
 [NVIDIA ALCHEMI Toolkit](https://github.com/NVIDIA/nvalchemi-toolkit) 0.3.0-rc.
@@ -13,35 +23,51 @@ Formerly **TrustSwarm**; the old GitHub URL redirects here.
 
 * Code: this repo (`fittest/` package, MIT licence)
 * Hosted MCP server: `https://fittest-mcp.westus2.cloudapp.azure.com/mcp`
-* Authoritative numbers: [`results/RESULTS.md`](results/RESULTS.md) (generated from the result files)
+* Authoritative numbers, all generated from the result files: [`results/RESULTS.md`](results/RESULTS.md)
+  (Idea 1), [`results/evolution/SUMMARY.md`](results/evolution/SUMMARY.md) (Idea 2) and
+  [`results/story_numbers.json`](results/story_numbers.json) (`scripts/story_numbers.py`: the critic values,
+  run F's lineages and its absolute errors)
 
 ---
 
 ## TL;DR
 
-* **Problem.** Foundation MLIPs fail silently off-distribution. On held-out Transition1x reactions every
-  model's force error rises toward the transition state; AIMNet2's median error at the TS is
-  **2.1×** its error at the reactant.
-* **Signal.** Disagreement between *independent* foundation models (MACE-MPA-0, AIMNet2, Orb-v3) tracks
-  error without labels (Spearman **0.73**, 3,157 frames). Seed ensembles of one model do not measure
-  error: their spread is **2.4–36×** smaller than the error of their mean.
-* **Result (leak-free split, 200 DFT label lookups per arm).** The swarm serves better answers:
-  force RMSE **0.206 eV/Å** vs 0.286–0.317 for every baseline, with a calibrated risk score (ECE **0.080**
-  for arm D's P(served wrong); the hosted server's `trust_score` is a different quantity, see §1.1).
-  The gain comes from *discovering* that averaging AIMNet2 and Orb is the best answer; a fixed
-  AIMNet2+Orb average chosen in hindsight is as good (0.202).
-* **Negative result.** The swarm ranks its own errors **worse** than the simple baselines:
-  AUROC **0.73** vs 0.80–0.87. Its self-repair (LoRA fine-tune of MACE) halved force error on held-out
-  labels but made relative energies worse, so its own gate refused to ship it.
-* **Evolution (six pre-registered runs, failures included).** Can the swarm improve itself by breeding fine-tuned
-  models, gating them and pruning the useless ones, at the same DFT budget? The first three designs (runs A–C)
-  **failed** their pre-registered rule, and a first fix (run D) was not confirmed. A diagnosis showed why: the gate's
-  relative-energy check on a few labels was noise and rejected the best children. With the gate testing forces only
-  (**run F**, pre-registered, 12 new seeds), the full loop beats the static swarm in **12 of 12 seeds**: served force
-  error −0.026 eV/Å [−0.030, −0.021] (≈12%), with better relative energies and calibration. It **held on 2,475 frames
-  of new chemistry** that no run had ever read (−0.026 [−0.034, −0.019], 12/12). Growing the swarm without selection
-  (run E) also wins (−0.018, 12/12 on new chemistry). A sham control for run E (CPU; children that learn nothing) shows its force
-  gain comes from learning. [`results/evolution/SUMMARY.md`](results/evolution/SUMMARY.md)
+* **Problem: the best model fails silently where it matters.** On 287 held-out Transition1x reactions every
+  model's force error peaks at the transition state, the top of the energy hill that sets the reaction rate.
+  AIMNet2 leads at the reactant (median 0.22 vs 0.35 eV/Å for Orb) and loses its lead at the transition
+  state (0.46 vs 0.47), with no warning. Its own seed ensemble does not warn either: its spread is 2.4×
+  smaller than its error.
+* **The council: each decision has an owner, no central planner.** Three models answer independently and
+  never see each other's answers. The Calibrator keeps the track record and chooses what to serve, the
+  Skeptic audits trusted answers at random and vetoes, the Oracle spends the ground-truth budget, and the
+  Curator breeds and retires members. They coordinate only through an append-only log, so every decision
+  replays. The agents are deterministic programs, not LLMs; an LLM agent uses the whole council as one tool
+  (MCP).
+* **Idea 1: decide as a council** (leak-free split, 200 DFT label lookups per arm).
+  * Disagreement between independent models flags when the best model is wrong, with no labels:
+    AUROC **0.917** against "AIMNet2 wrong" (pool split, 1,672 frames). Copies of one model are
+    overconfident: their spread is 2.4–36× smaller than their error.
+  * Served force RMSE **0.206 eV/Å** vs 0.286 for the best baseline (**−28%**). The council discovered from
+    200 labels that averaging AIMNet2 and Orb is the best answer; that average, picked in hindsight with eval
+    labels, is as good (0.202).
+  * Adding one role, the Skeptic's random audits of trusted answers, cuts calibration error (ECE) from
+    0.370 to 0.079 (**4.6×**).
+  * Negative: the council's own risk score ranks its remaining errors worse than the simple baselines
+    (AUROC 0.73 vs 0.80–0.87).
+* **The worst model is the best critic.** As an answerer MACE-MPA-0 is wrong on 99.9% of eval frames
+  (Orb 91.3%, AIMNet2 57.2%). As a critic it is the only foundation model whose removal makes the council
+  worse at spotting mistakes: mean ΔAUROC **+0.040** over 491 fitness checks (AIMNet2 −0.067, Orb −0.037).
+* **Idea 2: let the council evolve** (pre-registered, failures included). The Curator breeds fine-tuned
+  children on the labels the council already paid for; a child must beat its parent on labels it never
+  trained on, and members that add nothing are retired. The first four designs (runs A–D) failed their rule
+  or were not confirmed. A diagnosis showed why: the test's energy check on a few labels was noise and threw
+  out the best children. With a force-only test (**run F**, 12 new seeds, 800 lookups for both arms) the
+  evolving council beats the static council in **12 of 12 seeds**: −0.026 eV/Å [−0.030, −0.021] (−12%), and
+  **−14%** on 2,475 structures from new chemical formulas that no run had read. In total that is **0.181 vs
+  0.286 eV/Å** against the best Idea 1 baseline on the same eval frames (**−37%**), and below the hindsight
+  average. 108 children were bred, 43 sit in the final councils, and 32 of the 36 foundation models were
+  retired. Caveat: growing the council without selection (run E) already gives −0.018 of the −0.026;
+  selection's own share is not isolated yet.
 * **Use it now.** Add the hosted MCP server to Claude Code:
   `claude mcp add --transport http fittest https://fittest-mcp.westus2.cloudapp.azure.com/mcp`,
   then ask *"Use fittest to check whether I can trust an ML potential on this water molecule: O 0 0 0,
@@ -52,9 +78,10 @@ Formerly **TrustSwarm**; the old GitHub URL redirects here.
 ## Contents
 
 1. [Use it now](#1-use-it-now) — MCP server, local install, Python API, ALCHEMI hook
-2. [How it works](#2-how-it-works) — problem, signal, agents, blackboard, evolution, ALCHEMI usage
-3. [Validation](#3-validation) — data, split, metrics, ablation, figures
-4. [What failed and limitations](#4-what-failed-and-limitations)
+2. [How it works](#2-how-it-works) — the problem, the council, Idea 1, the worst model as critic, Idea 2
+   (evolution), ALCHEMI usage
+3. [Validation](#3-validation) — data, split, metrics, the Idea 1 ablation, self-repair
+4. [What failed and limitations](#4-what-failed-and-limitations) — and next steps
 5. [Reproduce](#5-reproduce)
 6. [Repo map, privacy, licence, acknowledgements](#6-repo-map)
 
@@ -64,7 +91,7 @@ Formerly **TrustSwarm**; the old GitHub URL redirects here.
 
 ### 1.1 Hosted MCP server (no install)
 
-`fittest-mcp` exposes the swarm to any MCP client over streamable HTTP. The three model agents
+`fittest-mcp` exposes the council to any MCP client over streamable HTTP. The three model agents
 (MACE-MPA-0, AIMNet2, Orb-v3) run as warm CPU processes on an Azure VM, and their disagreement is
 turned into a verdict with the Calibrator state learned in the final run
 (`fittest/snapshots/trust_snapshot.json`, identical to `results/trust_snapshot.json`). Landing page:
@@ -263,13 +290,20 @@ as an agent, see [`docs/REPRODUCE.md` §3](docs/REPRODUCE.md#3-add-your-own-mode
 
 ## 2. How it works
 
-### 2.1 The problem: silent failures where reactions are decided
+### 2.1 The problem: ground truth is scarce, and models fail silently where it matters
+
+Discovery is a funnel. ML models on GPUs screen candidates by the hundred million, and agents now set up and
+check the runs. What stays scarce is ground truth: a high-fidelity simulation or a lab experiment for each of
+the few candidates that reach the end. Two questions follow: which candidates should get ground truth, and
+which cheap answers can be trusted without it? Both need to know when a model is wrong, and the models do not
+say.
 
 Labs spend months deciding whether a foundation MLIP is good enough for their chemistry. The models
 return a number for every structure, with no warning when the structure is outside what they learned.
 On the 3,157 held-out Transition1x test frames (287 reactions), median force RMSE against DFT
 (ωB97x/6-31G(d)) rises from reactant to transition state for every model
-([`results/fig/numbers.json`](results/fig/numbers.json), `fig1`):
+([`results/fig/numbers.json`](results/fig/numbers.json), `fig1`). The best model, AIMNet2, leads clearly at
+the reactant and ties Orb at the transition state, where the reaction is decided:
 
 | model | reactant | path | TS | TS / reactant |
 |---|---|---|---|---|
@@ -281,36 +315,14 @@ On the 3,157 held-out Transition1x test frames (287 reactions), median force RMS
 
 ![Force error rises toward the transition state](results/fig/fig1_ts_failure.png)
 
-### 2.2 The signal: disagreement between independent models
-
-For M models predicting forces F_m on a structure with n atoms:
-
-```
-F̄_i  = mean_m F_m,i
-s_i  = sqrt( mean_m ||F_m,i − F̄_i||² )      per-atom spread
-σ_F  = mean_i s_i                            per-structure disagreement (eV/Å)
-```
-
-(`fittest.signals.force_spread`; the hook uses an identical vectorised twin, tested to agree.)
-
-* Committee of independent models (MACE-MPA-0, AIMNet2, Orb): Spearman(σ_F, AIMNet2 force error)
-  **0.73**; the spread is about **1.8×** the error.
-* Seed ensemble (the four shipped AIMNet2 members): Spearman 0.68, but the spread is about **0.4×** the
-  error — overconfident.
-* On the 1,485 eval frames: the AIMNet2 ensemble's median error is **2.4×** its spread; four MACE LoRA
-  seeds (arm B′) are **36×** under-dispersed (spread 0.008 eV/Å, error 0.278 eV/Å).
-
-Seed ensembles can rank errors well while being badly under-dispersed: ranking and calibration are
-different properties. This is why the swarm uses models trained on different data by different groups.
-
-![Spread vs error](results/fig/fig2_spread_vs_error.png)
-
-### 2.3 The agents and the blackboard
+### 2.2 The council: agents and the blackboard
 
 Each agent holds private information and talks to the others only through an append-only
 **blackboard** (`fittest.blackboard.Blackboard`; the full arm-D log is
 [`results/blackboard_armD.jsonl`](results/blackboard_armD.jsonl), 5,921 events). The round driver
-advances the clock and makes no decisions; there is no central planner.
+advances the clock and makes no decisions; there is no central planner. The agents are deterministic
+programs, not LLMs: the same inputs give the same decisions, and an LLM agent can use the whole council as a
+tool (§1).
 
 | agent | holds privately | decides | posts |
 |---|---|---|---|
@@ -352,37 +364,106 @@ bids (9,745 bids placed). The hook flagged 601 systems; the Skeptic vetoed 1,788
 `mean(aimnet2+orb)` on 1,373 of 1,485 frames and `aimnet2` on 112. Final reputations were nearly
 equal (aimnet2 0.89, mace_mpa0 0.89, orb 0.89, skeptic 0.86).
 
-### 2.4 The evolutionary layer
+### 2.3 Idea 1: decide as a council
 
-> **Status: done; the pre-registered claim does not hold.** Three runs (A: MACE LoRA offspring; B: AIMNet2
-> offspring; C: niche specialists of all three families at budgets 200/400/800), two seeds each. Full write-up,
-> controls and exploratory follow-ups: [`results/evolution/SUMMARY.md`](results/evolution/SUMMARY.md).
+The idea comes from LLMs: Mixture-of-Agents asks several models and lets an aggregator decide. Here the
+members are independent foundation MLIPs, trained by different groups on different data. Unlike multi-agent
+debate, they never see each other's answers and are never pushed to agree; their disagreement is the signal.
 
-The static swarm above has a fixed population. The evolutionary loop (`fittest/evolution.py`,
-`scripts/evolve.py`) asks whether a population that breeds, selects and prunes its own members
-improves at the **same DFT budget** as a static control. All settings below were fixed before the real
-run ([`results/evolution/METHODS.md`](results/evolution/METHODS.md)). One generation:
+**The signal.** For M models predicting forces F_m on a structure with n atoms:
+
+```
+F̄_i  = mean_m F_m,i
+s_i  = sqrt( mean_m ||F_m,i − F̄_i||² )      per-atom spread
+σ_F  = mean_i s_i                            per-structure disagreement (eV/Å)
+```
+
+(`fittest.signals.force_spread`; the hook uses an identical vectorised twin, tested to agree.)
+
+* Committee of independent models (MACE-MPA-0, AIMNet2, Orb): Spearman(σ_F, AIMNet2 force error)
+  **0.73**; the spread is about **1.8×** the error.
+* Seed ensemble (the four shipped AIMNet2 members): Spearman 0.68, but the spread is about **0.4×** the
+  error — overconfident.
+* On the 1,485 eval frames: the AIMNet2 ensemble's median error is **2.4×** its spread; four MACE LoRA
+  seeds (arm B′) are **36×** under-dispersed (spread 0.008 eV/Å, error 0.278 eV/Å).
+
+Seed ensembles can rank errors well while being badly under-dispersed: ranking and calibration are
+different properties. This is why the council uses models trained on different data by different groups.
+
+![Spread vs error](results/fig/fig2_spread_vs_error.png)
+
+**What the council does with it** (full ablation in [§3.3](#33-ablation-idea-1-final-run-v4)): disagreement
+flags when the best model is wrong (AUROC 0.917 against "AIMNet2 wrong", pool split); the Calibrator serves
+the best subset per context bucket, 0.206 eV/Å vs 0.286 for the best baseline (−28%); the Skeptic's random
+audits of trusted answers cut ECE from 0.370 to 0.079. The council's own risk score ranks its remaining errors
+worse than the baselines' scores (AUROC 0.73 vs 0.80–0.87).
+
+### 2.4 The worst model is the best critic
+
+The evolutionary loop ([§2.5](#25-idea-2-let-the-council-evolve)) scores every member in two roles: as an
+answerer (how much the served error rises without it, Δ_ans) and as a critic (how much the AUROC of the
+disagreement signal drops without it, Δ_crit). Pooled over every fitness evaluation of the three foundation
+models in all evolution runs ([`results/story_numbers.json`](results/story_numbers.json)):
+
+| foundation model | wrong as an answerer (eval) | critic: mean Δ_crit (AUROC lost when removed) | checks | checks with Δ_crit CI above 0 |
+|---|---|---|---|---|
+| MACE-MPA-0 | 99.9% | **+0.040** | 491 | 157 |
+| Orb-v3 | 91.3% | −0.037 | 503 | 33 |
+| AIMNet2 | 57.2% | −0.067 | 528 | 15 |
+
+"Wrong" here is force RMSE > 0.25 eV/Å on the 1,485 eval frames ([`results/fig/numbers.json`](results/fig/numbers.json)).
+The council never serves MACE alone, yet MACE is the one foundation model whose removal consistently costs
+the council error detection. Our reading, not tested: MACE was trained on different data (PBE materials) and
+disagrees with the others where they share a blind spot. Caveat: in run F on GPU the loop still retired base
+MACE in 12 of 12 seeds; in the CPU runs, which breed only AIMNet2 children, base MACE survived in 18 of 24
+seeds (E-cpu, F-cpu).
+
+### 2.5 Idea 2: let the council evolve
+
+> **Status: confirmed in run F** (pre-registered, 12 new seeds, and again on frames no run had read). Four
+> earlier designs failed or were not confirmed; all are reported. Full write-up, controls and exploratory
+> runs: [`results/evolution/SUMMARY.md`](results/evolution/SUMMARY.md).
+
+The static council has fixed members. The evolutionary loop (`fittest/evolution.py`,
+`fittest/evolution_c.py`, `scripts/evolve_c.py`) asks whether a council that breeds, tests and retires its
+own members serves better answers at the **same DFT budget** as a static control. One generation, as in run F
+([`results/evolution_c/PREREG.md`](results/evolution_c/PREREG.md),
+[`results/evolution_f/PREREG.md`](results/evolution_f/PREREG.md)):
 
 ```mermaid
 flowchart LR
-    T["1 Triage<br/>population predicts the pool;<br/>Calibrator chooses what to serve"] --> O["2 Oracle<br/>50 labels per generation:<br/>75% highest σ_F, 25% audits of trusted frames"]
+    T["1 Triage<br/>members predict the pool;<br/>Calibrator chooses what to serve"] --> O["2 Oracle<br/>200 labels per generation:<br/>75% highest σ_F, 25% audits of trusted frames"]
     O --> F["3 Fitness<br/>marginal contribution<br/>answerer Δ_ans · critic Δ_crit"]
-    F --> S["4 Selection<br/>prune members whose<br/>contribution CI includes 0"]
-    S --> B["5 Breeding<br/>Curator mutates the fittest<br/>MACE recipe; clones rejected"]
-    B --> G["6 Gate<br/>child vs parent on select labels<br/>+ ALCHEMI acceptance report"]
-    G --> H["7 Hot-swap<br/>survivors + gated offspring;<br/>ledger re-fitted"]
+    F --> S["4 Selection<br/>retire members whose<br/>contribution CI includes 0"]
+    S --> B["5 Breeding<br/>one child per family,<br/>fine-tuned where the council is weak"]
+    B --> G["6 Gate<br/>child ≤ parent force RMSE<br/>on select labels; clones rejected"]
+    G --> H["7 Hot-swap<br/>survivors + gated children;<br/>ledger re-fitted"]
     H --> T
 ```
 
-* **Budget and controls.** 4 generations × 50 Transition1x lookups = 200, the same budget as arm D. The
-  **static control** runs the identical triage/oracle procedure with the population fixed at MACE-MPA-0 +
-  AIMNet2 + Orb. Every generation of every run is scored on the same eval frames with 1,000 shared
-  reaction-bootstrap resamples, so comparisons are paired.
+* **Budget and controls.** 4 generations × 200 Transition1x lookups = 800, the same for both arms. The
+  **static control** runs the identical triage and oracle procedure with the members fixed at MACE-MPA-0 +
+  AIMNet2 + Orb. Every generation of every run is scored on the same 1,485 eval frames with 1,000 shared
+  reaction-bootstrap resamples, so comparisons are paired. Eval never feeds back: only the final scorer
+  (`EvalScorer`) reads eval labels.
 * **Breed / select split.** The pool's 16 endpoint-geometry components are split once into *select*
-  (7 components, 572 frames, 52 reactions) and *breed* (9 components, 1,100 frames, 100 reactions); each
-  generation labels 20 select + 30 breed frames. Offspring train only on breed labels; fitness and the gate
-  use labels no member trained on, so selection is never measured on a child's own training geometry.
-* **Fitness = marginal contribution to the swarm**, on clean labels:
+  (6 components, 561 frames, 51 reactions) and *breed* (10 components, 1,111 frames, 101 reactions); 40% of
+  each generation's labels go to select and 60% to breed. Children train only on breed labels; the gate and
+  fitness use select labels, which no member trained on (asserted).
+* **Niches**, label-free: `flagged` = σ_F ≥ τ₀ (the 70th percentile of pool σ_F, the high-disagreement,
+  transition-state-like region), `trusted` = the rest. Only `flagged` breeds specialists, because that is
+  where the council is weak and where triage spends its labels.
+* **Breeding.** After generations 0, 1 and 2, the Curator breeds one child per family (AIMNet2, Orb-v3,
+  MACE-MPA-0) from the fittest living member of that family, trained on the breed labels of the `flagged`
+  niche. Head-only fine-tune (AIMNet2 `mlps.2` + `outputs`, Orb `heads`, MACE `model.readouts`), Adam,
+  200 steps, force + reaction-relative energy loss. Later children mutate their parent's learning rate and
+  energy weight (×½ or ×2) and start from its head weights.
+* **Gate.** On the select labels of the niche, the child's force RMSE must be ≤ its parent's. **Clone
+  rejection:** Pearson r > 0.95 between the child's and a member's deviations from the population-mean
+  force, or median per-frame force RMS difference < 0.02 eV/Å. Failing children are stillborn and stay in
+  the family tree. Runs A–D also required reactant-relative ΔE MAE ≤ parent, and run A the ALCHEMI
+  `build_acceptance_report` from-scratch ratio ≤ 1.01; run F dropped the energy check (below).
+* **Fitness = marginal contribution to the council**, on clean labels:
   * *answerer*: `Δ_ans(m) = err(P \ m) − err(P)`, where err is the mean served error in wrongness units
     (`F_RMSE / 0.25 + |ΔE_rel| / 0.25`) and the served answer comes from a Calibrator fitted out-of-fold
     (5 reaction-grouped folds), so a member cannot look useful by overfitting the labels it is scored on;
@@ -390,56 +471,68 @@ flowchart LR
   * 400 paired reaction-bootstrap resamples give each Δ an SE and 95% CI; fitness = Δ_ans/SE_ans +
     Δ_crit/SE_crit; the role (answerer or critic) is the larger z-score.
 * **Selection.** Recomputed after every death. A member is eligible when neither Δ has a CI lower bound
-  above 0 and fitness ≤ 0.5; the least fit eligible member dies while the population exceeds 3, then the
-  least fit dies while it exceeds 6.
-* **Breeding.** 3 children per generation (generations 0–2) from the fittest MACE-family member(s); the
-  foundation MACE-MPA-0 is the germline if none is alive. Mutations from the parent recipe (E:F loss weight
-  10:10, LoRA rank 16, α 2, lr 10⁻³, 40 epochs): child a energy weight ×3; child b energy weight ×10 and
-  LoRA rank ×½ or ×2; child c learning rate ×½ or ×2, epochs −10/+20, 80% reaction subsample. A child of an
-  offspring starts from its parent's merged weights. **Clone rejection:** Pearson r > 0.95 between the
-  child's and a member's deviations from the population-mean force, or median per-frame force RMS
-  difference < 0.02 eV/Å.
-* **Gate** (select labels, component-disjoint from the child's training labels, asserted twice): force RMSE
-  ≤ parent; reactant-relative ΔE MAE ≤ parent; ALCHEMI `build_acceptance_report` from-scratch ratio
-  (child vs parent) ≤ 1.01. The 1% tolerance was set after a smoke test and before the real run: the
-  Toolkit's energy-per-atom MAE is dominated by frozen E0 offsets identical for child and parent (ratio
-  1.000008), so at exactly 1.00 the check is a float-precision coin flip. The Toolkit's own verdict at 1.0 is
-  recorded too. Failing children are stillborn and kept in the family tree.
-* **Differences from arm D**, stated so the two are not confused: no Skeptic kNN vetoes, no bid auction
-  (σ-ranked oracle + audits instead), no planted cases; the AUROC risk score is the population's σ_F.
-* **Eval never feeds back**: only the final scorer (`EvalScorer`) reads eval labels.
-* **Decision rule** (fixed in advance, `scripts/write_evolution_summary.py`): the flagship claim holds only
-  if, in every seed run, served force RMSE at the final generation is significantly lower than both the
-  run's own generation 0 and the static swarm at the same budget, over ≥ 3 generations, with offspring in
-  the final population and no significant regression vs static in relative-energy MAE or ECE.
+  above 0 and fitness ≤ 0.5; the least fit eligible member dies while the council exceeds 3, then the
+  least fit dies while it exceeds 6. Foundation models can be retired too.
+* **Decision rule** (run F, fixed before it ran): the seed-level 95% t-interval of mean Δ served force RMSE
+  (evolved − static, eval, final generation) lies entirely below 0, at most 1 of 12 seeds is significantly
+  worse, and ECE does not regress at the seed level. Runs A–C used a stricter rule: a significant win in
+  *every* seed, also against the run's own generation 0.
 
-**Results** (final generation minus static at the same budget, served on eval, paired 95% CI; * = CI excludes 0).
-Run C used the same engine with niche specialists, a niche gate and no ALCHEMI acceptance check
-([`results/evolution_c/PREREG.md`](results/evolution_c/PREREG.md)).
+**Every pre-registered design** (Δ = final generation − static at the same budget, served force RMSE on eval,
+eV/Å; * = paired CI excludes 0; E and F: seed-level mean with 95% t-interval):
 
-| run | budget | seed | force RMSE Δ (eV/Å) | rel-E MAE Δ (eV) | rule |
-|---|---|---|---|---|---|
-| A MACE LoRA | 200 | 0 | +0.010 * (worse) | −0.007 * | no |
-| | | 1 | −0.011 * | +0.056 * (worse) | no (rel-E, ECE regress) |
-| B AIMNet2 | 200 | 0 | −0.001 | −0.027 * | no |
-| | | 1 | −0.024 * | −0.029 * | yes |
-| C specialists | 200 | 0 / 1 | +0.034 * / −0.027 * | −0.011 * / −0.008 * | no / yes |
-| | 400 | 0 / 1 | +0.019 * / −0.016 * | −0.025 * / −0.018 * | no / no |
-| | 800 | 0 / 1 | −0.017 * / +0.011 * | −0.044 * / −0.028 * | yes / no |
+| run | design | seeds | Δ force RMSE | verdict |
+|---|---|---|---|---|
+| A | MACE LoRA children; gate with rel-E and the ALCHEMI report; budget 200 | 2 | +0.010 * / −0.011 * | fails |
+| B | AIMNet2 head fine-tunes; budget 200 | 2 | −0.001 / −0.024 * | fails (needs every seed) |
+| C | niche specialists of all three families; budgets 200 / 400 / 800 | 2 per budget | holds in 2 of 6 seed-budget cells | fails |
+| D | C + base models protected + 10% rel-E tolerance; new seeds | 6 (CPU primary) | holds in 4 of 6, 5 required | not confirmed |
+| E | grow without selection (base models kept, no gate, no pruning); new seeds | 12 | −0.018 [−0.024, −0.013], 10 better / 0 worse | confirmed |
+| **F** | **C with a force-only gate; new seeds** | **12** | **−0.026 [−0.030, −0.021], 12 better / 0 worse** | **confirmed** |
 
-**Verdict: the flagship claim does not hold under the pre-registered rule** (it needs every seed). Most children
-fail the gate on relative energy (run A: 15 of 18 stillborn; GPU run C: 36 of 54 stillborn, 35 of them on rel-E). Why the evolved
-swarm sometimes ends up *worse* than static is not established: base models were pruned in the worse runs but
-also in most of the runs that passed. The paired CIs cover eval resampling only; run-to-run noise is about
-0.02 eV/Å (the static swarm alone moves 0.202 → 0.220 between seeds). Fine-tuning *without* selection looked
-more consistent in exploratory runs, but it changes several things at once and lost to the evolved arm in one of
-the two pre-registered seeds. A post-hoc fix (protect the base models, tolerate 10% worse rel-E at the gate)
-was pre-registered as run D ([`results/evolution_d/PREREG.md`](results/evolution_d/PREREG.md)) and run on new seeds
-6–11: on CPU (primary, AIMNet2 specialists) it holds in 4 of 6, below the pre-registered 5 of 6, so it is **not confirmed**;
-on GPU (secondary, three families) it holds in 4 of 6 and two seeds are worse than static. **Run E** ([`results/evolution_e/PREREG.md`](results/evolution_e/PREREG.md)), pre-registered on 12 new seeds, **confirmed** a narrower claim: the no-selection arm (fine-tuned specialists added each generation, base models kept, no gate or pruning) beats static on served force error, mean −0.018 eV/Å [−0.024, −0.013] over seeds, 10 of 12 seeds significantly better and none worse, with lower relative-energy error and no calibration loss; the evolved arm on the same seeds averaged −0.001 [−0.017, +0.016]. Family trees: `results/fig/fig8_family_tree_run{A,B}_s{0,1}.png`; per-generation curves:
+Run F also passes the original every-seed rule, with lower relative-energy error (−0.039 eV) and lower ECE
+(−0.021) than static.
+
+**Frames no run had read.** The run F fix came from a diagnosis that read earlier eval results, so a check on
+never-read frames was pre-registered before scoring
+([`PREREG_fresh_frames.md`](results/evolution_f/PREREG_fresh_frames.md),
+[`FRESH_FRAMES.md`](results/evolution_f/FRESH_FRAMES.md)): 2,475 structures, 225 reactions, Transition1x val
+formulas. Run F: −0.026 [−0.034, −0.019], 12 of 12 seeds better (served force RMSE 0.191 → 0.164 eV/Å,
+−14%). Run E: −0.018 [−0.026, −0.011], 12 of 12.
+
+**In absolute terms** ([`results/story_numbers.json`](results/story_numbers.json)): on eval the evolved council
+serves 0.181 eV/Å (mean of 12 seeds), against 0.207 for the static council, 0.202 for the hindsight
+AIMNet2+Orb average and 0.286 for the best Idea 1 baseline (−37%). The baselines' answers use no labels, so
+their error does not depend on the budget.
+
+**Lineages** (run F, GPU, 12 seeds, `results/evolution_f/gpu*/b800*/family_tree.json`): 108 children bred
+(9 per seed), 9 stillborn, 6 rejected as clones, 50 retired later, **43 in the final councils**. 32 of the 36
+foundation models were retired (MACE 12, Orb 12, AIMNet2 8), and the final councils have 3 to 6 members.
+AIMNet2 and Orb build real lineages (children of children); 33 of the 36 MACE children were bred from the
+base model again.
+
+**What we learned on the way**
+
+* **The energy check was noise.** Most children of runs A–C failed the gate on reaction-relative energy
+  (run A: 15 of 18 stillborn; GPU run C: 36 of 54, 35 of them on rel-E). On CPU, that check's sign agreed
+  with eval only 38% of the time (r = −0.15), while the select-set force change predicted eval (r = 0.87). It
+  passed 39 of 114 AIMNet2 children against 91 of 114 Orb children, and the runs that ended worse than static
+  were those with no AIMNet2 specialist left ([`DIAGNOSIS.md`](results/evolution/DIAGNOSIS.md)). Run F
+  removed only that check.
+* **Growth vs selection.** Growing the council without selection (run E) gives −0.018, the full loop of run F
+  −0.026, on different seeds. A sham control (children with learning rate 0; CPU, exploratory) shows that
+  run E's force gain comes from learning. What selection adds on its own needs both arms on the same seeds
+  ([§4](#4-what-failed-and-limitations)).
+* **Budget.** The run F design is not significant at 400 labels (−0.010 [−0.023, +0.004]) and wins at 1,600
+  (−0.030); exploratory, seeds 24–29. The loop needs enough labels.
+* **Noise.** Run-to-run noise is about 0.02 eV/Å (the static council alone moves 0.202 → 0.220 between seeds),
+  and paired CIs cover eval resampling only. That is why runs D–F use 6 to 12 new seeds and seed-level
+  intervals.
+
+Family trees of runs A and B: `results/fig/fig8_family_tree_run{A,B}_s{0,1}.png`; per-generation curves:
 `results/fig/fig7_evolution_run{A,B}_s{0,1}.png`; budget axis: `results/evolution_c/fig9_budget.png`.
 
-### 2.5 How the ALCHEMI Toolkit is used
+### 2.6 How the ALCHEMI Toolkit is used
 
 | Toolkit feature (0.3.0-rc) | used for | evidence |
 |---|---|---|
@@ -511,7 +604,7 @@ Pool and eval still share chemical formulas.
 * 95% CIs: 1,000 bootstrap resamples over reactions, paired across arms.
 * Budget: 200 Transition1x label lookups per arm (40 per round × 5 rounds).
 
-### 3.3 Ablation (final run, v4)
+### 3.3 Ablation: Idea 1 (final run, v4)
 
 | arm | models | warning score | served answer |
 |---|---|---|---|
@@ -614,8 +707,8 @@ Everything below is also in [`results/RESULTS.md`](results/RESULTS.md) ("Failure
 * **τ never moved.** The Calibrator's threshold stayed at its round-0 floor (0.620) for all rounds: flags
   came from the 70th-percentile rule, not from learning.
 * **Reputations barely differentiated** (0.86–0.89): reputation-weighted bidding behaved like summed bids.
-* **The served-answer gain equals a hindsight choice** (0.202 vs 0.206 eV/Å). Which candidate each budget
-  in the sweep recommended is not recorded.
+* **The static council's served-answer gain equals a hindsight choice** (0.202 vs 0.206 eV/Å); the evolved
+  council goes below it (0.181, §2.5). Which candidate each budget in the sweep recommended is not recorded.
 * **Level of theory.** MACE-MPA-0 and Orb-v3-omat are PBE materials models, AIMNet2 is ωB97M-D3, labels
   are ωB97x/6-31G(d). Absolute energies are never compared across models; part of every error is the
   level-of-theory gap, not model failure.
@@ -626,12 +719,25 @@ Everything below is also in [`results/RESULTS.md`](results/RESULTS.md) ("Failure
   oracle queue.
 * **Narrow calibration domain.** Trust numbers are learned on C/H/N/O reaction chemistry with ≤ 7 heavy
   atoms. On water, metals, charged or periodic systems they extrapolate.
-* **Evolution.** The pre-registered rule needs a win in *every* seed; with two seeds per condition it has
-  little power, and the wins we saw were seed-dependent. Most children fail the gate on reaction-relative
-  energy. Run C's first GPU attempt is invalid (OOM children counted as stillborn) and is not quoted; the clean
+* **Evolution.** Four designs (runs A–D) failed or were not confirmed before run F (§2.5). Run F's fix was
+  found by reading earlier eval results; the pre-registered check on never-read frames passed, but the design
+  has not been tested on a second dataset. Growing without selection (run E) gives most of the gain, and what
+  selection adds on its own is not isolated. Base MACE, the best critic (§2.4), was retired in all 12 run F GPU
+  seeds. Runs A–C had two seeds per condition, little power for a rule that needs a win in every seed.
+  Run C's first GPU attempt is invalid (OOM children counted as stillborn) and is not quoted; the clean
   GPU rerun (three families) is the faithful run C, and C′ (CPU, AIMNet2 only) is a reported deviation. Extra seeds and design variants are exploratory, run on the same eval
   split, and labelled so. Details: [`results/evolution/SUMMARY.md`](results/evolution/SUMMARY.md).
 * The synthetic smoke test (`scripts/make_synthetic.py`) shows the pipeline runs; it is not evidence.
+
+### Next
+
+* **Live DFT** instead of Transition1x lookups.
+* **Selection vs growth on the same seeds**, to isolate what selection adds.
+* **Let the council set its own size.** It already grows and shrinks (final councils of 3 to 6 members), but
+  the bounds 3 and 6 are ours.
+* **Let new model families join.** Today only AIMNet2, Orb and MACE breed.
+* **A committee at one level of theory**, to separate model failure from the level-of-theory gap.
+* **A lab in the loop**: the same decision for experiments instead of DFT.
 
 ---
 
@@ -647,6 +753,7 @@ pytest                                  # CPU suite; GPU-only hook tests skip
 python scripts/make_synthetic.py        # synthetic frames + predictions
 python scripts/run_ablation.py --frames data/synthetic/frames.pkl --preds data/synthetic/preds --out results/synthetic
 python -m fittest.service serve --snapshot results/trust_snapshot.json --fake-models --port 8000
+python scripts/story_numbers.py         # critic values, run F lineages and absolute errors, from committed results
 ```
 
 **CPU VM with the real model agents** (what the hosted MCP server runs: Ubuntu 24.04, 8 vCPU, no GPU):
@@ -780,3 +887,7 @@ MIT ([`LICENSE`](LICENSE)). Model weights and datasets keep their own licences.
   enables a universal uncertainty metric for atomistic foundation models",
   arXiv:[2507.21297](https://arxiv.org/abs/2507.21297). Query-by-committee active learning: J. S. Smith et
   al., *J. Chem. Phys.* **148**, 241733 (2018). More in [`docs/data_and_models.md`](docs/data_and_models.md).
+* Patterns borrowed from LLMs: J. Wang et al., "Mixture-of-Agents enhances large language model capabilities",
+  arXiv:[2406.04692](https://arxiv.org/abs/2406.04692); the contrast with multi-agent debate: Y. Du et al.,
+  "Improving factuality and reasoning in language models through multiagent debate",
+  arXiv:[2305.14325](https://arxiv.org/abs/2305.14325).
