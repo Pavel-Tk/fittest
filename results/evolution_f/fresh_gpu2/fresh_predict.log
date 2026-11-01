@@ -1,0 +1,89 @@
+[fresh] aimnet2: 18 children in results/evolution_f_gpu2/cache
+Warp 1.18.0 initialized:
+   CUDA Toolkit 13.4, Driver 13.0
+   Devices:
+     "cpu"      : "x86_64"
+     "cuda:0"   : "NVIDIA L4" (22 GiB, sm_89, mempool enabled)
+   Kernel cache:
+     /root/.cache/warp/1.18.0
+[fresh] verify aimnet2_029b1dd42ff35728: max|dE| 2.41e-06 eV, max|dF| 5.36e-06 eV/A
+[fresh] aimnet2_029b1dd42ff35728 (g3_aimnet2_flagged) 1.2 s
+[fresh] verify aimnet2_1bfef324a307459d: max|dE| 2.6e-06 eV, max|dF| 4.39e-06 eV/A
+[fresh] aimnet2_1bfef324a307459d (g2_aimnet2_flagged) 0.6 s
+[fresh] verify aimnet2_2a113a4cb8b8baf5: max|dE| 2.59e-06 eV, max|dF| 4.89e-06 eV/A
+[fresh] aimnet2_2a113a4cb8b8baf5 (g3_aimnet2_flagged) 0.6 s
+[fresh] aimnet2_3b024840d0e0481d (g1_aimnet2_flagged) 0.4 s
+[fresh] aimnet2_3c672a030b8c7c00 (g1_aimnet2_flagged) 0.4 s
+[fresh] aimnet2_5890430ec8e7542f (g3_aimnet2_flagged) 0.4 s
+[fresh] aimnet2_7aa4295b6e756aa6 (g3_aimnet2_flagged) 0.4 s
+[fresh] aimnet2_81105f7ea69e3672 (g2_aimnet2_flagged) 0.4 s
+[fresh] aimnet2_8b560f3449137954 (g1_aimnet2_flagged) 0.4 s
+[fresh] aimnet2_8fb2364c55ad647c (g3_aimnet2_flagged) 0.4 s
+[fresh] aimnet2_9a7fa62817425ef4 (g2_aimnet2_flagged) 0.4 s
+[fresh] aimnet2_9d753a14daddc7a8 (g1_aimnet2_flagged) 0.4 s
+[fresh] aimnet2_a041f4ba876d0f0b (g3_aimnet2_flagged) 0.4 s
+[fresh] aimnet2_a08c0ee9bd386b10 (g2_aimnet2_flagged) 0.4 s
+[fresh] aimnet2_c7f1d0dec71879bf (g1_aimnet2_flagged) 0.4 s
+[fresh] aimnet2_cefa8b2da690c39b (g2_aimnet2_flagged) 0.4 s
+[fresh] aimnet2_dbb5073658c1edec (g2_aimnet2_flagged) 0.4 s
+[fresh] aimnet2_f836bc08a46878de (g1_aimnet2_flagged) 0.4 s
+[fresh] mace: 18 children in results/evolution_f_gpu2/cache
+INFO:numexpr.utils:NumExpr defaulting to 12 threads.
+/usr/local/lib/python3.13/dist-packages/torch/jit/_script.py:1488: DeprecationWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
+  warnings.warn(
+/content/fittest/scripts/evolve_c_fresh_predict.py:82: UserWarning: Environment variable TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD detected, since the`weights_only` argument was not explicitly passed to `torch.load`, forcing weights_only=False.
+  state = torch.load(s["ckpt"], map_location=args.device)
+Using medium MPA-0 model as default MACE-MP model, to use previous (before 3.10) default model please specify 'medium' as model argument
+[fresh] verify mace_0d190e95c27d59d4: max|dE| 1.53e-05 eV, max|dF| 7.03e-06 eV/A
+[fresh] mace_0d190e95c27d59d4 (g1_mace_flagged) 20.6 s
+[fresh] verify mace_0d7d9e0c3efb3388: max|dE| 1.53e-05 eV, max|dF| 7.03e-06 eV/A
+[fresh] mace_0d7d9e0c3efb3388 (g1_mace_flagged) 18.6 s
+[fresh] verify mace_0d91a17247aad379: max|dE| 1.53e-05 eV, max|dF| 9.25e-06 eV/A
+[fresh] mace_0d91a17247aad379 (g2_mace_flagged) 18.6 s
+[fresh] mace_23507afb783846c7 (g2_mace_flagged) 9.0 s
+[fresh] mace_247394f7a38e6b0c (g3_mace_flagged) 9.0 s
+[fresh] mace_417f73c91746474a (g1_mace_flagged) 9.1 s
+[fresh] mace_6aa93c5ab0f8a018 (g3_mace_flagged) 9.1 s
+[fresh] mace_70aaa109978d6c67 (g3_mace_flagged) 9.1 s
+[fresh] mace_712a10353e8eac4e (g1_mace_flagged) 9.1 s
+[fresh] mace_75a689b574b95291 (g3_mace_flagged) 9.1 s
+[fresh] mace_94d0ea3c080a6446 (g1_mace_flagged) 9.1 s
+[fresh] mace_a052f7722eea0c72 (g2_mace_flagged) 9.1 s
+[fresh] mace_a5a239afae40ccd4 (g2_mace_flagged) 9.1 s
+[fresh] mace_a6526459fbe64e0f (g3_mace_flagged) 9.1 s
+[fresh] mace_d047353435ba43c3 (g3_mace_flagged) 9.1 s
+[fresh] mace_d4fbd4adbe4d2af4 (g1_mace_flagged) 9.1 s
+[fresh] mace_eb90885c5f250e07 (g2_mace_flagged) 9.1 s
+[fresh] mace_fd6b118217eff199 (g2_mace_flagged) 9.1 s
+FRESH_PREDICT_DONE results/evolution_f_gpu2/cache
+[fresh] orb: 18 children in results/evolution_f_gpu2/cache
+/content/envs/orb/lib/python3.12/site-packages/torch/jit/_script.py:1491: FutureWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
+  warnings.warn(
+/content/envs/orb/lib/python3.12/site-packages/orb_models/utils.py:30: UserWarning: Setting global torch default dtype to torch.float32.
+  warnings.warn(f"Setting global torch default dtype to {torch_dtype}.")
+/content/envs/orb/lib/python3.12/site-packages/orb_models/utils.py:32: UserWarning: Consider passing 'precision=float32-high' for significantly higher (>2x) model throughput if high precision is not required.
+  warnings.warn(
+/content/envs/orb/lib/python3.12/site-packages/triton/knobs.py:504: UserWarning: TRITON_DEFAULT_FP_FUSION is unset: defaulting to FP fusion ENABLED for backward compatibility in Triton 3.9. The default will change to DISABLED in Triton 3.10; set TRITON_DEFAULT_FP_FUSION=1 to keep fusion enabled or =0 to adopt the new default early and silence this warning.
+  warn_once(FP_FUSION_DEFAULT_WARNING)
+[fresh] verify orb_20a7f0a46144961a: max|dE| 7.63e-06 eV, max|dF| 7.15e-06 eV/A
+[fresh] orb_20a7f0a46144961a (g1_orb_flagged) 19.1 s
+[fresh] verify orb_228ceffad76d4252: max|dE| 7.63e-06 eV, max|dF| 7.57e-06 eV/A
+[fresh] orb_228ceffad76d4252 (g2_orb_flagged) 14.5 s
+[fresh] verify orb_2af25d03108b4837: max|dE| 7.63e-06 eV, max|dF| 6.47e-06 eV/A
+[fresh] orb_2af25d03108b4837 (g2_orb_flagged) 14.6 s
+[fresh] orb_2f2cc1e3c5e84886 (g2_orb_flagged) 7.0 s
+[fresh] orb_3956f60af87d84ba (g2_orb_flagged) 7.0 s
+[fresh] orb_3e9978706aad0279 (g3_orb_flagged) 7.0 s
+[fresh] orb_4737dce3f2259c91 (g1_orb_flagged) 7.1 s
+[fresh] orb_5cd434bc424cc1bc (g2_orb_flagged) 7.0 s
+[fresh] orb_745609cedbc95ef1 (g3_orb_flagged) 7.0 s
+[fresh] orb_8220099595580c4c (g3_orb_flagged) 7.1 s
+[fresh] orb_93836013f2dbfff7 (g3_orb_flagged) 7.0 s
+[fresh] orb_9881167767b476c9 (g1_orb_flagged) 7.0 s
+[fresh] orb_ab2628fcc0dc1c83 (g2_orb_flagged) 7.0 s
+[fresh] orb_b146407381440ee7 (g1_orb_flagged) 7.1 s
+[fresh] orb_b6e52711db477a6d (g3_orb_flagged) 7.0 s
+[fresh] orb_cb7770f1c1440b63 (g1_orb_flagged) 7.0 s
+[fresh] orb_e1a218628572b84d (g3_orb_flagged) 7.0 s
+[fresh] orb_eb8aabcb296aa93f (g1_orb_flagged) 7.2 s
+FRESH_PREDICT_DONE results/evolution_f_gpu2/cache

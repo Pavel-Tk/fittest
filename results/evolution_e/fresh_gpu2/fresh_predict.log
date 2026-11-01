@@ -1,0 +1,125 @@
+[fresh] aimnet2: 30 children in results/evolution_e_gpu2/cache
+Warp 1.18.0 initialized:
+   CUDA Toolkit 13.4, Driver 13.0
+   Devices:
+     "cpu"      : "x86_64"
+     "cuda:0"   : "NVIDIA L4" (22 GiB, sm_89, mempool enabled)
+   Kernel cache:
+     /root/.cache/warp/1.18.0
+[fresh] verify aimnet2_01d9ccb2a3a99d8d: max|dE| 3.5e-06 eV, max|dF| 4.77e-06 eV/A
+[fresh] aimnet2_01d9ccb2a3a99d8d (g3_aimnet2_flagged) 1.2 s
+[fresh] verify aimnet2_1dc6c57a10242c99: max|dE| 2.91e-06 eV, max|dF| 5.48e-06 eV/A
+[fresh] aimnet2_1dc6c57a10242c99 (g1_aimnet2_flagged) 0.6 s
+[fresh] verify aimnet2_1de50f6c0236e992: max|dE| 3.72e-06 eV, max|dF| 5.25e-06 eV/A
+[fresh] aimnet2_1de50f6c0236e992 (g3_aimnet2_flagged) 0.6 s
+[fresh] aimnet2_1e39b6da34e33dfe (g1_aimnet2_flagged) 0.4 s
+[fresh] aimnet2_245de34dc8dd5c4a (g2_aimnet2_flagged) 0.4 s
+[fresh] aimnet2_2b694d25dcb12e1d (g3_aimnet2_flagged) 0.4 s
+[fresh] aimnet2_2f2523b05b33e10b (g2_aimnet2_flagged) 0.4 s
+[fresh] aimnet2_50f5c4238707368a (g2_aimnet2_flagged) 0.4 s
+[fresh] aimnet2_697d10c8160e9c3a (g3_aimnet2_flagged) 0.4 s
+[fresh] aimnet2_7a85cab23419df87 (g3_aimnet2_flagged) 0.4 s
+[fresh] aimnet2_91ff7a62ab7c2c64 (g2_aimnet2_flagged) 0.4 s
+[fresh] aimnet2_952b502c6df0eaf6 (g2_aimnet2_flagged) 0.4 s
+[fresh] aimnet2_a649286fc38f397a (g2_aimnet2_flagged) 0.4 s
+[fresh] aimnet2_a74208965535f14d (g1_aimnet2_flagged) 0.4 s
+[fresh] aimnet2_a75a2038cd6ea5f9 (g3_aimnet2_flagged) 0.4 s
+[fresh] aimnet2_b9fb3e75123a886b (g3_aimnet2_flagged) 0.4 s
+[fresh] aimnet2_bdc0d9c6efc1e537 (g2_aimnet2_flagged) 0.4 s
+[fresh] aimnet2_bf9f286ebf4d18e5 (g3_aimnet2_flagged) 0.4 s
+[fresh] aimnet2_c4ad88803e03e0b8 (g2_aimnet2_flagged) 0.4 s
+[fresh] aimnet2_c9f41a2cb08aa47f (g2_aimnet2_flagged) 0.4 s
+[fresh] aimnet2_ca264b3c4acb3e6b (g3_aimnet2_flagged) 0.4 s
+[fresh] aimnet2_cb78fdc30e306080 (g2_aimnet2_flagged) 0.4 s
+[fresh] aimnet2_d00f9941da687e8c (g3_aimnet2_flagged) 0.4 s
+[fresh] aimnet2_d2158900bd62404b (g1_aimnet2_flagged) 0.4 s
+[fresh] aimnet2_d5a3936ddac98665 (g1_aimnet2_flagged) 0.4 s
+[fresh] aimnet2_dcc1fce6a85d1fb9 (g2_aimnet2_flagged) 0.4 s
+[fresh] aimnet2_e75bf44bc27cd1d5 (g3_aimnet2_flagged) 0.4 s
+[fresh] aimnet2_edd5878ecbd9e0f0 (g2_aimnet2_flagged) 0.4 s
+[fresh] aimnet2_f244e869bce8fa22 (g3_aimnet2_flagged) 0.4 s
+[fresh] aimnet2_f6bf91a2a39f73b8 (g1_aimnet2_flagged) 0.4 s
+[fresh] mace: 30 children in results/evolution_e_gpu2/cache
+INFO:numexpr.utils:NumExpr defaulting to 12 threads.
+/usr/local/lib/python3.13/dist-packages/torch/jit/_script.py:1488: DeprecationWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
+  warnings.warn(
+/content/fittest/scripts/evolve_c_fresh_predict.py:82: UserWarning: Environment variable TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD detected, since the`weights_only` argument was not explicitly passed to `torch.load`, forcing weights_only=False.
+  state = torch.load(s["ckpt"], map_location=args.device)
+Using medium MPA-0 model as default MACE-MP model, to use previous (before 3.10) default model please specify 'medium' as model argument
+[fresh] verify mace_18c6f5b2fce29878: max|dE| 1.53e-05 eV, max|dF| 7.23e-06 eV/A
+[fresh] mace_18c6f5b2fce29878 (g3_mace_flagged) 21.3 s
+[fresh] verify mace_263bbf6fab49a6bc: max|dE| 1.53e-05 eV, max|dF| 7.76e-06 eV/A
+[fresh] mace_263bbf6fab49a6bc (g3_mace_flagged) 18.5 s
+[fresh] verify mace_31e9b8ca03bbbad4: max|dE| 1.53e-05 eV, max|dF| 9.12e-06 eV/A
+[fresh] mace_31e9b8ca03bbbad4 (g2_mace_flagged) 18.5 s
+[fresh] mace_4373a453479c75bb (g3_mace_flagged) 9.1 s
+[fresh] mace_49a5380917cb258e (g3_mace_flagged) 9.1 s
+[fresh] mace_4c799ffd6413ae13 (g1_mace_flagged) 9.0 s
+[fresh] mace_5803e44f5bfb002a (g3_mace_flagged) 9.1 s
+[fresh] mace_58e93a5da58f4320 (g2_mace_flagged) 9.1 s
+[fresh] mace_5ceeb5104d7fc92e (g2_mace_flagged) 9.1 s
+[fresh] mace_5eedc56e56c45cca (g3_mace_flagged) 9.1 s
+[fresh] mace_6450dd666047e852 (g2_mace_flagged) 9.1 s
+[fresh] mace_68a11f887e1bb582 (g1_mace_flagged) 9.1 s
+[fresh] mace_69d8836193d9209a (g2_mace_flagged) 9.1 s
+[fresh] mace_6ff0809ce8168a64 (g1_mace_flagged) 9.1 s
+[fresh] mace_796d685b4995508e (g3_mace_flagged) 9.1 s
+[fresh] mace_7a7a5952560b3a2d (g1_mace_flagged) 9.1 s
+[fresh] mace_80f28bd726ae20c6 (g2_mace_flagged) 9.1 s
+[fresh] mace_85a00093de926f68 (g3_mace_flagged) 9.1 s
+[fresh] mace_8673802aa0ee559a (g2_mace_flagged) 9.1 s
+[fresh] mace_87b0b7a34c8e1599 (g1_mace_flagged) 9.1 s
+[fresh] mace_b03876fdf87ac19c (g2_mace_flagged) 9.1 s
+[fresh] mace_b0a3c71a30ace64b (g3_mace_flagged) 9.1 s
+[fresh] mace_b7ec383ee268cdaf (g3_mace_flagged) 9.1 s
+[fresh] mace_b83533f6fadab6a3 (g3_mace_flagged) 9.1 s
+[fresh] mace_cb6d2074f92ad896 (g2_mace_flagged) 9.1 s
+[fresh] mace_cfc68fd919de3cdb (g2_mace_flagged) 9.1 s
+[fresh] mace_dc1da82b41ab66f7 (g2_mace_flagged) 9.1 s
+[fresh] mace_dd634601eb4eb2f5 (g3_mace_flagged) 9.1 s
+[fresh] mace_e57fc799dab66952 (g1_mace_flagged) 9.1 s
+[fresh] mace_fade613dcf080e79 (g2_mace_flagged) 9.1 s
+FRESH_PREDICT_DONE results/evolution_e_gpu2/cache
+[fresh] orb: 30 children in results/evolution_e_gpu2/cache
+/content/envs/orb/lib/python3.12/site-packages/torch/jit/_script.py:1491: FutureWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
+  warnings.warn(
+/content/envs/orb/lib/python3.12/site-packages/orb_models/utils.py:30: UserWarning: Setting global torch default dtype to torch.float32.
+  warnings.warn(f"Setting global torch default dtype to {torch_dtype}.")
+/content/envs/orb/lib/python3.12/site-packages/orb_models/utils.py:32: UserWarning: Consider passing 'precision=float32-high' for significantly higher (>2x) model throughput if high precision is not required.
+  warnings.warn(
+/content/envs/orb/lib/python3.12/site-packages/triton/knobs.py:504: UserWarning: TRITON_DEFAULT_FP_FUSION is unset: defaulting to FP fusion ENABLED for backward compatibility in Triton 3.9. The default will change to DISABLED in Triton 3.10; set TRITON_DEFAULT_FP_FUSION=1 to keep fusion enabled or =0 to adopt the new default early and silence this warning.
+  warn_once(FP_FUSION_DEFAULT_WARNING)
+[fresh] verify orb_015c71eb6937f153: max|dE| 7.63e-06 eV, max|dF| 8.14e-06 eV/A
+[fresh] orb_015c71eb6937f153 (g2_orb_flagged) 19.9 s
+[fresh] verify orb_0382a8c73e69f6b2: max|dE| 7.63e-06 eV, max|dF| 6.35e-06 eV/A
+[fresh] orb_0382a8c73e69f6b2 (g2_orb_flagged) 14.6 s
+[fresh] verify orb_0c8a2e35f1a6b2fa: max|dE| 7.63e-06 eV, max|dF| 7.58e-06 eV/A
+[fresh] orb_0c8a2e35f1a6b2fa (g2_orb_flagged) 14.6 s
+[fresh] orb_0f50d61eaa3ff2c8 (g2_orb_flagged) 7.0 s
+[fresh] orb_207d2bbcec9c25f3 (g2_orb_flagged) 7.0 s
+[fresh] orb_20d4e3b79bf13966 (g1_orb_flagged) 7.0 s
+[fresh] orb_3247f71b80cea44c (g2_orb_flagged) 7.1 s
+[fresh] orb_3804b2a74a67f041 (g2_orb_flagged) 7.0 s
+[fresh] orb_445028216963afee (g1_orb_flagged) 7.0 s
+[fresh] orb_488ae561e6ad8122 (g3_orb_flagged) 7.1 s
+[fresh] orb_52c1c7da881517a7 (g3_orb_flagged) 7.0 s
+[fresh] orb_5dadf6e3aaec2b23 (g3_orb_flagged) 7.0 s
+[fresh] orb_6741324c04b483e9 (g1_orb_flagged) 7.0 s
+[fresh] orb_6fee433d27ae0a07 (g3_orb_flagged) 7.1 s
+[fresh] orb_781fcd29ae9f331d (g3_orb_flagged) 7.0 s
+[fresh] orb_81ec586740e196fe (g2_orb_flagged) 7.0 s
+[fresh] orb_8293670c8d74c45a (g2_orb_flagged) 7.0 s
+[fresh] orb_838121cb26746706 (g3_orb_flagged) 7.1 s
+[fresh] orb_87f8d337b144c1be (g1_orb_flagged) 7.0 s
+[fresh] orb_8bd3a75188954d85 (g2_orb_flagged) 7.0 s
+[fresh] orb_91e625e7ce77504c (g1_orb_flagged) 7.0 s
+[fresh] orb_943273469a9bcf82 (g3_orb_flagged) 7.2 s
+[fresh] orb_a98e44f89560845c (g3_orb_flagged) 7.0 s
+[fresh] orb_acadba390cae5024 (g2_orb_flagged) 7.0 s
+[fresh] orb_af3af11493123738 (g2_orb_flagged) 7.0 s
+[fresh] orb_b6d8b38f94bd6899 (g3_orb_flagged) 7.1 s
+[fresh] orb_b9957d605d6ed277 (g1_orb_flagged) 7.0 s
+[fresh] orb_baea100d91d0b373 (g3_orb_flagged) 7.0 s
+[fresh] orb_df6d5e2ec928f6c8 (g3_orb_flagged) 7.1 s
+[fresh] orb_e2d8e387573d5a2f (g3_orb_flagged) 7.0 s
+FRESH_PREDICT_DONE results/evolution_e_gpu2/cache
