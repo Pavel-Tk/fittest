@@ -1,0 +1,22 @@
+/content/fittest/scripts/evolve_c_offspring.py:220: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:836.)
+  "rel_e_mse": float(el / len(lab_pos))})
+Warp 1.18.0 initialized:
+   CUDA Toolkit 13.4, Driver 13.0
+   Devices:
+     "cpu"      : "x86_64"
+     "cuda:0"   : "NVIDIA L4" (22 GiB, sm_89, mempool enabled)
+   Kernel cache:
+     /root/.cache/warp/1.18.0
+{"step": 0, "loss": 0.14979321568756537, "force_mse": 0.10102451592683792, "rel_e_mse": 0.09753739952145489}
+{"step": 20, "loss": 0.08281024182647972, "force_mse": 0.07211838662624359, "rel_e_mse": 0.021383710400472253}
+{"step": 40, "loss": 0.09158357412451919, "force_mse": 0.09044916182756424, "rel_e_mse": 0.002268824593909899}
+{"step": 60, "loss": 0.02041354395929115, "force_mse": 0.018728699535131454, "rel_e_mse": 0.003369688848319387}
+{"step": 80, "loss": 0.026439634500743235, "force_mse": 0.023462263867259026, "rel_e_mse": 0.005954741266968421}
+{"step": 100, "loss": 0.014926925965173232, "force_mse": 0.014467679895460606, "rel_e_mse": 0.0009184921394252516}
+{"step": 120, "loss": 0.021055216781194038, "force_mse": 0.020057005807757378, "rel_e_mse": 0.0019964219468733236}
+{"step": 140, "loss": 0.013421854726980277, "force_mse": 0.012175090610980988, "rel_e_mse": 0.0024935282319985797}
+{"step": 160, "loss": 0.015797807684127915, "force_mse": 0.015233615413308144, "rel_e_mse": 0.0011283845416395406}
+{"step": 180, "loss": 0.014800595664264412, "force_mse": 0.01390012539923191, "rel_e_mse": 0.0018009405300650047}
+{"step": 199, "loss": 0.009587803129020927, "force_mse": 0.009245350956916809, "rel_e_mse": 0.0006849043442082361}
+DONE {"id": "g2_aimnet2_flagged", "ckpt": "results/evolution_f_gpu1/cache/aimnet2_744a1b8c6cc28d62.pt", "n_train": 178, "n_train_reactions": 55, "n_head_params": 862665, "train_seconds": 19.58984923362732, "predict_seconds": 0.37546825408935547, "wall_seconds": 19.965318202972412, "toolkit": {}}

@@ -1,0 +1,22 @@
+Warp CUDA warning: Could not find or load the NVIDIA CUDA driver. GPU execution will not be available.
+/home/azureuser/fittest_evoC/scripts/evolve_c_offspring.py:220: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /__w/pytorch/pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:820.)
+  "rel_e_mse": float(el / len(lab_pos))})
+Warp 1.18.0 initialized:
+   CUDA Toolkit 13.4, CUDA driver not available (NVRTC compilation available)
+   Devices:
+     "cpu"      : "x86_64"
+   Kernel cache:
+     /home/azureuser/.cache/warp/1.18.0
+{"step": 0, "loss": 0.37222672781401855, "force_mse": 0.25341883301734924, "rel_e_mse": 0.11880789479666932}
+{"step": 20, "loss": 0.2791824735639673, "force_mse": 0.2515379786491394, "rel_e_mse": 0.02764449491482788}
+{"step": 40, "loss": 0.6088495003092438, "force_mse": 0.3131974935531616, "rel_e_mse": 0.2956520067560822}
+{"step": 60, "loss": 0.5618144482186428, "force_mse": 0.4297342300415039, "rel_e_mse": 0.13208021817713891}
+{"step": 80, "loss": 0.25756949172679267, "force_mse": 0.21066278219223022, "rel_e_mse": 0.04690670953456247}
+{"step": 100, "loss": 0.259012477008264, "force_mse": 0.21838438510894775, "rel_e_mse": 0.040628091899316286}
+{"step": 120, "loss": 0.34992114811134456, "force_mse": 0.32215943932533264, "rel_e_mse": 0.02776170878601193}
+{"step": 140, "loss": 0.3100649632155033, "force_mse": 0.29531577229499817, "rel_e_mse": 0.01474919092050515}
+{"step": 160, "loss": 0.45305411956991976, "force_mse": 0.3919662535190582, "rel_e_mse": 0.06108786605086154}
+{"step": 180, "loss": 0.30344827510856837, "force_mse": 0.274507999420166, "rel_e_mse": 0.028940275688402357}
+{"step": 199, "loss": 0.5367505433733719, "force_mse": 0.5158652663230896, "rel_e_mse": 0.020885277050282307}
+DONE {"id": "g1_aimnet2_flagged", "ckpt": "results/expl_sham/cache/aimnet2_bb4e5264c80cbc9b.pt", "n_train": 90, "n_train_reactions": 28, "n_head_params": 862665, "train_seconds": 22.808350801467896, "predict_seconds": 5.16508150100708, "wall_seconds": 27.973433017730713, "toolkit": {}}
