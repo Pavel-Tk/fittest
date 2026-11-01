@@ -156,7 +156,8 @@ def cmd_run(args) -> None:
     base_cfg = budget_config(args.budget, args.generations, n_bootstrap_eval=args.n_boot,
                              families=tuple(f for f in args.families.split(",") if f),
                              children_per_niche=args.children, explore_base=args.explore_base,
-                             gate_rel_e_tol=args.gate_tol, protect_base=args.protect_base)
+                             gate_rel_e_tol=args.gate_tol, protect_base=args.protect_base,
+                             lr_scale=args.lr_scale)
     base = load_models(args.preds, list(base_cfg.base_models))
     scorer = EvalScorer(args.n_boot, 0)
     factory = GPUFactory(Path(args.out), args.frames, args.core_python, args.orb_python, args.device,
@@ -366,6 +367,7 @@ def main(argv=None) -> None:
     r.add_argument("--explore-base", action="store_true", help="base-parent children explore energy weight / lr")
     r.add_argument("--gate-tol", type=float, default=0.0, help="relative rel-E tolerance of the gate")
     r.add_argument("--protect-base", action="store_true", help="never prune base models")
+    r.add_argument("--lr-scale", type=float, default=1.0, help="scale child learning rates (0 = sham control)")
     s = sub.add_parser("summarize")
     s.add_argument("--out", default="results/evolution_c")
     args = ap.parse_args(argv)

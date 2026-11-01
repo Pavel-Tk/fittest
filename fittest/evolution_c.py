@@ -66,6 +66,8 @@ class EvoCConfig(EvoConfig):
     gate_rel_e_tol: float = 0.0
     """gate passes rel-E if child MAE ≤ parent MAE × (1 + tol) (0 = pre-registered 'not worse')."""
     protect_base: bool = False
+    lr_scale: float = 1.0
+    """multiplies every child's learning rate (0 = sham children identical to their parent; a control)."""
     """base models are never pruned (specialists can only be added on top of the base swarm)."""
 
 
@@ -106,6 +108,7 @@ def mutate_recipe(parent_recipe: Mapping[str, Any] | None, family: str, cfg: Evo
     explore_energy_weights[sibling % n] and lr × (1, 0.5, 2)[(sibling // n) % 3]."""
     if not parent_recipe:
         r = dict(BASE_RECIPES[family])
+        r["lr"] = float(r["lr"] * cfg.lr_scale)
         if cfg.explore_base:
             n = len(cfg.explore_energy_weights)
             r["energy_weight"] = float(cfg.explore_energy_weights[sibling % n])
@@ -113,7 +116,7 @@ def mutate_recipe(parent_recipe: Mapping[str, Any] | None, family: str, cfg: Evo
         return r
     r = {k_: v for k_, v in parent_recipe.items() if k_ in BASE_RECIPES[family]}
     rng = np.random.default_rng([cfg.seed, g, k, 505])
-    r["lr"] = float(np.clip(r["lr"] * rng.choice(cfg.lr_mutation), 1e-6, 1e-2))
+    r["lr"] = 0.0 if cfg.lr_scale == 0 else float(np.clip(r["lr"] * rng.choice(cfg.lr_mutation), 1e-6, 1e-2))
     r["energy_weight"] = float(np.clip(r["energy_weight"] * rng.choice(cfg.energy_weight_mutation), 0.1, 30.0))
     return r
 
