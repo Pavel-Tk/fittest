@@ -1,8 +1,9 @@
 # Evolution: does a swarm that breeds and selects its own models beat the static swarm?
 
 **Verdict under the pre-registered rule: no.** Runs A, B and C each fail. A post-hoc fix (never prune the base
-models, soften the gate) looked strong in exploratory runs. Its pre-registered confirmation on new seeds (run D)
-fell short: it held in 4 of 6 seeds where 5 were required, though it was never worse than static. Below, every pre-registered run
+models, soften the gate) held in 5 of 6 exploratory seeds at budget 800 (CPU). Its pre-registered confirmation on new
+seeds (run D) fell short: on CPU (primary) it held in 4 of 6 new seeds where 5 were required (none worse than
+static); on GPU with three families (secondary) it held in 4 of 6 and was significantly worse than static in 2. Below, every pre-registered run
 is reported side by side, including the failures. This is followed by exploratory runs (extra seeds and design
 variants) that were **not** pre-registered and are labelled as such. Those runs do not change the verdict.
 
@@ -127,31 +128,36 @@ at 200 and 5 of 6 at 400, but **significantly worse in s0 at both** (+0.023 *, +
 |---|---|---|---|---|---|
 | base models never pruned (`--protect-base`) | CPU, AIMNet2 | 0–5 | 2 of 6 | 2 of 6 | 0 of 12 |
 | + gate tolerates 10 % worse rel-E (`--gate-tol 0.1`) | CPU, AIMNet2 | 0–5 | 3 of 6 | **5 of 6** | 0 of 12 |
-| + 2 children per family, base children explore the energy weight | L4, 3 families | 0–1 | **2 of 2** | 1 of 2 | 0 of 4 |
+| + 2 children per family, base children explore energy weight and lr | L4, 3 families | 0–1 | **2 of 2** | 1 of 2 | 0 of 4 |
 
 Sources: `../evolution_c/expl_cpu_protectbase/`, `../evolution_c/expl_cpu_protect_gatetol/`,
 `../evolution_c/expl_gpu_v2_combined/`. With base models protected, every run whose children all failed the gate
-equals static (Δ = 0). Every other run improved forces (−0.005 to −0.044 eV/Å), and rel-E in all but one cell (b400 s0
+equals static (Δ = 0). Every other run except GPU b800 s0 (−0.003 n.s.)
+improved forces significantly (−0.005 to −0.044 eV/Å), and rel-E in all but one cell (b400 s0
 with the gentle gate: +0.003 n.s.). The pattern suggests that pruning base models causes the harm and the strict gate
 causes the missed gains. Because these designs were chosen from these seeds, that is a hypothesis. Run D tests it.
+The one-knob GPU runs below already cut against the first half: with only the softer gate, all three base models
+were pruned in both seeds and forces still improved most.
 
 **One knob at a time** (L4, 3 families, budget 800, seeds 0–1; `../evolution_c/expl_gpu_ablation_*`). Forces Δ vs static
-(eV/Å): protect-base −0.010 * / −0.018 *; gate-tol 0.1 −0.029 * / −0.038 *; explore-base + 2 children +0.000 n.s. /
-−0.035 *; 3 children per family −0.011 * / −0.036 *. Every knob alone holds in seed 1, three of four also in seed 0,
+(eV/Å): protect-base −0.010 * / −0.018 *; gate-tol 0.1 −0.029 * / −0.038 *; explore-base (energy weight and lr) + 2 children
++0.000 n.s. / −0.035 *; 3 children per family −0.011 * / −0.036 * (without explore-base, siblings bred from a base
+model share the recipe and differ only in training seed). Every knob alone holds in seed 1, three of four also in seed 0,
 and none is worse than static. Pre-registered run C at the same budget and seeds: −0.017 * / +0.011 * (worse).
 Two seeds per knob cannot rank the knobs.
 
 **Run C extension, seeds 2–5, budget 800, three families** (L4, same pre-registered design; exploratory because of the
 extra seeds; `../evolution_c/expl_gpu_ext_seeds2-5/`): evolved holds in 2 of 4 (s3 −0.030 *, s5 −0.032 *) and is
 **significantly worse than static in 2 of 4** (s2 +0.038 *, s4 +0.017 *). No-selection beats static on forces
-(−0.021 to −0.027 *) and on rel-E (−0.022 to −0.041 *) in 4 of 4. Across all six three-family seeds at 800, evolved
+(−0.020 to −0.027 *) and on rel-E (−0.022 to −0.041 *) in 4 of 4. Across all six three-family seeds at 800, evolved
 holds in 3 of 6 and is worse in 3 of 6. No-selection beats static on forces in 5 of 6 (s0 n.s.) and on rel-E in 6 of 6.
 
 A third GPU job (the run C extension at budgets 200/400 and a budget-1600 run) was lost with its Colab session before
 any result was downloaded. It is not reported.
 
 ## Run D: pre-registered confirmation on new seeds (`../evolution_d/PREREG.md`)
-Design: run C plus `--protect-base --gate-tol 0.1`, budget 800, **new seeds 6–11**. The pre-registration was committed
+Design: run C plus `--protect-base --gate-tol 0.1`, budget 800, **new seeds 6–11**. D-cpu (primary) breeds
+AIMNet2 specialists only, as in C′; D-gpu (secondary) breeds all three families. The pre-registration was committed
 (3238b18) before any run D seed ran. **Confirmed iff the rule holds in ≥ 5 of 6 seeds of D-cpu and no seed is
 significantly worse than static.**
 
@@ -162,7 +168,8 @@ significantly worse than static.**
 | D-cpu rule | holds | holds | no (not better than own gen 0) | holds | no (no offspring) | holds |
 
 **D-cpu: the rule holds in 4 of 6 seeds, below the pre-registered 5, so the fix is NOT confirmed.** No seed is
-worse than static, and forces are better or equal in 6 of 6. Sources: `../evolution_d/cpu/summary.json` and
+worse than static, and forces are better or equal in 6 of 6. Under the original every-seed rule, both D-cpu and
+D-gpu fail. Sources: `../evolution_d/cpu/summary.json` and
 `summary_table.md`.
 
 | seed | 6 | 7 | 8 | 9 | 10 | 11 |
@@ -172,14 +179,15 @@ worse than static, and forces are better or equal in 6 of 6. Sources: `../evolut
 | D-gpu rule | holds | holds | holds | no | no | holds |
 
 **D-gpu (three families, secondary): holds in 4 of 6, and 2 seeds are significantly worse than static on forces,
-although base models were protected** (`../evolution_d/gpu/`). With Orb and MACE specialists in the population,
-protecting the base models did not prevent harm, which weakens the hypothesis above. In all 6 seeds, rel-E is
+although base models were protected** (`../evolution_d/gpu/`). In the three-family setting, protecting the base
+models did not prevent harm, which further weakens the hypothesis above. In all 6 seeds, rel-E is
 better than static.
 
-**Run D verdict: not confirmed** (D-cpu 4 of 6 < 5; D-gpu 4 of 6 with 2 seeds worse). What does replicate across
-every run here is narrower: evolved swarms lower reaction-relative energy error, and fine-tuning plus keeping
-the base models (no selection) lowers force error more often than selection does. Neither was the pre-registered
-claim.
+**Run D verdict: not confirmed** (D-cpu 4 of 6 < 5; D-gpu 4 of 6 with 2 seeds worse). What recurs is narrower:
+evolved swarms whose children survive usually lower reaction-relative energy error (not in run A s1 or most C′
+cells), and at budget 800 no-selection beat static on forces more often than the evolved arm (exploratory; not
+tested in run D). Neither was the pre-registered claim. Run E (`../evolution_e/PREREG.md`) tests the second on new
+seeds.
 
 ## Failures and limits, reported
 - Run C's first GPU attempt is invalid (OOM children counted as stillborn). In the clean GPU rerun, the first launch deadlocked:
