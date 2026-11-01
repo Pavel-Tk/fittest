@@ -1,6 +1,6 @@
 # Run E: does growing the swarm without selection beat the static swarm? (pre-registered)
 
-Written and committed **before** any run E seed was run (Sun Nov 1, about 20:30 EDT on Oct 31). Run E tests a
+Written and committed **before** any run E seed was run (Sat Oct 31, about 20:05 EDT = Nov 1 00:05 UTC). Run E tests a
 finding that showed up repeatedly in **exploratory** data: the run C *no-selection* arm. It fine-tunes one niche
 specialist per family per breeding generation, keeps the newest one, and **never removes the base models**; there
 is no gate, no clone check and no pruning. Across seeds 0–5 at budget 800 with three families, its

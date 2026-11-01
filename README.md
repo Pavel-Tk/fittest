@@ -39,7 +39,7 @@ Formerly **TrustSwarm**; the old GitHub URL redirects here.
   in 3 of 10 single seed runs. Reaction-relative energy error (secondary for run C) is lower than static in 9 of
   10, but fine-tuning without selection gains as much, so that is not evidence for selection. A post-hoc fix
   (never prune base models, softer gate) was then pre-registered and tested on new seeds (run D): it held in
-  4 of 6 seeds on CPU and 4 of 6 on GPU, short of the 5 required, so it is **not confirmed**.
+  4 of 6 new seeds on CPU (the primary test; 5 required), so it is **not confirmed**; on GPU (three families, secondary) it held in 4 of 6 and was significantly worse than static in 2.
   [`results/evolution/SUMMARY.md`](results/evolution/SUMMARY.md)
 * **Use it now.** Add the hosted MCP server to Claude Code:
   `claude mcp add --transport http fittest https://fittest-mcp.westus2.cloudapp.azure.com/mcp`,
@@ -434,8 +434,8 @@ also in most of the runs that passed. The paired CIs cover eval resampling only;
 more consistent in exploratory runs, but it changes several things at once and lost to the evolved arm in one of
 the two pre-registered seeds. A post-hoc fix (protect the base models, tolerate 10% worse rel-E at the gate)
 was pre-registered as run D ([`results/evolution_d/PREREG.md`](results/evolution_d/PREREG.md)) and run on new seeds
-6–11: it holds in 4 of 6 (CPU, AIMNet2 specialists) and 4 of 6 (GPU, three families, two seeds worse than static),
-below the pre-registered 5 of 6, so it is **not confirmed**. Family trees: `results/fig/fig8_family_tree_run{A,B}_s{0,1}.png`; per-generation curves:
+6–11: on CPU (primary, AIMNet2 specialists) it holds in 4 of 6, below the pre-registered 5 of 6, so it is **not confirmed**;
+on GPU (secondary, three families) it holds in 4 of 6 and two seeds are worse than static. Family trees: `results/fig/fig8_family_tree_run{A,B}_s{0,1}.png`; per-generation curves:
 `results/fig/fig7_evolution_run{A,B}_s{0,1}.png`; budget axis: `results/evolution_c/fig9_budget.png`.
 
 ### 2.5 How the ALCHEMI Toolkit is used
