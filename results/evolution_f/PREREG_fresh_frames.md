@@ -23,3 +23,18 @@ any mismatch. The served answer per frame uses the same Calibrator ledger and ro
 - **E holds on fresh frames** iff the same holds for E-gpu no-selection − static.
 - CPU versions are reported as secondary. If a rerun cannot reproduce the eval numbers, its fresh-frame result is
   reported as unreliable.
+
+## Amendment 1 (procedure only; committed before any fresh-frame number was computed, Nov 1 ~04:55 UTC)
+Child predictions were cached for pool + eval frames only (`predict_uids` = the evolution store, which holds pool and
+eval). Re-training children with extra prediction frames would change cache keys and almost certainly change the
+populations. The procedure is therefore:
+1. For every cached child, load its saved checkpoint (`cache/*.pt`) and predict the fresh frames with the same model
+   build and `predict()` code as `scripts/evolve_c_offspring.py`, writing the extra predictions next to the cache
+   entry without changing its key.
+2. Re-run each run with identical seeds, configs and code, plus the fresh scorer. Every child is a cache hit, so
+   triage, labels, selection and breeding are unchanged. Buckets, τ and the ledger are fitted exactly as before; the
+   fresh frames are only served and scored.
+3. Gate: the eval numbers of every rerun must reproduce the committed `summary.json`, with max |Δ| reported. As a
+   further check, a sample of children's eval predictions re-computed from checkpoints must match the cached `.npz`.
+   If either check fails for a run, that run's fresh-frame result is reported as unreliable.
+The decision rule is unchanged.
