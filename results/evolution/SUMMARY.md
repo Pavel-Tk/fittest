@@ -5,7 +5,10 @@ models, soften the gate) held in 5 of 6 exploratory seeds at budget 800 (CPU). I
 seeds (run D) fell short: on CPU (primary) it held in 4 of 6 new seeds where 5 were required (none worse than
 static); on GPU with three families (secondary) it held in 4 of 6 and was significantly worse than static in 2. **A narrower claim did confirm (run E, pre-registered, 12 new seeds): growing the swarm with fine-tuned
 specialists while keeping the base models, without selection, beats the static swarm on served force error
-(−0.018 eV/Å [−0.024, −0.013], 0 of 12 seeds worse) and on relative energies.** Below, every pre-registered run
+(−0.018 eV/Å [−0.024, −0.013], 0 of 12 seeds worse) and on relative energies.** **And once the gate tests only forces (run F, pre-registered after a diagnosis, 12 new seeds), the full
+evolutionary loop beats the static swarm in 12 of 12 seeds (−0.026 eV/Å [−0.030, −0.021]), passing even the original
+every-seed rule. That fix was chosen after reading earlier eval results; a pre-registered check on never-read frames
+is reported in the run F section.** Below, every pre-registered run
 is reported side by side, including the failures. This is followed by exploratory runs (extra seeds and design
 variants) that were **not** pre-registered and are labelled as such. Those runs do not change the verdict.
 
@@ -219,6 +222,36 @@ What this does and does not show: the swarm improves by **growing** (variation p
 **selection**: our gate and fitness pruning removed the gain. This was not the flagship claim, which needed the
 evolved arm to win and did not. Children are trained only on labels drawn from the same 800-label budget, so both
 arms use the same DFT cost.
+
+## Run F: gate on forces only (pre-registered, `../evolution_f/PREREG.md`) — CONFIRMED on eval
+Design: exactly run C (gate + fitness pruning; base models can be pruned) except that the gate's
+reaction-relative-energy check is switched off (`--gate-tol 1e9`). Budget 800, **new seeds 24–35**. The
+pre-registration was committed (94b4376, 00:23 UTC) before any run F seed ran. Motivation: the exploratory diagnosis
+(`DIAGNOSIS.md`) found that the rel-E check on the small select set does not predict eval (r = −0.15) and mostly
+rejects the AIMNet2 children with the largest force gains, and that harmed runs are those with no AIMNet2
+specialist.
+
+| | mean Δ force RMSE vs static (eV/Å) [95 % t-CI] | seeds sig. better / worse | mean Δ rel-E (eV) | mean Δ ECE | run-C rule per seed |
+|---|---|---|---|---|---|
+| **F-gpu evolved (3 families)** | **−0.026 [−0.030, −0.021]** | **12 / 0** | −0.039 [−0.044, −0.034] | −0.021 [−0.028, −0.014] | **holds in 12 of 12** |
+| F-cpu evolved (AIMNet2 only) | −0.017 [−0.023, −0.010] | 10 / 0 | −0.026 [−0.032, −0.020] | +0.002 [−0.017, +0.020] | holds in 10 of 12 |
+
+**Verdict: confirmed under the pre-registered rule.** With a force-only gate, the full evolutionary loop
+(breeding, gate, fitness pruning) beats the static swarm in every one of 12 new seeds. It even passes the original
+flagship rule, which required every seed. It also beats run E's no-selection arm on average (−0.026 vs −0.018, on
+different seeds).
+
+**Caveat: adaptivity to the eval split.** Every run is scored on the same 1485 eval frames. The run F design came from a
+diagnosis that read earlier runs' eval results, so new seeds do not rule out that the fix suits this eval split. A
+pre-registered check on frames no evolution run has ever read (Transition1x val formulas, 2475 frames,
+`../evolution_f/PREREG_fresh_frames.md`, committed f817523 before scoring) is in progress; results will be in `../evolution_f/FRESH_FRAMES.md`.
+
+**Run E controls (exploratory).** Sham children (learning rate 0, identical to their parent; everything else
+equal), CPU, seeds 12–17: forces −0.004 [−0.013, +0.005] (n.s.) vs −0.018 for real children, so run E's force gain
+comes from learning. But sham rel-E is −0.011 [−0.016, −0.006]: part of the rel-E gain in runs E/F is a pipeline effect
+(different labels and routing), not learning (`../evolution_e/expl_cpu_sham/`). Growing across budgets (CPU,
+seeds 12–17): forces −0.017 / −0.026 / −0.017 eV/Å at 200 / 400 / 1600 labels, 6 of 6 seeds better at each, with
+no trend (`../evolution_e/expl_cpu_grow_budget/`).
 
 ## Failures and limits, reported
 - Run C's first GPU attempt is invalid (OOM children counted as stillborn). In the clean GPU rerun, the first launch deadlocked:
