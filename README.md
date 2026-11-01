@@ -37,7 +37,9 @@ Formerly **TrustSwarm**; the old GitHub URL redirects here.
   own fine-tuned models did **not** reliably beat the static swarm on served force error at the same DFT
   budget: the rule (paired CI, every seed, 3 breeding generations) fails in all three runs (A, B, C); it holds
   in 3 of 10 single seed runs. Reaction-relative energy error (secondary for run C) is lower than static in 9 of
-  10, but fine-tuning without selection gains as much, so that is not evidence for selection.
+  10, but fine-tuning without selection gains as much, so that is not evidence for selection. A post-hoc fix
+  (never prune base models, softer gate) was then pre-registered and tested on new seeds (run D): it held in
+  4 of 6 seeds on CPU and 4 of 6 on GPU, short of the 5 required, so it is **not confirmed**.
   [`results/evolution/SUMMARY.md`](results/evolution/SUMMARY.md)
 * **Use it now.** Add the hosted MCP server to Claude Code:
   `claude mcp add --transport http fittest https://fittest-mcp.westus2.cloudapp.azure.com/mcp`,
@@ -430,7 +432,10 @@ swarm sometimes ends up *worse* than static is not established: base models were
 also in most of the runs that passed. The paired CIs cover eval resampling only; run-to-run noise is about
 0.02 eV/Å (the static swarm alone moves 0.202 → 0.220 between seeds). Fine-tuning *without* selection looked
 more consistent in exploratory runs, but it changes several things at once and lost to the evolved arm in one of
-the two pre-registered seeds. Family trees: `results/fig/fig8_family_tree_run{A,B}_s{0,1}.png`; per-generation curves:
+the two pre-registered seeds. A post-hoc fix (protect the base models, tolerate 10% worse rel-E at the gate)
+was pre-registered as run D ([`results/evolution_d/PREREG.md`](results/evolution_d/PREREG.md)) and run on new seeds
+6–11: it holds in 4 of 6 (CPU, AIMNet2 specialists) and 4 of 6 (GPU, three families, two seeds worse than static),
+below the pre-registered 5 of 6, so it is **not confirmed**. Family trees: `results/fig/fig8_family_tree_run{A,B}_s{0,1}.png`; per-generation curves:
 `results/fig/fig7_evolution_run{A,B}_s{0,1}.png`; budget axis: `results/evolution_c/fig9_budget.png`.
 
 ### 2.5 How the ALCHEMI Toolkit is used
