@@ -8,7 +8,8 @@ specialists while keeping the base models, without selection, beats the static s
 (−0.018 eV/Å [−0.024, −0.013], 0 of 12 seeds worse) and on relative energies.** **And once the gate tests only forces (run F, pre-registered after a diagnosis, 12 new seeds), the full
 evolutionary loop beats the static swarm in 12 of 12 seeds (−0.026 eV/Å [−0.030, −0.021]), passing even the original
 every-seed rule. That fix was chosen after reading earlier eval results; a pre-registered check on never-read frames
-is reported in the run F section.** Below, every pre-registered run
+is reported in the run F section: it passed (fresh, never-read Transition1x val formulas: −0.026 [−0.034, −0.019],
+12 of 12 seeds better).** Below, every pre-registered run
 is reported side by side, including the failures. This is followed by exploratory runs (extra seeds and design
 variants) that were **not** pre-registered and are labelled as such. Those runs do not change the verdict.
 
@@ -244,7 +245,18 @@ different seeds).
 **Caveat: adaptivity to the eval split.** Every run is scored on the same 1485 eval frames. The run F design came from a
 diagnosis that read earlier runs' eval results, so new seeds do not rule out that the fix suits this eval split. A
 pre-registered check on frames no evolution run has ever read (Transition1x val formulas, 2475 frames,
-`../evolution_f/PREREG_fresh_frames.md`, committed f817523 before scoring) is in progress; results will be in `../evolution_f/FRESH_FRAMES.md`.
+`../evolution_f/PREREG_fresh_frames.md`, committed f817523 before scoring) **passed** (`../evolution_f/FRESH_FRAMES.md`). Each final swarm was replayed from its cached children,
+the eval numbers reproduced exactly (max |Δ| = 0 in all 6 reruns), and the fresh frames were then served and scored:
+
+| on fresh frames (2475 frames, 225 reactions, new formulas) | mean Δ force RMSE vs static [95 % t-CI] | seeds better / worse | rule |
+|---|---|---|---|
+| **F-gpu evolved (force-only gate)** | **−0.026 [−0.034, −0.019]** | **12 / 0** | **holds** |
+| **E-gpu grow (no selection)** | **−0.018 [−0.026, −0.011]** | **12 / 0** | **holds** |
+| F-cpu evolved (secondary) | −0.015 [−0.024, −0.005] | 9 / 0 | holds |
+| E-cpu grow (secondary) | −0.019 [−0.033, −0.005] | 9 / 2 | **fails** (2 seeds worse; at most 1 allowed) |
+| E-gpu evolved, original gate (reference) | −0.010 [−0.026, +0.006] | 7 / 4 | — |
+
+The gains carry over to chemistry no run has seen, at the same size as on eval (F: −0.026 on both).
 
 **Run E controls (exploratory).** Sham children (learning rate 0, identical to their parent; everything else
 equal), CPU, seeds 12–17: forces −0.004 [−0.013, +0.005] (n.s.) vs −0.018 for real children, so run E's force gain
