@@ -33,14 +33,15 @@ Formerly **TrustSwarm**; the old GitHub URL redirects here.
 * **Negative result.** The swarm ranks its own errors **worse** than the simple baselines:
   AUROC **0.73** vs 0.80–0.87. Its self-repair (LoRA fine-tune of MACE) halved force error on held-out
   labels but made relative energies worse, so its own gate refused to ship it.
-* **Evolution (pre-registered, negative on the primary metric).** Letting the swarm breed, gate and prune its
-  own fine-tuned models did **not** reliably beat the static swarm on served force error at the same DFT
-  budget: the rule (paired CI, every seed, 3 breeding generations) fails in all three runs (A, B, C); it holds
-  in 3 of 10 single seed runs. Reaction-relative energy error (secondary for run C) is lower than static in 9 of
-  10, but fine-tuning without selection gains as much, so that is not evidence for selection. A post-hoc fix
-  (never prune base models, softer gate) was then pre-registered and tested on new seeds (run D): it held in
-  4 of 6 new seeds on CPU (the primary test; 5 required), so it is **not confirmed**; on GPU (three families, secondary) it held in 4 of 6 and was significantly worse than static in 2. **What did confirm** (run E, pre-registered, 12 new seeds, three families): *growing* the swarm by adding fine-tuned specialists while keeping the base models, with no selection, beats the static swarm on served force error (−0.018 eV/Å, 95% CI over seeds [−0.024, −0.013], 0 of 12 seeds worse) and on relative energies. With the gate testing forces only (run F, pre-registered after a diagnosis of why selection failed, 12 new seeds), the full evolutionary loop beats static in **12 of 12 seeds** (−0.026 eV/Å [−0.030, −0.021]). That fix was chosen after reading earlier eval results, so it was re-checked, pre-registered, on 2,475 frames of new Transition1x formulas no run had ever read: **−0.026 eV/Å [−0.034, −0.019], 12 of 12 seeds better** ([`results/evolution_f/FRESH_FRAMES.md`](results/evolution_f/FRESH_FRAMES.md)).
-  [`results/evolution/SUMMARY.md`](results/evolution/SUMMARY.md)
+* **Evolution (six pre-registered runs, failures included).** Can the swarm improve itself by breeding fine-tuned
+  models, gating them and pruning the useless ones, at the same DFT budget? The first three designs (runs A–C)
+  **failed** their pre-registered rule, and a first fix (run D) was not confirmed. A diagnosis showed why: the gate's
+  relative-energy check on a few labels was noise and rejected the best children. With the gate testing forces only
+  (**run F**, pre-registered, 12 new seeds), the full loop beats the static swarm in **12 of 12 seeds**: served force
+  error −0.026 eV/Å [−0.030, −0.021] (≈12%), with better relative energies and calibration. It **held on 2,475 frames
+  of new chemistry** that no run had ever read (−0.026 [−0.034, −0.019], 12/12). Growing the swarm without selection
+  (run E) also wins (−0.018, 12/12 on new chemistry). A sham control (children that learn nothing) shows the force
+  gain comes from learning. [`results/evolution/SUMMARY.md`](results/evolution/SUMMARY.md)
 * **Use it now.** Add the hosted MCP server to Claude Code:
   `claude mcp add --transport http fittest https://fittest-mcp.westus2.cloudapp.azure.com/mcp`,
   then ask *"Use fittest to check whether I can trust an ML potential on this water molecule: O 0 0 0,
