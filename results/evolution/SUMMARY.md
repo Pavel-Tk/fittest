@@ -155,6 +155,8 @@ holds in 3 of 6 and is worse in 3 of 6. No-selection beats static on forces in 5
 A third GPU job (the run C extension at budgets 200/400 and a budget-1600 run) was lost with its Colab session before
 any result was downloaded. It is not reported.
 
+Why evolved runs sometimes get worse than static (exploratory diagnosis): see `DIAGNOSIS.md`.
+
 ## Run D: pre-registered confirmation on new seeds (`../evolution_d/PREREG.md`)
 Design: run C plus `--protect-base --gate-tol 0.1`, budget 800, **new seeds 6–11**. D-cpu (primary) breeds
 AIMNet2 specialists only, as in C′; D-gpu (secondary) breeds all three families. The pre-registration was committed
