@@ -264,6 +264,8 @@ def cmd_summarize(args) -> None:
                 r["vs_noselect"] = {m: c["final_vs_noselect"][m] for m in ("force_rmse", "rel_e_mae")}
             if name.startswith("evolved") and "final_vs_static" in c:
                 r["verdict"] = verdict_for(c, last["population"])
+            if name.startswith("noselect") and "final_vs_static" in c:  # same rule, reported separately (run E)
+                r["verdict_noselect"] = verdict_for(c, last["population"])
             entry["runs"][name] = r
             rows.append((B, d.parent.name, name, r))
         summary["budgets"][d.parent.name] = {"budget": B, **entry}
