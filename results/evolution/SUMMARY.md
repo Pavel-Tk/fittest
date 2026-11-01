@@ -3,7 +3,9 @@
 **Verdict under the pre-registered rule: no.** Runs A, B and C each fail. A post-hoc fix (never prune the base
 models, soften the gate) held in 5 of 6 exploratory seeds at budget 800 (CPU). Its pre-registered confirmation on new
 seeds (run D) fell short: on CPU (primary) it held in 4 of 6 new seeds where 5 were required (none worse than
-static); on GPU with three families (secondary) it held in 4 of 6 and was significantly worse than static in 2. Below, every pre-registered run
+static); on GPU with three families (secondary) it held in 4 of 6 and was significantly worse than static in 2. **A narrower claim did confirm (run E, pre-registered, 12 new seeds): growing the swarm with fine-tuned
+specialists while keeping the base models, without selection, beats the static swarm on served force error
+(−0.018 eV/Å [−0.024, −0.013], 0 of 12 seeds worse) and on relative energies.** Below, every pre-registered run
 is reported side by side, including the failures. This is followed by exploratory runs (extra seeds and design
 variants) that were **not** pre-registered and are labelled as such. Those runs do not change the verdict.
 
@@ -190,6 +192,33 @@ evolved swarms whose children survive usually lower reaction-relative energy err
 cells), and at budget 800 no-selection beat static on forces more often than the evolved arm (exploratory; not
 tested in run D). Neither was the pre-registered claim. Run E (`../evolution_e/PREREG.md`) tests the second on new
 seeds.
+
+## Run E: growing the swarm without selection (pre-registered, `../evolution_e/PREREG.md`) — CONFIRMED
+Design: the run C no-selection arm (each breeding generation fine-tunes one niche specialist per family and keeps the
+newest; base models are never removed; no gate, no clone check, no pruning) vs static, plus the evolved arm, budget 800,
+**new seeds 12–23**. The pre-registration was committed (2f8114e, 00:07 UTC) before any run E seed ran. E-gpu (three
+families, L4) is primary, E-cpu (AIMNet2 specialists only) secondary. Rule: seed-level 95 % t-interval of mean Δ
+force RMSE (arm − static) entirely below 0, at most 1 of 12 seeds significantly worse, and no ECE regression at the
+seed level.
+
+| | mean Δ force RMSE (eV/Å) [95 % t-CI over seeds] | seeds sig. better / worse | mean Δ rel-E (eV) | mean Δ ECE | run-C rule per seed |
+|---|---|---|---|---|---|
+| **E-gpu no-selection** | **−0.018 [−0.024, −0.013]** | 10 / **0** | −0.026 [−0.033, −0.019] | −0.008 [−0.022, +0.005] | holds in 10 of 12 |
+| E-gpu evolved (same seeds) | −0.001 [−0.017, +0.016] | 6 / 4 | −0.032 [−0.037, −0.026] | +0.000 [−0.017, +0.018] | holds in 6 of 12 |
+| E-cpu no-selection | −0.018 [−0.027, −0.009] | 11 / 1 | −0.015 [−0.021, −0.009] | −0.013 [−0.027, −0.000] | — |
+| E-cpu evolved | −0.008 [−0.015, −0.000] | 4 / 0 | −0.012 [−0.023, −0.001] | +0.002 [−0.014, +0.017] | — |
+
+**Verdict: confirmed.** All three conditions hold in E-gpu. Adding fine-tuned niche specialists to a swarm that
+keeps its base models lowers served force error vs the static swarm at the same DFT budget (−0.018 eV/Å, about 9 % of
+static's ~0.21) and lowers reaction-relative energy error. The secondary CPU replication agrees. On the same seeds,
+the evolved arm (gate + fitness pruning) shows no force gain on average and is worse than static in 4 of 12
+seeds. Sources: `../evolution_e/gpu{1,2}/summary.json`, `../evolution_e/seed_level_gpu_{noselect,evolved}.json`,
+`../evolution_e/cpu/`.
+
+What this does and does not show: the swarm improves by **growing** (variation plus keeping parents), not by
+**selection**: our gate and fitness pruning removed the gain. This was not the flagship claim, which needed the
+evolved arm to win and did not. Children are trained only on labels drawn from the same 800-label budget, so both
+arms use the same DFT cost.
 
 ## Failures and limits, reported
 - Run C's first GPU attempt is invalid (OOM children counted as stillborn). In the clean GPU rerun, the first launch deadlocked:
